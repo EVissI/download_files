@@ -2709,9 +2709,9 @@
 
             .pokaz-side {
                 flex: 1 1 0;
-                min-width: 340px;
+                min-width: 380px;
                 width: auto;
-                max-width: min(640px, calc(48% - 14px));
+                max-width: min(720px, calc(50% - 14px));
                 margin-top: 1.5rem;
                 gap: 12px;
             }
@@ -2816,11 +2816,11 @@
             .pokaz-tools .jb-labels {
                 display: flex;
                 align-items: flex-end;
-                justify-content: space-around;
+                justify-content: space-evenly;
                 width: 100%;
                 gap: 4px;
                 margin: 0;
-                padding: 0 4px;
+                padding: 0 6px;
                 box-sizing: border-box;
             }
 
@@ -3138,8 +3138,8 @@
             }
         }
 
-        /* ~1000–1300: доска и инструменты столбцом — панель инструментов на полную ширину */
-        @media (min-width: 1025px) and (max-width: 1299px) {
+        /* ~1000–1500: доска и инструменты столбцом — панель на полную ширину, как на широком */
+        @media (min-width: 1025px) and (max-width: 1499px) {
             .pokaz-workspace,
             .container.pokaz-board-open .pokaz-workspace {
                 flex-direction: column;
@@ -3277,11 +3277,11 @@
             .pokaz-tools .jb-labels {
                 display: flex;
                 align-items: flex-end;
-                justify-content: space-around;
+                justify-content: space-evenly;
                 width: 100%;
                 gap: 4px;
                 margin: 0;
-                padding: 0 4px;
+                padding: 0 6px;
                 box-sizing: border-box;
             }
 
@@ -3342,7 +3342,7 @@
 
             .pokaz-tools .jb-row {
                 width: 100%;
-                justify-content: space-around;
+                justify-content: space-evenly;
                 gap: 6px;
             }
 
@@ -3448,11 +3448,194 @@
             }
         }
 
-        /* Узкая колонка инструментов (сайдбар): компактная сетка без наложений */
-        @container pokaz-tools (max-width: 580px) {
+        /* Средняя ширина панели: тот же 2-рядный вид, чуть компактнее */
+        @container pokaz-tools (max-width: 720px) {
             .selectors-wrapper {
-                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 52px !important;
-                gap: 10px 10px !important;
+                grid-template-columns: minmax(72px, 0.9fr) minmax(72px, 0.9fr) minmax(0, 2.2fr) 48px !important;
+                gap: 10px 8px !important;
+            }
+
+            .controls-row {
+                grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) auto !important;
+                gap: 10px 8px !important;
+            }
+
+            .checker-label,
+            .bar-label,
+            .jb-label,
+            .match-header,
+            .cube-controls-labels label,
+            .turn-dice-labels label,
+            .game-type-right label {
+                font-size: 10px !important;
+            }
+
+            .checker-selector,
+            .bar-selector {
+                font-size: 32px !important;
+                gap: 4px !important;
+            }
+
+            .jb-wrap,
+            .match-panel,
+            .cube-controls-block-wrapper,
+            .turn-dice-wrapper,
+            .game-type-right {
+                gap: 4px !important;
+            }
+
+            .checker-options,
+            .bar-options,
+            .jacobi-beaver-block,
+            .score-inputs,
+            .cube-controls-block,
+            .turn-dice-block {
+                height: 48px !important;
+                min-height: 48px !important;
+                padding: 6px 8px !important;
+                gap: 6px !important;
+            }
+
+            .toggle-btn {
+                min-width: 36px !important;
+                min-height: 32px !important;
+                padding: 4px 8px !important;
+                font-size: 12px !important;
+            }
+
+            .match-selector-button,
+            .bar-selector-button,
+            .checker-toggle-btn,
+            .cube-selector-button,
+            .dice-selector-button {
+                min-width: 32px !important;
+                min-height: 32px !important;
+                width: 34px !important;
+                height: 34px !important;
+            }
+
+            .game-type-right {
+                width: 48px !important;
+            }
+
+            #game-type-button {
+                width: 48px !important;
+                height: 48px !important;
+            }
+
+            #game-type-button i {
+                font-size: 18px !important;
+            }
+
+            .action-buttons {
+                height: 48px !important;
+                gap: 6px !important;
+            }
+
+            .action-buttons button {
+                width: 42px !important;
+                height: 42px !important;
+                min-width: 42px !important;
+                min-height: 42px !important;
+            }
+
+            .action-buttons-col.right button {
+                width: 48px !important;
+                height: 48px !important;
+                min-width: 48px !important;
+                min-height: 48px !important;
+            }
+
+            .jb-row {
+                justify-content: space-evenly !important;
+                gap: 4px !important;
+            }
+        }
+
+        /* Узкая панель: всё ещё 2 ряда, ещё плотнее */
+        @container pokaz-tools (max-width: 560px) {
+            .selectors-wrapper {
+                grid-template-columns: minmax(64px, 0.85fr) minmax(64px, 0.85fr) minmax(0, 2.4fr) 44px !important;
+                gap: 8px 6px !important;
+            }
+
+            .controls-row {
+                grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.95fr) auto !important;
+                gap: 8px 6px !important;
+            }
+
+            .checker-label,
+            .bar-label,
+            .jb-label,
+            .match-header,
+            .cube-controls-labels label,
+            .turn-dice-labels label,
+            .game-type-right label {
+                font-size: 9px !important;
+            }
+
+            .checker-options,
+            .bar-options,
+            .jacobi-beaver-block,
+            .score-inputs,
+            .cube-controls-block,
+            .turn-dice-block {
+                height: 44px !important;
+                min-height: 44px !important;
+                padding: 4px 6px !important;
+            }
+
+            .toggle-btn {
+                min-width: 32px !important;
+                min-height: 28px !important;
+                padding: 3px 6px !important;
+                font-size: 11px !important;
+            }
+
+            .match-selector-button,
+            .bar-selector-button,
+            .checker-toggle-btn,
+            .cube-selector-button,
+            .dice-selector-button {
+                min-width: 28px !important;
+                min-height: 28px !important;
+                width: 30px !important;
+                height: 30px !important;
+            }
+
+            .game-type-right,
+            #game-type-button {
+                width: 44px !important;
+            }
+
+            #game-type-button {
+                height: 44px !important;
+            }
+
+            .action-buttons {
+                height: 44px !important;
+            }
+
+            .action-buttons button {
+                width: 38px !important;
+                height: 38px !important;
+                min-width: 38px !important;
+                min-height: 38px !important;
+            }
+
+            .action-buttons-col.right button {
+                width: 44px !important;
+                height: 44px !important;
+                min-width: 44px !important;
+                min-height: 44px !important;
+            }
+        }
+
+        /* Очень узко: аккуратный стек без растягивания */
+        @container pokaz-tools (max-width: 420px) {
+            .selectors-wrapper {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 44px !important;
+                gap: 8px 8px !important;
             }
 
             .checker-selector {
@@ -3472,26 +3655,14 @@
             .game-type-right {
                 grid-column: 3 !important;
                 grid-row: 1 / 3 !important;
-                width: 52px !important;
-                align-self: center !important;
+                width: 44px !important;
+                align-self: end !important;
                 justify-self: end !important;
-            }
-
-            .checker-label,
-            .bar-label,
-            .jb-title,
-            .jb-label,
-            .match-header,
-            .cube-controls-labels label,
-            .turn-dice-labels label,
-            .game-type-right label {
-                font-size: 10px !important;
-                white-space: nowrap !important;
             }
 
             .controls-row {
                 grid-template-columns: 1fr !important;
-                gap: 12px !important;
+                gap: 10px !important;
             }
 
             .action-buttons {
@@ -3500,15 +3671,11 @@
                 padding-top: 2px;
             }
 
-            .checker-options,
-            .bar-options,
             .jacobi-beaver-block,
-            .score-inputs,
             .cube-controls-block,
-            .turn-dice-block {
-                height: auto !important;
-                min-height: 52px !important;
-                padding: 6px 8px !important;
+            .turn-dice-block,
+            .score-inputs {
+                justify-content: space-evenly !important;
             }
 
             .admin-comment-container {
@@ -3530,7 +3697,7 @@
             }
         }
 
-        @container pokaz-tools (max-width: 420px) {
+        @container pokaz-tools (max-width: 340px) {
             .selectors-wrapper {
                 grid-template-columns: 1fr 1fr !important;
             }
