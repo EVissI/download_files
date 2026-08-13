@@ -1956,6 +1956,22 @@
             box-sizing: border-box;
         }
 
+        .board-open-controls > .screenshot-controls {
+            flex: 1;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 8px;
+            padding: 0;
+            margin: 0;
+            border: none;
+            min-width: 0;
+        }
+
+        .board-open-controls > .screenshot-controls button {
+            flex-shrink: 0;
+        }
+
         .board-open-controls-buttons {
             flex: 1;
             display: flex;
@@ -8627,7 +8643,35 @@
         }
 
         // При открытой доске: скрыть selectors-wrapper и controls-row, показать board-open-controls
-        // Управление — всегда под доской; aux-панель на широких экранах тоже под доской
+        // Управление — всегда под доской; скриншоты — слева от стрелок; aux на широких — под доской
+        function relocateScreenshotControls(boardOpen) {
+            const screenshotControls = document.getElementById('screenshotControls');
+            const boardOpenControls = document.getElementById('boardOpenControls');
+            const auxPanel = document.querySelector('.pokaz-aux-panel');
+            const spacer = boardOpenControls
+                ? boardOpenControls.querySelector('.board-open-controls-spacer')
+                : null;
+            if (!screenshotControls || !boardOpenControls || !auxPanel) return;
+
+            if (boardOpen) {
+                const historyNav = boardOpenControls.querySelector('.history-nav');
+                if (screenshotControls.parentElement !== boardOpenControls
+                    || (historyNav && screenshotControls.nextElementSibling !== historyNav)) {
+                    if (historyNav) {
+                        boardOpenControls.insertBefore(screenshotControls, historyNav);
+                    } else {
+                        boardOpenControls.insertBefore(screenshotControls, boardOpenControls.firstChild);
+                    }
+                }
+                if (spacer) spacer.style.display = 'none';
+            } else {
+                if (screenshotControls.parentElement !== auxPanel) {
+                    auxPanel.insertBefore(screenshotControls, auxPanel.firstChild);
+                }
+                if (spacer) spacer.style.display = '';
+            }
+        }
+
         function relocatePokazOpenPanels(boardOpen, isWide) {
             const auxPanel = document.querySelector('.pokaz-aux-panel');
             const boardOpenControls = document.getElementById('boardOpenControls');
@@ -8658,6 +8702,8 @@
                     side.appendChild(boardOpenControls);
                 }
             }
+
+            relocateScreenshotControls(boardOpen);
 
             if (placeAuxUnderBoard) {
                 if (auxPanel && auxPanel.parentElement !== mainStage) {
