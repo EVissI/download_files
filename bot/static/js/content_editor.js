@@ -1815,9 +1815,8 @@ export class ContentEditor {
 
         this.schedulePipInteractiveCanvasWidthSync();
 
-        if (!options.skipLoadTools) {
-            this.loadTools();
-        }
+        // Всегда обновляем палитру: pip-инструменты видны только в pip-режиме.
+        this.loadTools();
     }
 
     /**
@@ -2883,8 +2882,8 @@ export class ContentEditor {
                 icon: 'fa fa-list-ol'
             },
             {
-                id: INTERACTIVE_PIP_DIFF_TOOL_ID,
-                name: INTERACTIVE_PIP_DIFF_DISPLAY_NAME,
+                id: 'interactive-pip-diff',
+                name: 'Разница пипсов',
                 type: 'interactive',
                 description: 'Разница пипсов: одно поле (±), проверка по модулю',
                 icon: 'fa fa-exchange'
@@ -2921,7 +2920,7 @@ export class ContentEditor {
             'interactive-pip-count',
             'interactive-pip-double',
             'interactive-pip-combo',
-            INTERACTIVE_PIP_DIFF_TOOL_ID,
+            'interactive-pip-diff',
         ]);
         const visibleTools = tools.filter((tool) => {
             if (pipInteractiveToolIds.has(tool.id)) return pipEditorPalette;
