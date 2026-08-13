@@ -390,6 +390,7 @@
             display: flex;
             flex-direction: row;
             align-items: center;
+            justify-content: space-around;
             gap: clamp(0.2rem, 1.5vw, 0.4rem);
             background-color: #3b3b3b;
             border: clamp(2px, 0.5vw, 3px) double #555;
@@ -397,6 +398,8 @@
             box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
             margin: 0;
             padding: clamp(0.15rem, 1vw, 0.3rem) clamp(0.3rem, 2vw, 0.7rem);
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .cube-controls-block .cube-shown-selector,
@@ -1108,14 +1111,19 @@
 
         .turn-dice-labels {
             display: flex;
-            gap: 1.5rem;
+            gap: 0.5rem;
             flex-direction: row;
+            justify-content: space-around;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .turn-dice-labels label {
             color: white;
             font-size: clamp(0.6rem, 1.5vw, 0.8rem);
             text-align: center;
+            flex: 1 1 0;
+            min-width: 0;
         }
 
         .turn-dice-content {
@@ -1679,17 +1687,38 @@
             gap: 0.5rem;
         }
 
+        .cube-controls-labels {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: flex-end;
+            width: 100%;
+            gap: 0.5rem;
+            box-sizing: border-box;
+        }
+
         .cube-controls-labels label {
             color: white;
             font-size: clamp(0.5rem, 1.2vw, 0.7rem);
-            text-align: left;
-            flex-shrink: 0;
+            text-align: center;
+            flex: 1 1 0;
+            min-width: 0;
         }
 
         .cube-controls-block-wrapper {
             display: flex;
             flex-direction: column;
-            gap: 0;
+            gap: 0.2rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .cube-control-section {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .crawford-checkbox-wrapper {
@@ -2711,7 +2740,7 @@
                 box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
                 display: flex;
                 align-items: center;
-                justify-content: center;
+                justify-content: space-around;
                 gap: 10px;
             }
 
@@ -2762,9 +2791,17 @@
 
             .pokaz-tools .cube-controls-labels,
             .pokaz-tools .turn-dice-labels {
-                gap: 12px;
+                display: flex;
+                gap: 8px;
                 justify-content: space-around;
                 width: 100%;
+            }
+
+            .pokaz-tools .cube-controls-labels label,
+            .pokaz-tools .turn-dice-labels label {
+                flex: 1 1 0;
+                text-align: center;
+                min-width: 0;
             }
 
             .pokaz-tools .cube-controls-block,
@@ -2772,10 +2809,18 @@
                 width: 100%;
             }
 
+            .pokaz-tools .cube-control-section {
+                flex: 1 1 0;
+            }
+
             .pokaz-tools .turn-dice-content {
                 width: 100%;
                 justify-content: space-around;
                 gap: 12px;
+            }
+
+            .pokaz-tools .turn-dice-section {
+                flex: 1 1 0;
             }
 
             .pokaz-tools .checker-toggle-btn {
@@ -3436,7 +3481,7 @@
                     data-i18n="crawford">Кроуфорд</label>
             </div>
             <div class="cube-controls-block">
-                <div class="cube-shown-selector">
+                <div class="cube-control-section cube-shown-selector">
                     <div class="cube-selector-custom">
                         <div class="cube-selector-button empty" id="cube-shown-button" data-cube="shown" data-i18n="no">
                             нет</div>
@@ -3460,7 +3505,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="cube-value-options">
+                <div class="cube-control-section cube-value-options">
                     <div>
                         <div class="cube-selector-custom">
                             <div class="cube-selector-button empty" id="cube-value-button" data-cube="value"
@@ -3486,13 +3531,13 @@
                         </div>
                     </div>
                 </div>
-                <div class="cube-owner-selector">
+                <div class="cube-control-section cube-owner-selector">
                     <input type="hidden" id="cube-owner-select" value="white">
                     <button type="button" id="cube-owner-select-btn" class="checker-toggle-btn white"
                         data-target="cube-owner-select" data-i18n-aria-label="whose_cube" aria-label="Чей куб?"
                         data-color="white"></button>
                 </div>
-                <div class="crawford-checkbox-wrapper" style="display: none;">
+                <div class="cube-control-section crawford-checkbox-wrapper" style="display: none;">
                     <input type="checkbox" id="crawford-checkbox">
                 </div>
             </div>
