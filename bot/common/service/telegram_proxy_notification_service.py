@@ -76,17 +76,21 @@ def sync_telegram_proxy_availability_notification() -> None:
             logger.info("Telegram proxies recovered, all-down notification flag cleared")
         return
 
-    if redis.get(ALL_PROXIES_DOWN_REDIS_KEY):
+    # SETNX: только один параллельный вызов отправит письмо
+    # (DB poll, failover и деактивация прокси могут сработать одновременно).
+    if not redis.set(ALL_PROXIES_DOWN_REDIS_KEY, "1", nx=True):
         return
 
     admin_email = fetch_admin_notification_email_sync()
     if not admin_email:
+        redis.delete(ALL_PROXIES_DOWN_REDIS_KEY)
         logger.warning(
             "All Telegram proxies are down, but admin notification email is not set in FAB"
         )
         return
 
     if not email_service.is_configured():
+        redis.delete(ALL_PROXIES_DOWN_REDIS_KEY)
         logger.warning(
             "All Telegram proxies are down, but SMTP is not configured (set SMTP_* in .env)"
         )
@@ -99,8 +103,9 @@ def sync_telegram_proxy_availability_notification() -> None:
         body_html,
         body_text=body_text,
     ):
-        redis.set(ALL_PROXIES_DOWN_REDIS_KEY, "1")
         logger.error(
             "All Telegram proxies are down — notification email sent to {}",
             admin_email,
         )
+    else:
+        redis.delete(ALL_PROXIES_DOWN_REDIS_KEY)
