@@ -1949,6 +1949,13 @@
             display: flex;
         }
 
+        .pokaz-main-stage > .board-open-controls.active {
+            width: 100%;
+            margin-top: 0.35rem;
+            padding: 0.5rem 0 0;
+            box-sizing: border-box;
+        }
+
         .board-open-controls-buttons {
             flex: 1;
             display: flex;
@@ -8620,8 +8627,8 @@
         }
 
         // При открытой доске: скрыть selectors-wrapper и controls-row, показать board-open-controls
-        // На широких экранах управление и aux-панель переносим под доску
-        function relocatePokazOpenPanels(underBoard) {
+        // Управление — всегда под доской; aux-панель на широких экранах тоже под доской
+        function relocatePokazOpenPanels(boardOpen, isWide) {
             const auxPanel = document.querySelector('.pokaz-aux-panel');
             const boardOpenControls = document.getElementById('boardOpenControls');
             const mainStage = document.querySelector('.pokaz-main-stage');
@@ -8631,7 +8638,10 @@
             const boardWrapper = mainStage ? mainStage.querySelector('.board-wrapper') : null;
             if (!mainStage || !side || !tools) return;
 
-            if (underBoard) {
+            const placeControlsUnderBoard = !!boardOpen;
+            const placeAuxUnderBoard = !!(boardOpen && isWide);
+
+            if (placeControlsUnderBoard) {
                 if (boardOpenControls) {
                     if (boardWrapper && boardWrapper.nextSibling !== boardOpenControls) {
                         mainStage.insertBefore(boardOpenControls, boardWrapper.nextSibling);
@@ -8639,6 +8649,17 @@
                         mainStage.appendChild(boardOpenControls);
                     }
                 }
+            } else if (boardOpenControls && boardOpenControls.parentElement !== side) {
+                if (turnLabel && turnLabel.parentElement === side) {
+                    side.insertBefore(boardOpenControls, turnLabel);
+                } else if (tools.parentElement === side) {
+                    side.insertBefore(boardOpenControls, tools);
+                } else {
+                    side.appendChild(boardOpenControls);
+                }
+            }
+
+            if (placeAuxUnderBoard) {
                 if (auxPanel && auxPanel.parentElement !== mainStage) {
                     mainStage.appendChild(auxPanel);
                 } else if (auxPanel && boardOpenControls && auxPanel.previousElementSibling !== boardOpenControls) {
@@ -8646,15 +8667,6 @@
                 }
                 tools.classList.add('is-aux-relocated');
             } else {
-                if (boardOpenControls && boardOpenControls.parentElement !== side) {
-                    if (turnLabel && turnLabel.parentElement === side) {
-                        side.insertBefore(boardOpenControls, turnLabel);
-                    } else if (tools.parentElement === side) {
-                        side.insertBefore(boardOpenControls, tools);
-                    } else {
-                        side.appendChild(boardOpenControls);
-                    }
-                }
                 if (auxPanel && auxPanel.parentElement !== tools) {
                     tools.appendChild(auxPanel);
                 }
@@ -8687,7 +8699,7 @@
                 if (controlsRow) controlsRow.style.display = '';
                 boardOpenControls.classList.remove('active');
             }
-            relocatePokazOpenPanels(isBoardOpen && isWide);
+            relocatePokazOpenPanels(isBoardOpen, isWide);
         }
 
         window.addEventListener('resize', () => {
