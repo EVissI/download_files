@@ -52,6 +52,18 @@ const {
     refreshInteractivePipComboPreviewBlocks,
 } = await import(_interactivePipComboHref);
 
+const _interactivePipDiffHref = (() => {
+    const resolved = new URL('./interactive_pip_diff.js', import.meta.url).href;
+    const q = _interactivePipCountCacheQs;
+    if (!q || resolved.includes('?')) return resolved;
+    return resolved + q;
+})();
+
+const {
+    setupInteractivePipDiffAfterCardPreviewRender,
+    refreshInteractivePipDiffPreviewBlocks,
+} = await import(_interactivePipDiffHref);
+
 export function openCardPreviewModalImpl(editor) {
     if (!editor.cardPreviewModal) return;
     editor.cardPreviewRefs = editor.collectSavedFrameRefsForCurrentGame();
@@ -1013,6 +1025,7 @@ export function renderCardPreviewSurfaceImpl(editor, payload, hostRoot = null) {
         setupInteractivePipCountAfterCardPreviewRender(editor, effectivePayload);
         setupInteractivePipDoubleAfterCardPreviewRender(editor, effectivePayload);
         setupInteractivePipComboAfterCardPreviewRender(editor, effectivePayload);
+        setupInteractivePipDiffAfterCardPreviewRender(editor, effectivePayload);
     }
 }
 

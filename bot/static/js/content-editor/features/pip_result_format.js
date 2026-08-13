@@ -5,6 +5,7 @@ export const PIP_RESULT_MARK_BAD = '❌';
 export const PIP_RESULT_TEMPLATE_KIND_COUNT = 'pip_count';
 export const PIP_RESULT_TEMPLATE_KIND_DOUBLE = 'pip_double';
 export const PIP_RESULT_TEMPLATE_KIND_COMBO = 'pip_combo';
+export const PIP_RESULT_TEMPLATE_KIND_DIFF = 'pip_diff';
 
 export const DEFAULT_PIP_COUNT_RESULT_TEMPLATE = `Время: {time}
 
@@ -25,13 +26,19 @@ export const DEFAULT_PIP_COMBO_RESULT_TEMPLATE = `Время: {time}
 Ваше решение: {choice_user}
 Правильно: {choice_correct} {choice_mark}`;
 
+export const DEFAULT_PIP_DIFF_RESULT_TEMPLATE = `Время: {time}
+
+Разница пипсов:
+{no_board}{diff_row}`;
+
 export const PIP_RESULT_TEMPLATE_PLACEHOLDER_HINT =
-    'Переменные: {time}, {no_board}, {upper_row}, {lower_row}, {upper_user}, {upper_correct}, {upper_mark}, {lower_user}, {lower_correct}, {lower_mark}, {choice_user}, {choice_correct}, {choice_mark}. Цвет: выделите текст и нажмите «Цвет» или тег <span style="color:#RRGGBB">...</span>. Пустое поле — шаблон по умолчанию.';
+    'Переменные: {time}, {no_board}, {upper_row}, {lower_row}, {upper_user}, {upper_correct}, {upper_mark}, {lower_user}, {lower_correct}, {lower_mark}, {diff_row}, {diff_user}, {diff_correct}, {diff_mark}, {choice_user}, {choice_correct}, {choice_mark}. Цвет: выделите текст и нажмите «Цвет» или тег <span style="color:#RRGGBB">...</span>. Пустое поле — шаблон по умолчанию.';
 
 const DEFAULT_TEMPLATE_BY_KIND = {
     [PIP_RESULT_TEMPLATE_KIND_COUNT]: DEFAULT_PIP_COUNT_RESULT_TEMPLATE,
     [PIP_RESULT_TEMPLATE_KIND_DOUBLE]: DEFAULT_PIP_DOUBLE_RESULT_TEMPLATE,
     [PIP_RESULT_TEMPLATE_KIND_COMBO]: DEFAULT_PIP_COMBO_RESULT_TEMPLATE,
+    [PIP_RESULT_TEMPLATE_KIND_DIFF]: DEFAULT_PIP_DIFF_RESULT_TEMPLATE,
 };
 
 function mark(ok) {
@@ -136,6 +143,7 @@ export function pipResultTemplateKindFromToolId(toolId) {
     if (toolId === 'interactive-pip-count') return PIP_RESULT_TEMPLATE_KIND_COUNT;
     if (toolId === 'interactive-pip-double') return PIP_RESULT_TEMPLATE_KIND_DOUBLE;
     if (toolId === 'interactive-pip-combo') return PIP_RESULT_TEMPLATE_KIND_COMBO;
+    if (toolId === 'interactive-pip-diff') return PIP_RESULT_TEMPLATE_KIND_DIFF;
     return null;
 }
 
@@ -201,6 +209,34 @@ function buildPipRowVars(ref, userUpper, userLower) {
     };
 }
 
+function buildPipDiffVars(ref, userDiff) {
+    if (!ref) {
+        return {
+            no_board: 'Нет данных доски для проверки.\n',
+            diff_row: '',
+            diff_user: '',
+            diff_correct: '',
+            diff_mark: '',
+        };
+    }
+    const correctAbs = Math.abs(ref.pipDiff != null ? ref.pipDiff : ref.pipDiffAbs);
+    const ok = userDiff != null && Math.abs(userDiff) === correctAbs;
+    return {
+        no_board: '',
+        diff_row:
+            'Разница: ваш ' +
+            formatUserValue(userDiff) +
+            ', правильно ' +
+            correctAbs +
+            ' ' +
+            mark(ok) +
+            '\n',
+        diff_user: formatUserValue(userDiff),
+        diff_correct: String(correctAbs),
+        diff_mark: mark(ok),
+    };
+}
+
 function buildCubeVars(chosenLabel, correctLabel, doubleCorrect) {
     return {
         choice_user: chosenLabel != null ? String(chosenLabel) : '—',
@@ -223,6 +259,17 @@ export function buildPipCountResultText(elapsed, ref, userUpper, userLower, bloc
         ...buildPipRowVars(ref, userUpper, userLower),
     };
     return renderFromTemplate(block, PIP_RESULT_TEMPLATE_KIND_COUNT, vars);
+}
+
+/**
+ * Результат блока «Разница пипсов» (сравнение по модулю).
+ */
+export function buildPipDiffResultText(elapsed, ref, userDiff, block) {
+    const vars = {
+        time: elapsed,
+        ...buildPipDiffVars(ref, userDiff),
+    };
+    return renderFromTemplate(block, PIP_RESULT_TEMPLATE_KIND_DIFF, vars);
 }
 
 /**
@@ -268,6 +315,13 @@ export function buildPipResultPreview(kind, template) {
     }
     if (kind === PIP_RESULT_TEMPLATE_KIND_DOUBLE) {
         return applyPipResultTemplate(tpl, { time: '01:23', ...cube });
+    }
+    if (kind === PIP_RESULT_TEMPLATE_KIND_DIFF) {
+        const diffRef = { ...ref, pipDiff: ref.upperPips - ref.lowerPips, pipDiffAbs: 2 };
+        return applyPipResultTemplate(tpl, {
+            time: '01:23',
+            ...buildPipDiffVars(diffRef, -2),
+        });
     }
     return applyPipResultTemplate(tpl, { ...base, ...cube });
 }

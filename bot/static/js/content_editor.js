@@ -150,6 +150,15 @@ const {
 } = await import(_editorFeatureUrl('./content-editor/features/interactive_pip_combo.js'));
 
 const {
+    setupInteractivePipDiffAfterCardPreviewRender,
+    refreshInteractivePipDiffPreviewBlocks,
+    mountInteractivePipDiffBlock,
+    getInteractivePipDiffInnerHtml,
+    INTERACTIVE_PIP_DIFF_TOOL_ID,
+    INTERACTIVE_PIP_DIFF_DISPLAY_NAME,
+} = await import(_editorFeatureUrl('./content-editor/features/interactive_pip_diff.js'));
+
+const {
     getDefaultPipResultTemplate,
     pipResultTemplateKindFromToolId,
     buildPipResultPreview,
@@ -1626,6 +1635,7 @@ export class ContentEditor {
         refreshInteractivePipCountPreviewBlocks(this, payload, inner);
         refreshInteractivePipDoublePreviewBlocks(this, payload, inner);
         refreshInteractivePipComboPreviewBlocks(this, payload, inner);
+        refreshInteractivePipDiffPreviewBlocks(this, payload, inner);
     }
 
     /**
@@ -2333,7 +2343,12 @@ export class ContentEditor {
     }
 
     isPipInteractiveToolId(toolId) {
-        return toolId === 'interactive-pip-count' || toolId === 'interactive-pip-double' || toolId === INTERACTIVE_PIP_COMBO_TOOL_ID;
+        return (
+            toolId === 'interactive-pip-count' ||
+            toolId === 'interactive-pip-double' ||
+            toolId === INTERACTIVE_PIP_COMBO_TOOL_ID ||
+            toolId === INTERACTIVE_PIP_DIFF_TOOL_ID
+        );
     }
 
     getPipResultTemplateKind(element) {
@@ -2440,7 +2455,7 @@ export class ContentEditor {
         element.style.maxHeight = '';
         element.style.overflow = 'visible';
         element.style.boxSizing = 'border-box';
-        const inner = element.querySelector('.ce-interactive-pip-count__inner, .ce-interactive-pip-double__inner, .ce-interactive-pip-combo__inner');
+        const inner = element.querySelector('.ce-interactive-pip-count__inner, .ce-interactive-pip-double__inner, .ce-interactive-pip-combo__inner, .ce-interactive-pip-diff__inner');
         if (inner) {
             inner.style.width = '100%';
             inner.style.boxSizing = 'border-box';
@@ -2451,7 +2466,7 @@ export class ContentEditor {
     schedulePipInteractiveCanvasWidthSync(attempt = 0) {
         if (!this.canvas) return;
         const blocks = this.canvas.querySelectorAll(
-            '.canvas-element[data-tool-id="interactive-pip-count"], .canvas-element[data-tool-id="interactive-pip-double"], .canvas-element[data-tool-id="interactive-pip-combo"]'
+            '.canvas-element[data-tool-id="interactive-pip-count"], .canvas-element[data-tool-id="interactive-pip-double"], .canvas-element[data-tool-id="interactive-pip-combo"], .canvas-element[data-tool-id="interactive-pip-diff"]'
         );
         if (!blocks.length) return;
 
@@ -2868,6 +2883,13 @@ export class ContentEditor {
                 icon: 'fa fa-list-ol'
             },
             {
+                id: INTERACTIVE_PIP_DIFF_TOOL_ID,
+                name: INTERACTIVE_PIP_DIFF_DISPLAY_NAME,
+                type: 'interactive',
+                description: 'Разница пипсов: одно поле (±), проверка по модулю',
+                icon: 'fa fa-exchange'
+            },
+            {
                 id: 'frame-templates',
                 name: 'Шаблоны',
                 type: 'templates',
@@ -2895,7 +2917,12 @@ export class ContentEditor {
         const pipEditorPalette =
             this.isPipCountImportEditorMode() ||
             (this.editorOpenedFromContentCardView && this.isPipCountContentCardContext());
-        const pipInteractiveToolIds = new Set(['interactive-pip-count', 'interactive-pip-double', 'interactive-pip-combo']);
+        const pipInteractiveToolIds = new Set([
+            'interactive-pip-count',
+            'interactive-pip-double',
+            'interactive-pip-combo',
+            INTERACTIVE_PIP_DIFF_TOOL_ID,
+        ]);
         const visibleTools = tools.filter((tool) => {
             if (pipInteractiveToolIds.has(tool.id)) return pipEditorPalette;
             if (pipEditorPalette && tool.id === 'interactive-best-move') return false;
@@ -4806,6 +4833,25 @@ export class ContentEditor {
                 break;
             }
 
+            case INTERACTIVE_PIP_DIFF_TOOL_ID: {
+                element.classList.add('ce-interactive-pip-diff');
+                element.innerHTML = getInteractivePipDiffInnerHtml();
+                let boardSnapDiff = null;
+                if (typeof window.getHintViewerBoardSnapshot === 'function') {
+                    try {
+                        boardSnapDiff = window.getHintViewerBoardSnapshot();
+                    } catch (_e) {
+                        boardSnapDiff = null;
+                    }
+                }
+                mountInteractivePipDiffBlock(element, {
+                    dryRun: true,
+                    payload: boardSnapDiff ? { board: boardSnapDiff } : null,
+                    sharedContext: this._contentCardSharedContext,
+                });
+                break;
+            }
+
             default:
                 element.innerHTML = `
                     <div style=" text-align: center; color: #666;">
@@ -5529,6 +5575,7 @@ export class ContentEditor {
                 </div>
                 ` : ''}
                 ${element.dataset.toolId === 'interactive-pip-count' ? this.renderPipResultTemplatePropertyHtml(element) : ''}
+                ${element.dataset.toolId === INTERACTIVE_PIP_DIFF_TOOL_ID ? this.renderPipResultTemplatePropertyHtml(element) : ''}
                 ${element.dataset.toolId === INTERACTIVE_PIP_DOUBLE_TOOL_ID ? `
                 <div class="property-item">
                     <label>Правильный ответ:</label>
@@ -6549,6 +6596,7 @@ export class ContentEditor {
                 case 'interactive-pip-count':
                 case INTERACTIVE_PIP_DOUBLE_TOOL_ID:
                 case INTERACTIVE_PIP_COMBO_TOOL_ID:
+                case INTERACTIVE_PIP_DIFF_TOOL_ID:
                     delete item.style.height;
                     break;
                 case 'board-illustration': {
@@ -8696,6 +8744,14 @@ export class ContentEditor {
             });
             this.applyPipInteractiveCanvasLayout(el);
         });
+        this.canvas.querySelectorAll(`.canvas-element[data-tool-id="${INTERACTIVE_PIP_DIFF_TOOL_ID}"]`).forEach((el) => {
+            mountInteractivePipDiffBlock(el, {
+                dryRun: true,
+                payload: p,
+                sharedContext: this._contentCardSharedContext,
+            });
+            this.applyPipInteractiveCanvasLayout(el);
+        });
         this.schedulePipInteractiveCanvasWidthSync();
 
         const tryTightStackAfterRestore = (attempt = 0) => {
@@ -8802,7 +8858,8 @@ export class ContentEditor {
                 toolId !== 'interactive-best-move' &&
                 toolId !== 'interactive-pip-count' &&
                 toolId !== INTERACTIVE_PIP_DOUBLE_TOOL_ID &&
-                toolId !== INTERACTIVE_PIP_COMBO_TOOL_ID
+                toolId !== INTERACTIVE_PIP_COMBO_TOOL_ID &&
+                toolId !== INTERACTIVE_PIP_DIFF_TOOL_ID
             ) {
                 element.style.height = item.style.height;
             }
@@ -8912,6 +8969,11 @@ export class ContentEditor {
                 element.classList.add('ce-interactive-pip-combo');
                 ensurePipComboDatasetDefaults(element);
                 element.innerHTML = getInteractivePipComboInnerHtml();
+                break;
+            }
+            case INTERACTIVE_PIP_DIFF_TOOL_ID: {
+                element.classList.add('ce-interactive-pip-diff');
+                element.innerHTML = getInteractivePipDiffInnerHtml();
                 break;
             }
             case 'upload-image': {
@@ -9282,7 +9344,7 @@ export class ContentEditor {
         this.canvas.addEventListener('mousedown', (e) => {
             if (
                 e.target.closest(
-                    '[data-ce-pip-upper], [data-ce-pip-lower], [data-ce-pip-action], [data-ce-pip-combo-action], [data-ce-pip-combo-choice], .ce-interactive-pip-count__field, .ce-interactive-pip-count__btn, .ce-interactive-pip-combo__btn, .ce-interactive-pip-double__choice-btn'
+                    '[data-ce-pip-upper], [data-ce-pip-lower], [data-ce-pip-action], [data-ce-pip-diff], [data-ce-pip-diff-action], [data-ce-pip-combo-action], [data-ce-pip-combo-choice], .ce-interactive-pip-count__field, .ce-interactive-pip-count__btn, .ce-interactive-pip-diff__field, .ce-interactive-pip-diff__btn, .ce-interactive-pip-combo__btn, .ce-interactive-pip-double__choice-btn'
                 )
             ) {
                 return;

@@ -110,3 +110,18 @@ export function resolveReferencePipsFromPayload(payload, sharedContext) {
 
     return null;
 }
+
+/**
+ * Эталонная разница пипсов (верх − низ). Проверка ответа — по модулю.
+ * @returns {{ upperPips: number, lowerPips: number, pipDiff: number, pipDiffAbs: number } | null}
+ */
+export function resolveReferencePipDiffFromPayload(payload, sharedContext) {
+    const ref = resolveReferencePipsFromPayload(payload, sharedContext);
+    if (!ref) return null;
+    const pipDiff = ref.upperPips - ref.lowerPips;
+    return {
+        ...ref,
+        pipDiff,
+        pipDiffAbs: Math.abs(pipDiff),
+    };
+}
