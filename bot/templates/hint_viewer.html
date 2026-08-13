@@ -457,6 +457,13 @@
             padding: 5px;
         }
 
+        .match-game-label {
+            display: block;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
         .match-info-row {
             display: flex;
             justify-content: space-between;
@@ -1541,21 +1548,7 @@
                 aspect-ratio: 1 / 1;
             }
 
-            /* Матч: игроки сверху, затем «Матч до» | выбор игры | «Счет» */
-            .header:has(.match-info-row) #players-info {
-                order: 1;
-                text-align: center;
-                margin-bottom: 0.35rem;
-            }
-
-            .header:has(.match-info-row) #match-info {
-                order: 2;
-            }
-
-            .header:has(.match-info-row) #top-bar {
-                order: 3;
-            }
-
+            /* Матч: «Матч до» | выбор игры | «Счет» в одну строку */
             .match-info-row {
                 justify-content: center;
                 gap: 0.75rem;
@@ -2177,6 +2170,7 @@
         function renderMatchInfoRow() {
             if (!matchInfoDiv || !(matchLength > 0)) return;
             matchInfoDiv.innerHTML =
+                `<div class="match-game-label">Игра ${currentGameNum}</div>` +
                 '<div class="match-info-row">' +
                 `<span class="match-length">Матч до ${matchLength}</span>` +
                 buildGameSelectHtml(currentGameNum) +
