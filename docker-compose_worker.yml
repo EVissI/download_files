@@ -3,6 +3,7 @@
     build: .
     command: python -m bot.workers.hint_worker
     environment:
+      # Tailscale IP главного сервера (tailscale ip -4 на main). Не публичный IP!
       - REDIS_HOST=${REMOTE_REDIS_HOST}
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
