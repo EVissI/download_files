@@ -3,12 +3,13 @@ user-static-hello = Hello! I'm an analysis bot.I can help you analyze your backg
 
 keyboard-user-reply-autoanalyze = 🔮 Analysis
 keyboard-user-reply-profile = 🧍‍♂️ Profile
-keyboard-admin-reply-match_analysis_cabinet = 🎧 Match analysis
 keyboard-admin-reply-admin_panel = Admin Panel
 keyboard-admin-reply-fab_admin = 🖥 Web Admin
 keyboard-user-reply-short_board_view = 📊 Pleer
+keyboard-user-reply-hint_viewer = 👁️ Errors
 keyboard-user-reply-pokaz = 🎯 Position
 keyboard-user-reply-cards_cabinet = 🗂️ Cards
+keyboard-user-reply-match_analysis_cabinet = 🎧 Match analysis
 keyboard-user-reply-pip_count_cabinet = 🧮 Pip count
 user-cards-cabinet-select_action = To open your cards cabinet, tap the button below ⬇
 user-cards-cabinet-open_button = Open cards cabinet

@@ -18,6 +18,7 @@ class MainKeyboard:
             'hint_viewer': i18n.keyboard.user.reply.hint_viewer(),
             'pokaz': i18n.keyboard.user.reply.pokaz(),
             'cards_cabinet': i18n.keyboard.user.reply.cards_cabinet(),
+            'match_analysis_cabinet': i18n.keyboard.user.reply.match_analysis_cabinet(),
             'pip_count_cabinet': i18n.keyboard.user.reply.pip_count_cabinet(),
             'profile': i18n.keyboard.user.reply.profile(),
         }
@@ -25,8 +26,6 @@ class MainKeyboard:
     @staticmethod
     def get_admin_kb_text(i18n:TranslatorRunner) -> dict:
         return {
-            # Порядок: кабинет над «Админпанель», затем веб-админка.
-            'match_analysis_cabinet': i18n.keyboard.admin.reply.match_analysis_cabinet(),
             'admin_panel': i18n.keyboard.admin.reply.admin_panel(),
             'fab_admin': i18n.keyboard.admin.reply.fab_admin(),
         }
@@ -43,14 +42,12 @@ class MainKeyboard:
             for text in MainKeyboard.get_admin_kb_text(i18n).values():
                 kb.add(KeyboardButton(text=text))
 
-        # Пользовательские кнопки парами; админ-кнопки — каждая на своей строке
-        # («Анализ матча» → «Админпанель» → «Веб-админка»).
+        # Ряды: пары → «Карточки | Анализ матча | Подсчёт пипсов» → Профиль;
+        # у админа ниже — «Админпанель» и «Веб-админка» по одной на строку.
         # Важно: web_app на ReplyKeyboard не передаёт initData (ограничение Telegram),
         # поэтому кабинет/веб-админка — текстовые кнопки → дальше inline WebApp.
-        row_sizes: list[int] = [2] * (len(user_texts) // 2)
-        if len(user_texts) % 2:
-            row_sizes.append(1)
+        row_sizes: list[int] = [2, 2, 3, 1]
         if is_admin:
-            row_sizes.extend([1, 1, 1])
+            row_sizes.extend([1, 1])
         kb.adjust(*row_sizes)
         return kb.as_markup(resize_keyboard=True)

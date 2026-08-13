@@ -1,4 +1,4 @@
-"""Вход в кабинет «Анализ матча» по команде /match_analysis и кнопке админ-клавиатуры."""
+"""Вход в кабинет «Анализ матча» по команде /match_analysis и кнопке основной клавиатуры."""
 
 from aiogram import F, Router
 from aiogram.filters import Command
@@ -114,14 +114,11 @@ async def handle_grant_all_ready_match_analyses(message: Message, user_info):
 @match_analysis_entry_router.message(
     F.text.in_(
         get_all_locales_for_key(
-            translator_hub, "keyboard-admin-reply-match_analysis_cabinet"
+            translator_hub, "keyboard-user-reply-match_analysis_cabinet"
         )
     ),
     UserInfo(),
 )
 async def handle_match_analysis_cabinet_button(message: Message, user_info):
-    """Кнопка над «Админпанель» — только у админов в MainKeyboard."""
-    if not user_info or user_info.role != User.Role.ADMIN.value:
-        await message.answer("Доступно только администраторам.")
-        return
+    """Кнопка «Анализ матча» в общем ряду с «Карточки» и «Подсчёт пипсов»."""
     await _send_match_analysis_cabinet_entry(message, user_info)
