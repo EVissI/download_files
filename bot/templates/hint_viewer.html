@@ -479,7 +479,7 @@
 
         .match-info-row .match-length,
         .match-info-row .match-score {
-            flex: 1 1 0;
+            flex: 0 1 auto;
             min-width: 0;
             white-space: nowrap;
         }
@@ -489,7 +489,7 @@
         }
 
         .match-info-row .match-score {
-            text-align: right;
+            text-align: center;
         }
 
         .match-info-row .game-select {
@@ -1047,7 +1047,7 @@
             box-sizing: border-box;
         }
 
-        /* Матч: Игра n → игроки → Матч до / выбор / Счет */
+        /* Матч: Игра n → игроки → Матч до / выбор / Счет / пипсы */
         .header:has(.match-info-row) #match-info {
             display: contents;
         }
@@ -1062,6 +1062,7 @@
 
         .header:has(.match-info-row) .match-info-row {
             order: 3;
+            margin-bottom: 0;
         }
 
         .header:has(.match-info-row) #top-bar {
@@ -1078,17 +1079,18 @@
         .header:has(.match-info-row) #crawfordLabel {
             position: absolute;
             left: 0;
-            top: 2px;
+            bottom: 0;
+            transform: translateY(-100%);
         }
 
-        .header:has(.match-info-row) #top-bar .right-group {
-            position: absolute;
-            right: 0;
-            top: 2px;
+        .header:has(.match-info-row) .match-info-row .right-group {
+            margin-left: auto;
+            flex: 0 0 auto;
         }
 
-        .header:has(.match-info-row) .match-info-row {
-            margin-bottom: 0;
+        .header:has(.match-info-row) .match-info-row .pips-above-board,
+        .header:has(.match-info-row) .match-info-row .pips-above-board-inverted {
+            margin: 0;
         }
 
         .header.has-ma-cabinet-back:has(.match-info-row) .match-game-label,
@@ -2230,26 +2232,27 @@
 
         function renderMatchInfoRow() {
             if (!matchInfoDiv || !(matchLength > 0)) return;
+            const prevHide = document.getElementById('hideInfoCheckbox');
+            const hideChecked = !!(prevHide && prevHide.checked);
+            const pipsEl = document.getElementById('black-pips');
+            const pipsText = pipsEl ? pipsEl.innerText : '0';
+            const pipsClass = pipsEl && pipsEl.className
+                ? pipsEl.className
+                : 'pips-above-board';
+            const pipsDisplay = pipsEl ? pipsEl.style.display : '';
+
             matchInfoDiv.innerHTML =
                 `<div class="match-game-label">Игра ${currentGameNum}</div>` +
                 '<div class="match-info-row">' +
                 `<span class="match-length">Матч до ${matchLength}</span>` +
                 buildGameSelectHtml(currentGameNum) +
                 `<span class="match-score">Счет: ${gameRedScore} - ${gameBlackScore}</span>` +
-                '</div>';
-        }
-
-        function renderMatchTopBar(crawfordVisibility) {
-            if (!topBar) return;
-            const prevHide = document.getElementById('hideInfoCheckbox');
-            const hideChecked = !!(prevHide && prevHide.checked);
-            topBar.innerHTML =
-                '<span id="crawfordLabel" style="visibility: ' +
-                crawfordVisibility +
-                ';">Кроуфорд</span>' +
                 '<div class="right-group">' +
                 `<input type="checkbox" id="hideInfoCheckbox"${hideChecked ? ' checked' : ''}>` +
-                '<div id="black-pips" class="pips-above-board">0</div>' +
+                `<div id="black-pips" class="${pipsClass}"` +
+                (pipsDisplay ? ` style="display: ${pipsDisplay}"` : '') +
+                `>${pipsText}</div>` +
+                '</div>' +
                 '</div>';
 
             const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
@@ -2262,6 +2265,14 @@
                     localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
                 });
             }
+        }
+
+        function renderMatchTopBar(crawfordVisibility) {
+            if (!topBar) return;
+            topBar.innerHTML =
+                '<span id="crawfordLabel" style="visibility: ' +
+                crawfordVisibility +
+                ';">Кроуфорд</span>';
         }
 
         function startAnalysisBootstrap(json) {
