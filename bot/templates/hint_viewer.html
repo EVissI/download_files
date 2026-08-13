@@ -103,6 +103,8 @@
             height: auto;
             aspect-ratio: 1 / 1;
             margin: 0;
+            display: block;
+            vertical-align: top;
         }
 
         .game-info {
@@ -1064,6 +1066,29 @@
 
         .header:has(.match-info-row) #top-bar {
             order: 4;
+            margin: 0;
+            padding: 0;
+            min-height: 0;
+            height: 0;
+            overflow: visible;
+            position: relative;
+            z-index: 2;
+        }
+
+        .header:has(.match-info-row) #crawfordLabel {
+            position: absolute;
+            left: 0;
+            top: 2px;
+        }
+
+        .header:has(.match-info-row) #top-bar .right-group {
+            position: absolute;
+            right: 0;
+            top: 2px;
+        }
+
+        .header:has(.match-info-row) .match-info-row {
+            margin-bottom: 0;
         }
 
         .header.has-ma-cabinet-back:has(.match-info-row) .match-game-label,
@@ -1584,7 +1609,7 @@
             .match-info-row {
                 justify-content: center;
                 gap: 0.75rem;
-                margin: 0.25rem 0 0.35rem;
+                margin: 0.25rem 0 0;
             }
 
             .match-info-row .match-length,
