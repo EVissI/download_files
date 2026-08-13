@@ -3420,25 +3420,22 @@
 
             .pokaz-tools .cube-controls-labels,
             .pokaz-tools .turn-dice-labels {
-                display: grid;
-                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                display: flex;
+                flex-direction: row;
+                align-items: flex-end;
+                justify-content: space-around;
                 gap: 8px;
-                justify-content: stretch;
                 width: 100%;
                 padding: 0;
                 box-sizing: border-box;
             }
 
-            .pokaz-tools .cube-controls-labels {
-                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
-            }
-
             .pokaz-tools .cube-controls-labels label,
             .pokaz-tools .turn-dice-labels label {
-                flex: none;
+                flex: 1 1 0;
                 text-align: center;
                 min-width: 0;
-                width: 100%;
+                width: auto;
             }
 
             .pokaz-tools .turn-dice-content {
@@ -3945,18 +3942,33 @@
             }
 
             .cube-controls-labels {
-                display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+                display: flex;
+                flex-direction: row;
+                align-items: flex-end;
+                justify-content: space-around;
                 gap: 4px;
                 width: 100%;
             }
 
+            .cube-controls-labels label {
+                flex: 1 1 0;
+                min-width: 0;
+                text-align: center;
+            }
+
             .cube-controls-block {
-                display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+                display: flex;
+                flex-direction: row;
                 align-items: center;
-                justify-items: center;
+                justify-content: space-around;
                 width: 100%;
+                height: auto;
+                min-height: 48px;
+            }
+
+            .cube-controls-block .cube-control-section {
+                flex: 1 1 0;
+                min-width: 0;
             }
         }
 
@@ -4026,11 +4038,12 @@
             }
 
             .cube-controls-labels {
-                display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+                display: flex;
+                flex-direction: row;
+                align-items: flex-end;
+                justify-content: space-around;
                 gap: 2px;
                 width: 100%;
-                justify-content: stretch;
             }
 
             .cube-controls-labels label,
@@ -4040,31 +4053,38 @@
                 white-space: normal;
                 hyphens: auto;
                 text-align: center;
-                flex: none;
-                width: 100%;
+                flex: 1 1 0;
+                width: auto;
                 min-width: 0;
             }
 
             .cube-controls-block,
             .turn-dice-block {
                 min-height: 44px;
-                height: 44px;
+                height: auto;
                 padding: 4px 6px;
                 gap: 4px;
                 box-sizing: border-box;
             }
 
             .cube-controls-block {
-                display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+                display: flex;
+                flex-direction: row;
                 align-items: center;
-                justify-items: center;
+                justify-content: space-around;
                 width: 100%;
             }
 
             .cube-control-section {
-                width: 100%;
+                flex: 1 1 0;
+                width: auto;
+                min-width: 0;
                 justify-content: center;
+            }
+
+            .crawford-checkbox-wrapper input[type="checkbox"] {
+                width: 18px;
+                height: 18px;
             }
 
             .turn-dice-labels,
@@ -4105,7 +4125,7 @@
             .cube-controls-block,
             .turn-dice-block {
                 min-height: 40px;
-                height: 40px;
+                height: auto;
                 padding: 3px 4px;
             }
 
