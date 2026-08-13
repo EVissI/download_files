@@ -3171,50 +3171,58 @@
                 padding: 14px 14px 12px;
                 gap: 10px;
             }
+        }
 
-            /* ~1000px: при Кроуфорде Куб / Чей куб? уходят на второй ряд */
-            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels,
-            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-block {
+        /* 1000–1300: контролы в один ряд; лейблы «Куб» и «Чей куб?» — под своими элементами */
+        @media (min-width: 1000px) and (max-width: 1300px) {
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford {
                 display: grid;
-                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                grid-template-columns: repeat(4, minmax(0, 1fr));
                 grid-template-areas:
-                    "shown crawford"
-                    "value owner";
-                gap: 8px 12px;
+                    "l-shown . . l-crawford"
+                    "block block block block"
+                    ". l-value l-owner .";
+                column-gap: 8px;
+                row-gap: 4px;
                 align-items: center;
                 justify-items: center;
-                height: auto;
-                min-height: 0;
             }
 
-            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-shown-select"],
-            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-shown-selector {
-                grid-area: shown;
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels {
+                display: contents;
             }
 
-            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-value-select"],
-            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-value-options {
-                grid-area: value;
-            }
-
-            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-owner-select-btn"],
-            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-owner-selector {
-                grid-area: owner;
-            }
-
-            .pokaz-tools .cube-controls-block-wrapper.has-crawford #crawford-label,
-            .pokaz-tools .cube-controls-block-wrapper.has-crawford .crawford-checkbox-wrapper {
-                grid-area: crawford;
-            }
-
-            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-control-section {
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-block {
+                grid-area: block;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-around;
                 width: 100%;
-                flex: none;
+                height: 56px;
+                min-height: 56px;
+            }
+
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-shown-select"] {
+                grid-area: l-shown;
+            }
+
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-value-select"] {
+                grid-area: l-value;
+            }
+
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-owner-select-btn"] {
+                grid-area: l-owner;
+            }
+
+            .pokaz-tools .cube-controls-block-wrapper.has-crawford #crawford-label {
+                grid-area: l-crawford;
             }
 
             .pokaz-tools .cube-controls-block-wrapper.has-crawford .cube-controls-labels label {
-                width: 100%;
                 flex: none;
+                width: 100%;
+                text-align: center;
             }
 
             .pokaz-tools .controls-row:has(.has-crawford) {
@@ -3675,51 +3683,6 @@
             .jb-row {
                 justify-content: space-evenly !important;
                 gap: 4px !important;
-            }
-
-            /* При Кроуфорде: Куб и Чей куб? — вторым рядом (на ~1000px в правой панели) */
-            .cube-controls-block-wrapper.has-crawford .cube-controls-labels,
-            .cube-controls-block-wrapper.has-crawford .cube-controls-block {
-                display: grid !important;
-                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
-                grid-template-areas:
-                    "shown crawford"
-                    "value owner" !important;
-                gap: 8px 12px !important;
-                align-items: center !important;
-                justify-items: center !important;
-                height: auto !important;
-                min-height: 0 !important;
-            }
-
-            .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-shown-select"],
-            .cube-controls-block-wrapper.has-crawford .cube-shown-selector {
-                grid-area: shown !important;
-            }
-
-            .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-value-select"],
-            .cube-controls-block-wrapper.has-crawford .cube-value-options {
-                grid-area: value !important;
-            }
-
-            .cube-controls-block-wrapper.has-crawford .cube-controls-labels label[for="cube-owner-select-btn"],
-            .cube-controls-block-wrapper.has-crawford .cube-owner-selector {
-                grid-area: owner !important;
-            }
-
-            .cube-controls-block-wrapper.has-crawford #crawford-label,
-            .cube-controls-block-wrapper.has-crawford .crawford-checkbox-wrapper {
-                grid-area: crawford !important;
-            }
-
-            .cube-controls-block-wrapper.has-crawford .cube-control-section {
-                width: 100% !important;
-                flex: none !important;
-            }
-
-            .cube-controls-block-wrapper.has-crawford .cube-controls-labels label {
-                width: 100% !important;
-                flex: none !important;
             }
         }
 
