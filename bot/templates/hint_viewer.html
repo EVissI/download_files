@@ -2456,12 +2456,30 @@
                         gameBlackScore = gameScores.Black || 0;
                         if (matchLength === 0) {
                             playersInfoDiv.innerHTML = "Белые: " + redPlayer + " <br>Черные: " + blackPlayer + "<br>";
+                            if (!document.getElementById('black-pips') && topBar) {
+                                const prevHide = document.getElementById('hideInfoCheckbox');
+                                const hideChecked = !!(prevHide && prevHide.checked);
+                                topBar.innerHTML =
+                                    '<span id="crawfordLabel" style="visibility: hidden;"></span>' +
+                                    `<input type="checkbox" id="hideInfoCheckbox"${hideChecked ? ' checked' : ''}>` +
+                                    '<div id="black-pips" class="pips-above-board">0</div>';
+                                const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+                                if (hideInfoCheckbox) {
+                                    const savedState = localStorage.getItem('hideInfoCheckbox');
+                                    if (!hideChecked && savedState === 'true') {
+                                        hideInfoCheckbox.checked = true;
+                                    }
+                                    hideInfoCheckbox.addEventListener('change', () => {
+                                        localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                                    });
+                                }
+                            }
                         } else {
                             playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
                             renderMatchInfoRow();
+                            let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
+                            renderMatchTopBar(crawfordVisibility);
                         }
-                        let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
-                        renderMatchTopBar(crawfordVisibility);
 
                         hidePipsCheckbox = document.getElementById('hidePipsCheckbox');
                         if (hidePipsCheckbox) {
@@ -3316,13 +3334,19 @@
             const blackPips = calculatePips(blackPositions, 'black', invertColors);
 
             if (!hidePips) {
+                const blackPipsEl = document.getElementById('black-pips');
+                const redPipsEl = document.getElementById('red-pips');
                 if (invertColors) {
-                    document.getElementById('black-pips').innerText = `${redPips}`;
-                    document.getElementById('red-pips').innerText = `${blackPips}`;
-                    document.getElementById('black-pips').className = 'pips-above-board-inverted';
-                    document.getElementById('red-pips').className = 'pips-below-board-inverted';
-                    document.getElementById('black-pips').style.display = 'block';
-                    document.getElementById('red-pips').style.display = 'block';
+                    if (blackPipsEl) {
+                        blackPipsEl.innerText = `${redPips}`;
+                        blackPipsEl.className = 'pips-above-board-inverted';
+                        blackPipsEl.style.display = 'block';
+                    }
+                    if (redPipsEl) {
+                        redPipsEl.innerText = `${blackPips}`;
+                        redPipsEl.className = 'pips-below-board-inverted';
+                        redPipsEl.style.display = 'block';
+                    }
                     ctx.fillStyle = '#000000';
                     ctx.fillRect(650, 800, 150, 50);
                     ctx.fillStyle = '#ffffff';
@@ -3335,12 +3359,16 @@
                     ctx.fillStyle = '#000000';
                     ctx.fillText(`${blackPips}`, 725, 830);
                 } else {
-                    document.getElementById('black-pips').innerText = `${blackPips}`;
-                    document.getElementById('red-pips').innerText = `${redPips}`;
-                    document.getElementById('black-pips').className = 'pips-above-board';
-                    document.getElementById('red-pips').className = 'pips-below-board';
-                    document.getElementById('black-pips').style.display = 'block';
-                    document.getElementById('red-pips').style.display = 'block';
+                    if (blackPipsEl) {
+                        blackPipsEl.innerText = `${blackPips}`;
+                        blackPipsEl.className = 'pips-above-board';
+                        blackPipsEl.style.display = 'block';
+                    }
+                    if (redPipsEl) {
+                        redPipsEl.innerText = `${redPips}`;
+                        redPipsEl.className = 'pips-below-board';
+                        redPipsEl.style.display = 'block';
+                    }
                     ctx.fillStyle = '#000000';
                     ctx.fillRect(650, -50, 150, 50);
                     ctx.fillStyle = '#ffffff';
@@ -3354,8 +3382,10 @@
                     ctx.fillText(`${redPips}`, 725, 830);
                 }
             } else {
-                document.getElementById('black-pips').style.display = 'none';
-                document.getElementById('red-pips').style.display = 'none';
+                const blackPipsEl = document.getElementById('black-pips');
+                const redPipsEl = document.getElementById('red-pips');
+                if (blackPipsEl) blackPipsEl.style.display = 'none';
+                if (redPipsEl) redPipsEl.style.display = 'none';
             }
 
 
