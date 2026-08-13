@@ -3125,6 +3125,13 @@
                 display: none;
             }
 
+            .container.pokaz-board-open .pokaz-main-stage > .board-open-controls.active {
+                width: 100%;
+                margin-top: 0.35rem;
+                padding: 0.5rem 0 0;
+                box-sizing: border-box;
+            }
+
             .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel {
                 display: flex;
                 flex-direction: column;
@@ -3178,6 +3185,10 @@
             }
 
             .container.pokaz-board-open .board-open-controls.active {
+                padding-top: 0.5rem;
+            }
+
+            .container.pokaz-board-open .pokaz-main-stage > .board-open-controls.active {
                 padding-top: 0.5rem;
             }
 
@@ -8609,17 +8620,46 @@
         }
 
         // При открытой доске: скрыть selectors-wrapper и controls-row, показать board-open-controls
-        // При свёрнутой таблице — восстанавливаем старые элементы
-        function relocatePokazAuxPanel(underBoard) {
+        // На широких экранах управление и aux-панель переносим под доску
+        function relocatePokazOpenPanels(underBoard) {
             const auxPanel = document.querySelector('.pokaz-aux-panel');
+            const boardOpenControls = document.getElementById('boardOpenControls');
             const mainStage = document.querySelector('.pokaz-main-stage');
+            const side = document.querySelector('.pokaz-side');
             const tools = document.querySelector('.pokaz-tools');
-            if (!auxPanel || !mainStage || !tools) return;
-            const target = underBoard ? mainStage : tools;
-            if (auxPanel.parentElement !== target) {
-                target.appendChild(auxPanel);
+            const turnLabel = document.getElementById('turn-label');
+            const boardWrapper = mainStage ? mainStage.querySelector('.board-wrapper') : null;
+            if (!mainStage || !side || !tools) return;
+
+            if (underBoard) {
+                if (boardOpenControls) {
+                    if (boardWrapper && boardWrapper.nextSibling !== boardOpenControls) {
+                        mainStage.insertBefore(boardOpenControls, boardWrapper.nextSibling);
+                    } else if (boardOpenControls.parentElement !== mainStage) {
+                        mainStage.appendChild(boardOpenControls);
+                    }
+                }
+                if (auxPanel && auxPanel.parentElement !== mainStage) {
+                    mainStage.appendChild(auxPanel);
+                } else if (auxPanel && boardOpenControls && auxPanel.previousElementSibling !== boardOpenControls) {
+                    mainStage.appendChild(auxPanel);
+                }
+                tools.classList.add('is-aux-relocated');
+            } else {
+                if (boardOpenControls && boardOpenControls.parentElement !== side) {
+                    if (turnLabel && turnLabel.parentElement === side) {
+                        side.insertBefore(boardOpenControls, turnLabel);
+                    } else if (tools.parentElement === side) {
+                        side.insertBefore(boardOpenControls, tools);
+                    } else {
+                        side.appendChild(boardOpenControls);
+                    }
+                }
+                if (auxPanel && auxPanel.parentElement !== tools) {
+                    tools.appendChild(auxPanel);
+                }
+                tools.classList.remove('is-aux-relocated');
             }
-            tools.classList.toggle('is-aux-relocated', !!underBoard);
         }
 
         function updateBoardOpenState() {
@@ -8647,7 +8687,7 @@
                 if (controlsRow) controlsRow.style.display = '';
                 boardOpenControls.classList.remove('active');
             }
-            relocatePokazAuxPanel(isBoardOpen && isWide);
+            relocatePokazOpenPanels(isBoardOpen && isWide);
         }
 
         window.addEventListener('resize', () => {
