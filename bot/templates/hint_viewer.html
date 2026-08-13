@@ -457,6 +457,34 @@
             padding: 5px;
         }
 
+        .match-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.6rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .match-info-row .match-length,
+        .match-info-row .match-score {
+            flex: 1 1 0;
+            min-width: 0;
+            white-space: nowrap;
+        }
+
+        .match-info-row .match-length {
+            text-align: left;
+        }
+
+        .match-info-row .match-score {
+            text-align: right;
+        }
+
+        .match-info-row .game-select {
+            flex: 0 0 auto;
+        }
+
         .settings-modal select {
             font-family: Arial, sans-serif;
             font-size: 16px;
@@ -1512,6 +1540,39 @@
                 height: auto;
                 aspect-ratio: 1 / 1;
             }
+
+            /* Матч: игроки сверху, затем «Матч до» | выбор игры | «Счет» */
+            .header:has(.match-info-row) #players-info {
+                order: 1;
+                text-align: center;
+                margin-bottom: 0.35rem;
+            }
+
+            .header:has(.match-info-row) #match-info {
+                order: 2;
+            }
+
+            .header:has(.match-info-row) #top-bar {
+                order: 3;
+            }
+
+            .match-info-row {
+                justify-content: center;
+                gap: 0.75rem;
+                margin: 0.15rem 0 0.35rem;
+            }
+
+            .match-info-row .match-length,
+            .match-info-row .match-score {
+                flex: 0 1 auto;
+                text-align: center;
+                font-size: 0.95rem;
+            }
+
+            .match-info-row .game-select {
+                font-size: 0.95rem;
+                padding: 4px 8px;
+            }
         }
     </style>
     <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
@@ -2101,45 +2162,70 @@
             return visible;
         }
 
+        function buildGameSelectHtml(selectedValue) {
+            let selectHtml = '<select id="gameSelect" class="game-select" onchange="loadGame(this.value)">';
+            selectHtml += '<option value="">Выберите игру</option>';
+            (availableGames || []).forEach((game) => {
+                const num = game.game_number;
+                const selected = String(num) === String(selectedValue) ? ' selected' : '';
+                selectHtml += `<option value="${num}"${selected}>Игра ${num}</option>`;
+            });
+            selectHtml += '</select>';
+            return selectHtml;
+        }
+
+        function renderMatchInfoRow() {
+            if (!matchInfoDiv || !(matchLength > 0)) return;
+            matchInfoDiv.innerHTML =
+                '<div class="match-info-row">' +
+                `<span class="match-length">Матч до ${matchLength}</span>` +
+                buildGameSelectHtml(currentGameNum) +
+                `<span class="match-score">Счет: ${gameRedScore} - ${gameBlackScore}</span>` +
+                '</div>';
+        }
+
+        function renderMatchTopBar(crawfordVisibility) {
+            if (!topBar) return;
+            const prevHide = document.getElementById('hideInfoCheckbox');
+            const hideChecked = !!(prevHide && prevHide.checked);
+            topBar.innerHTML =
+                '<span id="crawfordLabel" style="visibility: ' +
+                crawfordVisibility +
+                ';">Кроуфорд</span>' +
+                '<div class="right-group">' +
+                `<input type="checkbox" id="hideInfoCheckbox"${hideChecked ? ' checked' : ''}>` +
+                '<div id="black-pips" class="pips-above-board">0</div>' +
+                '</div>';
+
+            const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
+            if (hideInfoCheckbox) {
+                const savedState = localStorage.getItem('hideInfoCheckbox');
+                if (!hideChecked && savedState === 'true') {
+                    hideInfoCheckbox.checked = true;
+                }
+                hideInfoCheckbox.addEventListener('change', () => {
+                    localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
+                });
+            }
+        }
+
         function startAnalysisBootstrap(json) {
             const scores = bootstrapAnalysisSummary(json);
             const redScore = scores.Red || 0;
             const blackScore = scores.Black || 0;
 
             if (availableGames.length > 0 && matchLength > 0) {
-                let selectHtml = '<select id="gameSelect" class="game-select" onchange="loadGame(this.value)">';
-                selectHtml += '<option value="">Выберите игру</option>';
-                availableGames.forEach((game) => {
-                    selectHtml += `<option value="${game.game_number}">Игра ${game.game_number}</option>`;
-                });
-                selectHtml += '</select>';
                 currentGameNum = parseInt(availableGames[0].game_number);
                 gameRedScore = scores.Red || 0;
                 gameBlackScore = scores.Black || 0;
-                matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
-                playersInfoDiv.innerHTML = `Белые: ${redPlayer} <br>Черные: ${blackPlayer}<br>`;
+                playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
                 let crawfordVisibility =
                     enable_crawford_game_number &&
                     currentGameNum === enable_crawford_game_number
                         ? 'visible'
                         : 'hidden';
-                topBar.innerHTML =
-                    '<span id="crawfordLabel" style="visibility: ' +
-                    crawfordVisibility +
-                    ';">Кроуфорд</span>' +
-                    selectHtml +
-                    '<div class="right-group"><input type="checkbox" id="hideInfoCheckbox"><div id="black-pips" class="pips-above-board">0</div></div>';
-
-                const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
-                if (hideInfoCheckbox) {
-                    const savedState = localStorage.getItem('hideInfoCheckbox');
-                    if (savedState === 'true') {
-                        hideInfoCheckbox.checked = true;
-                    }
-                    hideInfoCheckbox.addEventListener('change', () => {
-                        localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
-                    });
-                }
+                renderMatchInfoRow();
+                renderMatchTopBar(crawfordVisibility);
 
                 if (availableGames.length > 0) {
                     let startGameNum = availableGames[0].game_number;
@@ -2294,22 +2380,11 @@
                         if (matchLength === 0) {
                             playersInfoDiv.innerHTML = "Белые: " + redPlayer + " <br>Черные: " + blackPlayer + "<br>";
                         } else {
-                            matchInfoDiv.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><span>Матч до ${matchLength}</span><span>Игра ${currentGameNum}</span><span>Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
-                            playersInfoDiv.innerHTML = `Белые: ${redPlayer} <br>Черные: ${blackPlayer}<br>`;
+                            playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
+                            renderMatchInfoRow();
                         }
                         let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
-                        topBar.innerHTML = '<span id="crawfordLabel" style="visibility: ' + crawfordVisibility + ';">Кроуфорд</span>' + (document.getElementById('gameSelect') ? document.getElementById('gameSelect').outerHTML : '') + '<div class="right-group">' + (document.getElementById('hideInfoCheckbox') ? document.getElementById('hideInfoCheckbox').outerHTML : '') + '<div id="black-pips" class="pips-above-board">0</div></div>';
-
-                        const hideInfoCheckbox = document.getElementById('hideInfoCheckbox');
-                        if (hideInfoCheckbox) {
-                            const savedState = localStorage.getItem('hideInfoCheckbox');
-                            if (savedState === 'true') {
-                                hideInfoCheckbox.checked = true;
-                            }
-                            hideInfoCheckbox.addEventListener('change', () => {
-                                localStorage.setItem('hideInfoCheckbox', hideInfoCheckbox.checked);
-                            });
-                        }
+                        renderMatchTopBar(crawfordVisibility);
 
                         hidePipsCheckbox = document.getElementById('hidePipsCheckbox');
                         if (hidePipsCheckbox) {
