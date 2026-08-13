@@ -2521,6 +2521,11 @@
             }
         }
 
+        .pokaz-tools {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
         /* ---------- Адаптивная верстка ---------- */
         @media (min-width: 601px) {
             body {
@@ -2541,7 +2546,8 @@
             .turn-label,
             .hints-table,
             .screenshot-controls,
-            .admin-comment-container {
+            .admin-comment-container,
+            .pokaz-tools {
                 max-width: 960px;
                 margin-left: auto;
                 margin-right: auto;
@@ -2561,36 +2567,307 @@
                 max-width: 1140px;
             }
 
-            .selectors-wrapper,
-            .controls-row {
-                display: flex;
-                justify-content: space-between;
-                gap: 1.5rem;
-            }
-
-            .selectors-container {
-                flex: 1.5;
-            }
-
-            .jb-wrap,
-            .match-panel,
-            .game-type-right {
-                flex: 1;
-            }
-
             .turn-label,
             .hints-table,
             .screenshot-controls,
-            .admin-comment-container {
+            .admin-comment-container,
+            .pokaz-tools {
                 max-width: 1140px;
             }
         }
 
-        /* Десктоп: при открытой таблице — доска слева, таблица справа, остальное снизу */
+        /* Десктоп: единая сетка инструментов */
         @media (min-width: 1025px) {
             .container {
                 max-width: 1400px;
                 padding: 1rem 1.5rem 1.5rem;
+            }
+
+            .pokaz-tools {
+                width: min(960px, 100%);
+                max-width: min(960px, 100%);
+                margin: 1.25rem auto 0;
+                padding: 18px 20px 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+                background: #232323;
+                border: 1px solid #3a3a3a;
+                border-radius: 14px;
+                box-sizing: border-box;
+            }
+
+            .pokaz-tools .selectors-wrapper,
+            .pokaz-tools .controls-row,
+            .pokaz-tools .screenshot-controls,
+            .pokaz-tools .admin-comment-container,
+            .pokaz-tools #pokazScreenshotAdminContainer {
+                width: 100%;
+                max-width: none;
+                margin: 0;
+            }
+
+            .pokaz-tools .selectors-wrapper {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(220px, 2.1fr) 64px;
+                align-items: end;
+                justify-items: stretch;
+                gap: 14px 16px;
+                padding-top: 0;
+                font-size: 16px;
+                overflow: visible;
+            }
+
+            .pokaz-tools .selectors-container {
+                display: contents;
+            }
+
+            .pokaz-tools .checker-selector,
+            .pokaz-tools .bar-selector {
+                font-size: 40px;
+                width: 100%;
+                gap: 8px;
+            }
+
+            .pokaz-tools .checker-selector {
+                grid-column: 1;
+            }
+
+            .pokaz-tools .bar-selector {
+                grid-column: 2;
+            }
+
+            .pokaz-tools .jb-wrap,
+            .pokaz-tools .match-panel {
+                grid-column: 3;
+                font-size: 16px;
+                width: 100%;
+                gap: 8px;
+            }
+
+            .pokaz-tools .checker-label,
+            .pokaz-tools .bar-label,
+            .pokaz-tools .jb-title,
+            .pokaz-tools .match-header,
+            .pokaz-tools .cube-controls-labels label,
+            .pokaz-tools .turn-dice-labels label,
+            .pokaz-tools .game-type-right label {
+                font-size: 12px !important;
+                line-height: 1.2;
+                font-weight: 600;
+                color: #cfcfcf;
+                letter-spacing: 0.01em;
+                white-space: nowrap;
+            }
+
+            .pokaz-tools .jb-title {
+                font-size: 12px;
+            }
+
+            .pokaz-tools .match-panel-headers {
+                padding-left: 0;
+                gap: 8px;
+                justify-content: space-around;
+            }
+
+            .pokaz-tools .game-type-right {
+                grid-column: 4;
+                width: 64px;
+                gap: 8px;
+                justify-self: end;
+                align-self: end;
+            }
+
+            .pokaz-tools #game-type-button {
+                width: 56px;
+                height: 56px;
+                margin-top: 0;
+                border-radius: 10px;
+            }
+
+            .pokaz-tools #game-type-button i {
+                font-size: 22px;
+            }
+
+            /* Единый вид «карточек» контролов */
+            .pokaz-tools .checker-options,
+            .pokaz-tools .bar-options,
+            .pokaz-tools .jacobi-beaver-block,
+            .pokaz-tools .score-inputs,
+            .pokaz-tools .cube-controls-block,
+            .pokaz-tools .turn-dice-block {
+                min-height: 64px;
+                height: 64px;
+                box-sizing: border-box;
+                margin: 0;
+                padding: 8px 12px;
+                border: 2px solid #555;
+                border-style: double;
+                border-radius: 10px;
+                background-color: #3b3b3b;
+                box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.08);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+            }
+
+            .pokaz-tools .jacobi-beaver-block {
+                flex-direction: row;
+                width: 100%;
+            }
+
+            .pokaz-tools .jb-row {
+                width: 100%;
+                justify-content: center;
+                gap: 10px;
+            }
+
+            .pokaz-tools .score-inputs {
+                width: 100%;
+                gap: 12px;
+                padding: 8px 10px;
+            }
+
+            .pokaz-tools .toggle-btn {
+                min-width: 44px;
+                min-height: 36px;
+                padding: 6px 12px;
+                font-size: 14px;
+                border-radius: 6px;
+            }
+
+            .pokaz-tools .match-selector-button,
+            .pokaz-tools .bar-selector-button {
+                min-width: 36px;
+                min-height: 36px;
+            }
+
+            .pokaz-tools .controls-row {
+                display: grid;
+                grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) auto;
+                align-items: end;
+                gap: 14px 16px;
+                flex-wrap: nowrap;
+            }
+
+            .pokaz-tools .cube-controls-block-wrapper,
+            .pokaz-tools .turn-dice-wrapper {
+                width: 100%;
+                gap: 8px;
+            }
+
+            .pokaz-tools .cube-controls-labels,
+            .pokaz-tools .turn-dice-labels {
+                gap: 12px;
+                justify-content: space-around;
+                width: 100%;
+            }
+
+            .pokaz-tools .cube-controls-block,
+            .pokaz-tools .turn-dice-block {
+                width: 100%;
+            }
+
+            .pokaz-tools .turn-dice-content {
+                width: 100%;
+                justify-content: space-around;
+                gap: 12px;
+            }
+
+            .pokaz-tools .checker-toggle-btn {
+                width: 40px;
+                height: 40px;
+            }
+
+            .pokaz-tools .cube-selector-button,
+            .pokaz-tools .dice-selector-button {
+                width: 40px;
+                height: 40px;
+                border-radius: 8px;
+            }
+
+            .pokaz-tools .action-buttons {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 10px;
+                height: 64px;
+            }
+
+            .pokaz-tools .action-buttons-col {
+                flex-direction: row;
+                gap: 10px;
+            }
+
+            .pokaz-tools .action-buttons button {
+                width: 48px;
+                height: 48px;
+                min-width: 48px;
+                min-height: 48px;
+                padding: 0;
+                border-radius: 10px;
+                margin: 0;
+            }
+
+            .pokaz-tools .action-buttons-col.right button {
+                width: 56px;
+                height: 56px;
+                min-width: 56px;
+                min-height: 56px;
+            }
+
+            .pokaz-tools .action-buttons-col.left button i {
+                font-size: 18px;
+            }
+
+            .pokaz-tools .action-buttons-col.right button i {
+                font-size: 22px;
+            }
+
+            .pokaz-tools .screenshot-controls {
+                justify-content: center;
+                gap: 12px;
+                padding: 12px 0 0;
+                margin: 0;
+                border-top: 1px solid #353535;
+            }
+
+            .pokaz-tools #screenshotBtn,
+            .pokaz-tools #screenSaveBtn,
+            .pokaz-tools #screenUploadBtn {
+                width: 44px;
+                height: 44px;
+            }
+
+            .pokaz-tools .admin-comment-container {
+                margin: 0;
+                padding: 12px 0 0;
+                border-top: 1px solid #353535;
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .pokaz-tools #adminCommentBtn,
+            .pokaz-tools #openPokazPipCountCardEditorBtn,
+            .pokaz-tools #openPokazCardEditorBtn {
+                height: 40px;
+                padding: 0 14px !important;
+                margin: 0 !important;
+                font-size: 13px !important;
+                border-radius: 8px;
+                box-sizing: border-box;
+            }
+
+            .pokaz-tools #pokazScreenshotAdminContainer {
+                margin: 0 !important;
+                padding-top: 4px;
+            }
+
+            .pokaz-tools .admin-screenshot-font-scale {
+                margin: 0;
             }
 
             .container.pokaz-board-open .pokaz-main-stage {
@@ -2624,13 +2901,11 @@
 
             .container.pokaz-board-open .board-open-controls,
             .container.pokaz-board-open .turn-label,
-            .container.pokaz-board-open .screenshot-controls,
-            .container.pokaz-board-open .admin-comment-container,
-            .container.pokaz-board-open #pokazScreenshotAdminContainer {
-                width: 100%;
-                max-width: 100%;
-                margin-left: 0;
-                margin-right: 0;
+            .container.pokaz-board-open .pokaz-tools {
+                width: min(960px, 100%);
+                max-width: min(960px, 100%);
+                margin-left: auto;
+                margin-right: auto;
                 box-sizing: border-box;
             }
 
@@ -2862,6 +3137,7 @@
 
         <div id="turn-label" class="turn-label"></div>
 
+        <div class="pokaz-tools">
         <div class="selectors-wrapper">
             <div class="selectors-container">
                 <div class="checker-selector">
@@ -3303,125 +3579,126 @@
                 <button id="show-button"><i class="fa fa-eye"></i></button>
             </div>
         </div>
-    </div>
+        </div>
 
-    <div class="screenshot-controls" id="screenshotControls">
-        <button onclick="takeScreenshot()" id="screenshotBtn" data-i18n-title="take_screenshot"
-            title="Сделать скриншот"></button>
-        <button onclick="saveScreenshot()" id="screenSaveBtn" data-i18n-title="save_screenshot"
-            title="Сохранить скриншот в буфер"></button>
-        <button onclick="uploadScreenshots()" id="screenUploadBtn" data-i18n-title="upload_screenshots"
-            title="Отправить скриншоты"></button>
-    </div>
+        <div class="screenshot-controls" id="screenshotControls">
+            <button onclick="takeScreenshot()" id="screenshotBtn" data-i18n-title="take_screenshot"
+                title="Сделать скриншот"></button>
+            <button onclick="saveScreenshot()" id="screenSaveBtn" data-i18n-title="save_screenshot"
+                title="Сохранить скриншот в буфер"></button>
+            <button onclick="uploadScreenshots()" id="screenUploadBtn" data-i18n-title="upload_screenshots"
+                title="Отправить скриншоты"></button>
+        </div>
 
-    <!-- Modal window for clear confirmation -->
-    <div id="clear-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 data-i18n="confirm">Подтверждение</h3>
-            </div>
-            <div class="modal-body">
-                <p data-i18n="clear_confirm_msg">Вы уверены, что хотите очистить доску?</p>
-            </div>
-            <div class="modal-footer">
-                <button id="modal-cancel" class="modal-btn modal-btn-cancel" data-i18n="cancel">Отмена</button>
-                <button id="modal-confirm" class="modal-btn modal-btn-confirm" data-i18n="clear">Очистить</button>
+        <!-- Modal window for clear confirmation -->
+        <div id="clear-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 data-i18n="confirm">Подтверждение</h3>
+                </div>
+                <div class="modal-body">
+                    <p data-i18n="clear_confirm_msg">Вы уверены, что хотите очистить доску?</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="modal-cancel" class="modal-btn modal-btn-cancel" data-i18n="cancel">Отмена</button>
+                    <button id="modal-confirm" class="modal-btn modal-btn-confirm" data-i18n="clear">Очистить</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Modal window for init confirmation -->
-    <div id="init-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 data-i18n="confirm">Подтверждение</h3>
-            </div>
-            <div class="modal-body">
-                <p data-i18n="init_confirm_msg">Вы уверены, что хотите расставить начальную позицию?</p>
-            </div>
-            <div class="modal-footer">
-                <button id="init-modal-cancel" class="modal-btn modal-btn-cancel" data-i18n="cancel">Отмена</button>
-                <button id="init-modal-confirm" class="modal-btn modal-btn-confirm" data-i18n="init">Расставить</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="admin-comment-container">
-        <button id="openPokazPipCountCardEditorBtn" onclick="openPipCountCardEditor()" style="
-            display: none;
-            margin-right: 10px;
-            padding: 8px 12px;
-            background-color: #1f6f8f;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            transition: background-color 0.3s;
-        " onmouseover="this.style.backgroundColor='#185a73'" onmouseout="this.style.backgroundColor='#1f6f8f'">
-            Карточка: подсчёт пипсов
-        </button>
-        <button id="openPokazCardEditorBtn" onclick="openPokazCardEditor()" style="
-            display: none;
-            margin-right: 10px;
-            padding: 8px 12px;
-            background-color: #2d7a4e;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            transition: background-color 0.3s;
-        " onmouseover="this.style.backgroundColor='#25643f'" onmouseout="this.style.backgroundColor='#2d7a4e'">
-            Редактор карточек
-        </button>
-        <button id="adminCommentBtn" onclick="openAdminCommentModal()">
-            <i class="fa fa-commenting-o"></i>
-            <span data-i18n="comment_btn">Комментарий</span>
-        </button>
-        <input type="checkbox" id="invertNumberingCheckbox">
-        <a href="#" id="lang-switcher" class="lang-switcher"
-            style="margin-left: auto; color: #888; font-size: 14px; text-decoration: none;">{% if lang == 'en' %}EN{%
-            else %}RU{% endif %}</a>
-    </div>
-
-    <div id="adminCommentModal" class="admin-modal">
-        <div class="admin-modal-content">
-            <p data-i18n="comment_modal_title">Задайте вопрос по расставленной позиции</p>
-            <textarea id="adminCommentText" data-i18n-placeholder="admin_comment_placeholder"
-                placeholder="Введите текст сообщения..."></textarea>
-            <div class="admin-modal-footer">
-                <button class="admin-cancel-btn" onclick="closeAdminCommentModal()" data-i18n="cancel">Отмена</button>
-                <button id="sendAdminCommentBtn" class="admin-send-btn" onclick="sendToAdmin()"
-                    data-i18n="comment_send">Отправить</button>
+        <!-- Modal window for init confirmation -->
+        <div id="init-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 data-i18n="confirm">Подтверждение</h3>
+                </div>
+                <div class="modal-body">
+                    <p data-i18n="init_confirm_msg">Вы уверены, что хотите расставить начальную позицию?</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="init-modal-cancel" class="modal-btn modal-btn-cancel" data-i18n="cancel">Отмена</button>
+                    <button id="init-modal-confirm" class="modal-btn modal-btn-confirm" data-i18n="init">Расставить</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div id="pokazScreenshotAdminContainer" style="margin: 0 0 20px; text-align: center; display: none;">
-        <div class="admin-screenshot-font-scale">
-            <label for="pokazScreenshotFontScaleSelect">Размер шрифта на скриншоте:</label>
-            <select id="pokazScreenshotFontScaleSelect" onchange="savePokazScreenshotFontScale()">
-                <option value="80">80%</option>
-                <option value="90">90%</option>
-                <option value="100">100%</option>
-                <option value="110">110%</option>
-                <option value="120">120%</option>
-                <option value="130">130%</option>
-                <option value="140">140%</option>
-                <option value="150">150%</option>
-                <option value="160">160%</option>
-                <option value="170">170%</option>
-                <option value="180">180%</option>
-                <option value="190">190%</option>
-                <option value="200">200%</option>
-            </select>
+        <div class="admin-comment-container">
+            <button id="openPokazPipCountCardEditorBtn" onclick="openPipCountCardEditor()" style="
+                display: none;
+                margin-right: 10px;
+                padding: 8px 12px;
+                background-color: #1f6f8f;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                transition: background-color 0.3s;
+            " onmouseover="this.style.backgroundColor='#185a73'" onmouseout="this.style.backgroundColor='#1f6f8f'">
+                Карточка: подсчёт пипсов
+            </button>
+            <button id="openPokazCardEditorBtn" onclick="openPokazCardEditor()" style="
+                display: none;
+                margin-right: 10px;
+                padding: 8px 12px;
+                background-color: #2d7a4e;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                transition: background-color 0.3s;
+            " onmouseover="this.style.backgroundColor='#25643f'" onmouseout="this.style.backgroundColor='#2d7a4e'">
+                Редактор карточек
+            </button>
+            <button id="adminCommentBtn" onclick="openAdminCommentModal()">
+                <i class="fa fa-commenting-o"></i>
+                <span data-i18n="comment_btn">Комментарий</span>
+            </button>
+            <input type="checkbox" id="invertNumberingCheckbox">
+            <a href="#" id="lang-switcher" class="lang-switcher"
+                style="margin-left: auto; color: #888; font-size: 14px; text-decoration: none;">{% if lang == 'en' %}EN{%
+                else %}RU{% endif %}</a>
         </div>
-    </div>
+
+        <div id="adminCommentModal" class="admin-modal">
+            <div class="admin-modal-content">
+                <p data-i18n="comment_modal_title">Задайте вопрос по расставленной позиции</p>
+                <textarea id="adminCommentText" data-i18n-placeholder="admin_comment_placeholder"
+                    placeholder="Введите текст сообщения..."></textarea>
+                <div class="admin-modal-footer">
+                    <button class="admin-cancel-btn" onclick="closeAdminCommentModal()" data-i18n="cancel">Отмена</button>
+                    <button id="sendAdminCommentBtn" class="admin-send-btn" onclick="sendToAdmin()"
+                        data-i18n="comment_send">Отправить</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="pokazScreenshotAdminContainer" style="margin: 0 0 20px; text-align: center; display: none;">
+            <div class="admin-screenshot-font-scale">
+                <label for="pokazScreenshotFontScaleSelect">Размер шрифта на скриншоте:</label>
+                <select id="pokazScreenshotFontScaleSelect" onchange="savePokazScreenshotFontScale()">
+                    <option value="80">80%</option>
+                    <option value="90">90%</option>
+                    <option value="100">100%</option>
+                    <option value="110">110%</option>
+                    <option value="120">120%</option>
+                    <option value="130">130%</option>
+                    <option value="140">140%</option>
+                    <option value="150">150%</option>
+                    <option value="160">160%</option>
+                    <option value="170">170%</option>
+                    <option value="180">180%</option>
+                    <option value="190">190%</option>
+                    <option value="200">200%</option>
+                </select>
+            </div>
+        </div>
+        </div>
     </div>
 
     <div id="msgModalOverlay" class="msg-modal-overlay">
