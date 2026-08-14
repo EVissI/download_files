@@ -4136,42 +4136,12 @@
                 margin-right: 0;
             }
 
-            /* Стрелки и шар — в одном ряду с нижними пипсами, сразу под доской */
-            .board-wrapper.has-mobile-history-nav {
-                display: grid;
-                grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-                align-items: start;
-            }
-
-            .board-wrapper.has-mobile-history-nav > #black-pips {
-                grid-column: 3;
-                grid-row: 1;
-                justify-self: end;
-                margin-left: 0;
-            }
-
-            .board-wrapper.has-mobile-history-nav > canvas {
-                grid-column: 1 / -1;
-                grid-row: 2;
-            }
-
+            /* Стрелки и шар — отдельным блоком сразу под пипсами, пипсы остаются у доски */
             .board-wrapper.has-mobile-history-nav > .history-nav {
-                grid-column: 2;
-                grid-row: 3;
-                justify-self: center;
-                align-self: center;
+                justify-content: center;
+                width: 100%;
                 margin-top: 6px;
                 z-index: 4;
-            }
-
-            .board-wrapper.has-mobile-history-nav > #red-pips {
-                grid-column: 3;
-                grid-row: 3;
-                justify-self: end;
-                align-self: center;
-                margin-top: 6px;
-                margin-left: 0;
-                z-index: 5;
             }
 
             .container.pokaz-board-open .pokaz-main-stage > .board-open-controls.active {
@@ -8725,13 +8695,16 @@
             if (!boardOpenControls || !historyNav || !boardWrapper) return;
 
             const isPhone = window.matchMedia('(max-width: 600px)').matches;
-            const placeBesidePips = !!(boardOpen && isPhone);
+            const placeUnderPips = !!(boardOpen && isPhone);
 
-            if (placeBesidePips) {
-                if (historyNav.parentElement !== boardWrapper) {
-                    const redPips = document.getElementById('red-pips');
+            if (placeUnderPips) {
+                const redPips = document.getElementById('red-pips');
+                const afterPips = redPips && redPips.parentElement === boardWrapper
+                    ? redPips.nextSibling
+                    : null;
+                if (historyNav.parentElement !== boardWrapper || historyNav.previousElementSibling !== redPips) {
                     if (redPips && redPips.parentElement === boardWrapper) {
-                        boardWrapper.insertBefore(historyNav, redPips);
+                        boardWrapper.insertBefore(historyNav, afterPips);
                     } else {
                         boardWrapper.appendChild(historyNav);
                     }
