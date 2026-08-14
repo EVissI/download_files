@@ -42,7 +42,7 @@ async def make_admin(message: Message, session_without_commit):
     try:
         parts = message.text.split()
         if len(parts) != 2 or not parts[1].isdigit():
-            return await message.answer("Использование: /makeadmin <user_id>")
+            return await message.answer("Использование: /makeadmin <code>user_id</code>")
 
         user_id = int(parts[1])
 
@@ -75,7 +75,7 @@ async def make_admin(message: Message, session_without_commit):
     try:
         parts = message.text.split()
         if len(parts) != 2 or not parts[1].isdigit():
-            return await message.answer("Использование: /makeadmin <user_id>")
+            return await message.answer("Использование: /delete_user <code>user_id</code>")
 
         user_id = int(parts[1])
 
@@ -120,7 +120,7 @@ async def clear_user_cards(message: Message, session_without_commit):
     try:
         parts = message.text.split()
         if len(parts) != 2 or not parts[1].isdigit():
-            return await message.answer("Использование: /clear_user_cards <user_id>")
+            return await message.answer("Использование: /clear_user_cards <code>user_id</code>")
 
         user_id = int(parts[1])
         result = await session_without_commit.execute(
@@ -183,7 +183,7 @@ async def clear_active_jobs(message: Message):
     try:
         parts = message.text.split()
         if len(parts) != 2 or not parts[1].isdigit():
-            return await message.answer("Использование: /clear_active_jobs <user_id>")
+            return await message.answer("Использование: /clear_active_jobs <code>user_id</code>")
 
         user_id = int(parts[1])
 
