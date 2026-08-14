@@ -4136,6 +4136,49 @@
                 margin-right: 0;
             }
 
+            /* Стрелки и шар — в одном ряду с нижними пипсами, сразу под доской */
+            .board-wrapper.has-mobile-history-nav {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+                align-items: start;
+            }
+
+            .board-wrapper.has-mobile-history-nav > #black-pips {
+                grid-column: 3;
+                grid-row: 1;
+                justify-self: end;
+                margin-left: 0;
+            }
+
+            .board-wrapper.has-mobile-history-nav > canvas {
+                grid-column: 1 / -1;
+                grid-row: 2;
+            }
+
+            .board-wrapper.has-mobile-history-nav > .history-nav {
+                grid-column: 2;
+                grid-row: 3;
+                justify-self: center;
+                align-self: center;
+                margin-top: 6px;
+                z-index: 4;
+            }
+
+            .board-wrapper.has-mobile-history-nav > #red-pips {
+                grid-column: 3;
+                grid-row: 3;
+                justify-self: end;
+                align-self: center;
+                margin-top: 6px;
+                margin-left: 0;
+                z-index: 5;
+            }
+
+            .container.pokaz-board-open .pokaz-main-stage > .board-open-controls.active {
+                margin-top: 0.2rem;
+                padding-top: 0.25rem;
+            }
+
             .controls-row {
                 display: grid;
                 grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) auto;
@@ -8655,10 +8698,12 @@
 
             if (boardOpen) {
                 const historyNav = boardOpenControls.querySelector('.history-nav');
+                const buttons = boardOpenControls.querySelector('.board-open-controls-buttons');
+                const screenshotAnchor = historyNav || buttons;
                 if (screenshotControls.parentElement !== boardOpenControls
-                    || (historyNav && screenshotControls.nextElementSibling !== historyNav)) {
-                    if (historyNav) {
-                        boardOpenControls.insertBefore(screenshotControls, historyNav);
+                    || (screenshotAnchor && screenshotControls.nextElementSibling !== screenshotAnchor)) {
+                    if (screenshotAnchor) {
+                        boardOpenControls.insertBefore(screenshotControls, screenshotAnchor);
                     } else {
                         boardOpenControls.insertBefore(screenshotControls, boardOpenControls.firstChild);
                     }
@@ -8669,6 +8714,39 @@
                     auxPanel.insertBefore(screenshotControls, auxPanel.firstChild);
                 }
                 if (spacer) spacer.style.display = '';
+            }
+        }
+
+        function relocateHistoryNav(boardOpen) {
+            const boardOpenControls = document.getElementById('boardOpenControls');
+            const historyNav = document.querySelector('.history-nav');
+            const mainStage = document.querySelector('.pokaz-main-stage');
+            const boardWrapper = mainStage ? mainStage.querySelector('.board-wrapper') : null;
+            if (!boardOpenControls || !historyNav || !boardWrapper) return;
+
+            const isPhone = window.matchMedia('(max-width: 600px)').matches;
+            const placeBesidePips = !!(boardOpen && isPhone);
+
+            if (placeBesidePips) {
+                if (historyNav.parentElement !== boardWrapper) {
+                    const redPips = document.getElementById('red-pips');
+                    if (redPips && redPips.parentElement === boardWrapper) {
+                        boardWrapper.insertBefore(historyNav, redPips);
+                    } else {
+                        boardWrapper.appendChild(historyNav);
+                    }
+                }
+                boardWrapper.classList.add('has-mobile-history-nav');
+            } else {
+                if (historyNav.parentElement !== boardOpenControls) {
+                    const buttons = boardOpenControls.querySelector('.board-open-controls-buttons');
+                    if (buttons) {
+                        boardOpenControls.insertBefore(historyNav, buttons);
+                    } else {
+                        boardOpenControls.appendChild(historyNav);
+                    }
+                }
+                boardWrapper.classList.remove('has-mobile-history-nav');
             }
         }
 
@@ -8703,6 +8781,7 @@
                 }
             }
 
+            relocateHistoryNav(boardOpen);
             relocateScreenshotControls(boardOpen);
 
             if (placeAuxUnderBoard) {
