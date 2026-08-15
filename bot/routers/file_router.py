@@ -543,10 +543,12 @@ async def process_hint_viewer_file(
         
         # Создаем фиктивное сообщение для check_job_status
         class FakeMessage:
-            def __init__(self, chat_id, bot, user_id):
+            def __init__(self, chat_id, bot, user_id, username=None):
                 self.chat = type('obj', (object,), {'id': chat_id})()
                 self.bot = bot
-                self.from_user = type('obj', (object,), {'id': user_id})()
+                self.from_user = type(
+                    'obj', (object,), {'id': user_id, 'username': username}
+                )()
                 self._chat_id = chat_id
             
             async def answer(self, text, **kwargs):
@@ -557,7 +559,12 @@ async def process_hint_viewer_file(
                 """Отправляет ответ на сообщение"""
                 return await self.bot.send_message(chat_id=self._chat_id, text=text, **kwargs)
         
-        fake_message = FakeMessage(chat_id, bot, user_info.id)
+        fake_message = FakeMessage(
+            chat_id,
+            bot,
+            user_info.id,
+            username=getattr(user_info, "username", None),
+        )
         asyncio.create_task(
             check_job_status(fake_message, actual_job_id, state, i18n, session_without_commit, user_info)
         )

@@ -1899,6 +1899,12 @@ async def check_job_status(
     Фоновая задача для проверки статуса анализа.
     Проверяет Redis каждые 3 секунды и отправляет результат когда готов.
     """
+    def _resolve_username() -> str | None:
+        return (
+            getattr(getattr(message, "from_user", None), "username", None)
+            or getattr(user_info, "username", None)
+        )
+
     try:
         message_dao = MessagesTextsDAO(session_without_commit)
         job_info_json = await redis_client.get(f"job_info:{job_id}")
@@ -1942,8 +1948,7 @@ async def check_job_status(
                                 red_player,
                                 black_player,
                                 user_id=message.from_user.id,
-                                username=message.from_user.username
-                                or getattr(user_info, "username", None),
+                                username=_resolve_username(),
                                 mat_ref=result.get("mat_path"),
                             )
 
@@ -1975,8 +1980,7 @@ async def check_job_status(
                                 await offer_pro_analysis_order(
                                     message,
                                     user_id=message.from_user.id,
-                                    username=message.from_user.username
-                                    or getattr(user_info, "username", None),
+                                    username=_resolve_username(),
                                     service="hint_viewer",
                                     i18n=i18n,
                                     s3_key=mat_ref
