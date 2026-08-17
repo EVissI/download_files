@@ -9,6 +9,12 @@
     <title>Backgammon Game Viewer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
+        html {
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
         body {
             font-family: Arial, sans-serif;
             text-align: center;
@@ -16,13 +22,20 @@
             background-color: #1a1a1a;
             margin: 0;
             padding: 20px;
-            min-height: 100vh;
+            padding-top: max(20px, env(safe-area-inset-top, 0px));
+            padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
+            min-height: 100%;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            overflow-y: auto;
+            box-sizing: border-box;
         }
 
         .container {
             width: 100%;
             margin: 0 auto;
             padding: 0 20px;
+            padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
             box-sizing: border-box;
             /* Мобильный столбец ≈ половине ширины; на десктопе переопределяется */
             --viewer-col-width: calc(99% * 0.5);
@@ -83,6 +96,7 @@
             padding-top: 4px;
             padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
             min-width: 0;
+            overflow: visible;
         }
 
         .board-panel > #top-row,
@@ -595,7 +609,8 @@
 
         @media (max-width: 600px) {
             body {
-                padding: 0 10px 10px;
+                padding: max(0px, env(safe-area-inset-top, 0px)) 10px 10px;
+                padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
             }
 
             h1 {
@@ -664,8 +679,9 @@
                 word-spacing: normal;
             }
 
+            /* Верхний отступ на смартфонах (как board_viewer / кабинет) */
             .container {
-                padding: max(10vh, 24px) 10px 0 10px;
+                padding: calc(max(10vh, 24px) + env(safe-area-inset-top, 0px)) 10px 0 10px;
             }
 
             .hints-table {
@@ -730,11 +746,12 @@
         /* Планшеты: один ряд, крупнее для пальца */
         @media (min-width: 601px) and (max-width: 1024px) {
             body {
-                padding: 0 20px 20px;
+                padding: max(0px, env(safe-area-inset-top, 0px)) 20px 20px;
+                padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
             }
 
             .container {
-                padding: max(5vh, 24px) 20px 0 20px;
+                padding: calc(max(5vh, 24px) + env(safe-area-inset-top, 0px)) 20px 0 20px;
             }
 
             .screenshot-controls,
@@ -1536,7 +1553,9 @@
         @media (min-width: 601px) {
             .container {
                 max-width: 960px;
-                padding: 0 1rem 1.5rem;
+                padding-left: 1rem;
+                padding-right: 1rem;
+                padding-bottom: 1.5rem;
             }
 
             .board-block {
@@ -1604,6 +1623,15 @@
                 --viewer-col-width: 100%;
                 padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
                 padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
+                padding-bottom: max(32px, env(safe-area-inset-bottom, 0px));
+            }
+
+            body {
+                padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+            }
+
+            .board-panel {
+                padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
             }
 
             .board-block,
