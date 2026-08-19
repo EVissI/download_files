@@ -1,4 +1,5 @@
 import asyncio
+from datetime import timedelta
 
 from aiogram import Bot
 from aiogram.types import WebAppInfo
@@ -12,11 +13,13 @@ from bot.db.models import (
     ContentCardPool,
     MatchAnalysis,
     Promocode,
+    PromocodeType,
     User,
     UserAnalizePayment,
     UserContentCard,
     UserMatchAnalysis,
     UserPromocode,
+    UserPromocodeService,
 )
 from bot.config import create_bot_for_sync_context
 from bot.config import settings
@@ -107,19 +110,21 @@ class UserPromocodeInline(ModelView):
     """Инлайн-вьюха для активированных промокодов пользователя"""
 
     datamodel = CustomUserPromocodeSQLAInterface(UserPromocode)
-    base_permissions = ['can_list', 'can_show']
+    base_permissions = ["can_list", "can_show", "can_delete"]
+    can_delete = True
     list_title = "Промокоды"
+    delete_row_message = "Промокод снят с пользователя, связанный остаток удалён."
 
     list_columns = [
         "promocode.code",
-        "promocode.services_summary",
+        "promo_benefit_display",
         "promo_date_range",
         "is_active_display",
     ]
     order_columns = ["promocode.code", "is_active_display"]
     show_columns = [
         "promocode.code",
-        "promocode.services_summary",
+        "promo_benefit_display",
         "created_at_display",
         "promo_date_range",
         "remaining_balance_display",
@@ -129,7 +134,7 @@ class UserPromocodeInline(ModelView):
         (
             "Промокод",
             {
-                "fields": ["promocode.code", "promocode.services_summary"],
+                "fields": ["promocode.code", "promo_benefit_display"],
                 "expanded": True,
             },
         ),
@@ -141,7 +146,7 @@ class UserPromocodeInline(ModelView):
             },
         ),
         (
-            "Остаток по услугам",
+            "Остаток",
             {
                 "fields": ["remaining_balance_display"],
                 "expanded": True,
@@ -157,7 +162,7 @@ class UserPromocodeInline(ModelView):
     ]
     label_columns = {
         "promocode.code": "Промокод",
-        "promocode.services_summary": "На что (услуги)",
+        "promo_benefit_display": "На что",
         "created_at_display": "Дата активации",
         "promo_date_range": "Период действия (с — по)",
         "remaining_balance_display": "Остаток",
@@ -168,7 +173,70 @@ class UserPromocodeInline(ModelView):
         return super().get_query().options(
             joinedload(UserPromocode.promocode).joinedload(Promocode.services),
             joinedload(UserPromocode.remaining_services),
+            joinedload(UserPromocode.issued_content_cards),
         )
+
+    def pre_delete(self, item: UserPromocode):
+        if not item.is_active:
+            raise Exception("Снять можно только активный промокод.")
+        self._redirect_user_id = item.user_id
+        self._revoke_user_promocode_grants(item)
+
+    def post_delete_redirect(self):
+        user_id = getattr(self, "_redirect_user_id", None)
+        if user_id:
+            return redirect(url_for("UserModelView.show", pk=str(user_id)))
+        if request.referrer:
+            return redirect(request.referrer)
+        return super().post_delete_redirect()
+
+    def _revoke_user_promocode_grants(self, item: UserPromocode) -> None:
+        """Удаляет остаток услуг и выданные этим промо карточки/анализы."""
+        session = self.datamodel.session
+
+        for svc in list(item.remaining_services or []):
+            session.delete(svc)
+
+        issued_cards = list(item.issued_content_cards or [])
+        if not issued_cards:
+            issued_cards = session.execute(
+                select(UserContentCard).where(
+                    UserContentCard.source_user_promocode_id == item.id
+                )
+            ).scalars().all()
+        for card in issued_cards:
+            session.delete(card)
+
+        promo = item.promocode
+        if (
+            promo
+            and promo.promocode_type == PromocodeType.CARDS
+            and int(item.issued_cards_count or 0) > 0
+        ):
+            pool_val = (
+                promo.card_pool.value
+                if hasattr(promo.card_pool, "value")
+                else str(promo.card_pool or "")
+            )
+            if pool_val == ContentCardPool.MATCH_ANALYSIS.value:
+                query = select(UserMatchAnalysis).where(
+                    UserMatchAnalysis.user_id == item.user_id
+                )
+                if item.created_at is not None:
+                    query = query.where(
+                        UserMatchAnalysis.created_at
+                        >= item.created_at - timedelta(seconds=5),
+                        UserMatchAnalysis.created_at
+                        <= item.created_at + timedelta(seconds=5),
+                    )
+                query = query.order_by(UserMatchAnalysis.id.asc()).limit(
+                    int(item.issued_cards_count)
+                )
+                for row in session.execute(query).scalars().all():
+                    session.delete(row)
+
+        if promo and (promo.activate_count or 0) > 0:
+            promo.activate_count = promo.activate_count - 1
 
 
 class UserAnalizePaymentInline(ModelView):

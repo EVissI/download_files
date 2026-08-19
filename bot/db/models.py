@@ -357,10 +357,37 @@ class UserPromocode(Base):
             return f"{start_str} — {end_str}"
         return f"{start_str} — ∞"
 
+    @staticmethod
+    def _card_pool_label(pool) -> str:
+        val = pool.value if hasattr(pool, "value") else str(pool or "")
+        if val == ContentCardPool.PIP_COUNT.value:
+            return "Подсчёт пипсов"
+        if val == ContentCardPool.MATCH_ANALYSIS.value:
+            return "Анализ матча"
+        return "Карточки"
+
+    @property
+    @renders("promo_benefit_display")
+    def promo_benefit_display(self) -> str:
+        """Что даёт промо: услуги (regular) или пул карточек (cards)."""
+        promo = self.promocode
+        if promo and promo.promocode_type == PromocodeType.CARDS:
+            qty = self.issued_cards_count or promo.cards_issue_quantity or 0
+            return f"{self._card_pool_label(promo.card_pool)}: выдано {qty}"
+        if promo:
+            return promo.services_summary
+        return "—"
+
     @property
     @renders("remaining_balance_display")
     def remaining_balance_display(self) -> str:
-        """Остаток по услугам: Матч: 3, Ошибки: 5 и т.д."""
+        """Остаток: услуги для regular, выданные карточки/анализы для cards."""
+        promo = self.promocode
+        if promo and promo.promocode_type == PromocodeType.CARDS:
+            return (
+                f"{self._card_pool_label(promo.card_pool)}: "
+                f"выдано {self.issued_cards_count or 0}"
+            )
         if not self.remaining_services:
             return "—"
         parts = []
