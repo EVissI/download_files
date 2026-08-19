@@ -331,6 +331,16 @@
     {{ render_actions(actions, modelview_name) }}
     {{ lnk_back() }}
     {{ lnk_main_menu() }}
+    {% if modelview_name == 'UserPromocodeInline' %}
+        <button type="button"
+                class="btn btn-sm btn-primary"
+                data-toggle="modal"
+                data-target="#assignPromocodesModal"
+                title="Добавить промокод">
+            <span class="sr-only">Добавить промокод</span>
+            <i class="fa fa-plus"></i>
+        </button>
+    {% endif %}
     <div class="pull-right">
         <strong>{{ _('Record Count') }}:</strong> {{ count }}
     </div>

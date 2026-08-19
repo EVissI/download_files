@@ -162,4 +162,243 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="assignPromocodesModal" tabindex="-1" role="dialog" aria-labelledby="assignPromocodesModalLabel"
+     data-list-url="{{ assignable_promocodes_url|default('') }}">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <form method="post" action="{{ assign_promocodes_url|default('') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                <div id="assign-promo-selected-ids"></div>
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="assignPromocodesModalLabel">Добавить промокоды</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="row" style="margin-bottom: 10px;">
+                        <div class="col-sm-8">
+                            <input
+                                id="assign-promo-search"
+                                type="text"
+                                class="form-control"
+                                placeholder="Поиск по названию"
+                                autocomplete="off"
+                            >
+                        </div>
+                        <div class="col-sm-4">
+                            <select id="assign-promo-type" class="form-control">
+                                <option value="all">Все типы</option>
+                                <option value="regular">Услуги</option>
+                                <option value="cards">Карточки</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="text-muted" style="margin-bottom: 8px;">
+                        Нажмите на доступный промокод, чтобы выбрать. Можно выбрать несколько.
+                    </p>
+                    <div class="table-responsive" style="max-height: 360px; overflow: auto;">
+                        <table class="table table-bordered table-hover" style="margin-bottom: 0;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 36px;"></th>
+                                    <th>Промокод</th>
+                                    <th>Тип</th>
+                                    <th>На что</th>
+                                    <th>Срок</th>
+                                    <th>Статус</th>
+                                </tr>
+                            </thead>
+                            <tbody id="assign-promo-tbody">
+                                <tr><td colspan="6" class="text-muted">Загрузка…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p id="assign-promo-selected-count" class="text-muted" style="margin: 10px 0 0;">Ничего не выбрано</p>
+                    <div style="margin-top: 14px; display: flex; align-items: center; gap: 8px;">
+                        <label class="checkbox-inline" style="margin: 0;">
+                            <input type="checkbox" id="assign-promo-notify" name="notify_user" value="1" checked>
+                            Уведомление пользователя
+                        </label>
+                        <button
+                            type="button"
+                            id="assign-promo-notify-edit-btn"
+                            class="btn btn-sm btn-default"
+                            title="Изменить текст уведомления"
+                        >
+                            <i class="fa fa-pencil"></i>
+                        </button>
+                    </div>
+                    <div id="assign-promo-notify-editor" style="display: none; margin-top: 10px;">
+                        <label for="assign-promo-notify-text">Текст уведомления (Markdown)</label>
+                        <textarea
+                            id="assign-promo-notify-text"
+                            name="notify_text"
+                            class="form-control"
+                            rows="5"
+                        >{{ default_promo_notify_text|default('Вам начислен промокод: *{codes}*') }}</textarea>
+                        <p class="help-block" style="margin-bottom: 0;">
+                            Плейсхолдер <code>{codes}</code> заменится на названия промокодов.
+                            Разметка Telegram Markdown: <code>*жирный*</code>, <code>_курсив_</code>,
+                            <code>`код`</code>, <code>[ссылка](https://example.com)</code>.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Отмена</button>
+                    <button type="submit" id="assign-promo-save" class="btn btn-primary" disabled>Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block add_tail_js %}
+{{ super() }}
+<script>
+(function ($) {
+    var $modal = $("#assignPromocodesModal");
+    if (!$modal.length) {
+        return;
+    }
+
+    var listUrl = $modal.attr("data-list-url") || "";
+    var $tbody = $("#assign-promo-tbody");
+    var $search = $("#assign-promo-search");
+    var $type = $("#assign-promo-type");
+    var $selectedBox = $("#assign-promo-selected-ids");
+    var $selectedCount = $("#assign-promo-selected-count");
+    var $saveBtn = $("#assign-promo-save");
+    var $notifyCheck = $("#assign-promo-notify");
+    var $notifyEditor = $("#assign-promo-notify-editor");
+    var $notifyToggleBtn = $("#assign-promo-notify-edit-btn");
+    var $notifyText = $("#assign-promo-notify-text");
+    var defaultNotify = $notifyText.val() || "";
+
+    var allItems = [];
+    var selectedIds = {};
+
+    function escapeHtml(value) {
+        return String(value == null ? "" : value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function selectedList() {
+        return Object.keys(selectedIds).filter(function (id) { return selectedIds[id]; });
+    }
+
+    function syncSelectedInputs() {
+        $selectedBox.empty();
+        selectedList().forEach(function (id) {
+            $("<input>", { type: "hidden", name: "promocode_ids", value: id })
+                .appendTo($selectedBox);
+        });
+        var n = selectedList().length;
+        $selectedCount.text(n ? ("Выбрано: " + n) : "Ничего не выбрано");
+        $saveBtn.prop("disabled", n === 0);
+    }
+
+    function renderRows() {
+        var q = ($.trim($search.val()) || "").toLowerCase();
+        var typeFilter = $type.val() || "all";
+        var rows = allItems.filter(function (item) {
+            if (typeFilter !== "all" && item.type !== typeFilter) {
+                return false;
+            }
+            if (q && String(item.code || "").toLowerCase().indexOf(q) === -1) {
+                return false;
+            }
+            return true;
+        });
+
+        if (!rows.length) {
+            $tbody.html('<tr><td colspan="6" class="text-muted">Ничего не найдено</td></tr>');
+            return;
+        }
+
+        $tbody.html(rows.map(function (item) {
+            var available = !!item.available;
+            var selected = !!selectedIds[item.id];
+            var cls = available ? "assign-promo-row" : "assign-promo-row disabled";
+            if (selected && available) {
+                cls += " success";
+            }
+            var status = available
+                ? '<span class="text-success">Доступен</span>'
+                : '<span class="text-muted">' + escapeHtml(item.reason || "Недоступен") + "</span>";
+            return (
+                '<tr class="' + cls + '" data-id="' + item.id + '" data-available="' + (available ? "1" : "0") + '"' +
+                (available ? ' style="cursor:pointer;"' : ' style="cursor:not-allowed; opacity:0.72;"') + ">" +
+                "<td>" + (available
+                    ? '<i class="fa ' + (selected ? "fa-check-square-o" : "fa-square-o") + '"></i>'
+                    : '<i class="fa fa-ban text-muted"></i>') +
+                "</td>" +
+                "<td><strong>" + escapeHtml(item.code) + "</strong></td>" +
+                "<td>" + escapeHtml(item.type_label) + "</td>" +
+                "<td>" + escapeHtml(item.benefit) + "</td>" +
+                "<td>" + escapeHtml(item.duration) + "</td>" +
+                "<td>" + status + "</td>" +
+                "</tr>"
+            );
+        }).join(""));
+    }
+
+    function loadItems() {
+        $tbody.html('<tr><td colspan="6" class="text-muted">Загрузка…</td></tr>');
+        $.getJSON(listUrl)
+            .done(function (data) {
+                allItems = data.promocodes || [];
+                if (!$notifyText.data("touched")) {
+                    $notifyText.val(data.default_notify_text || defaultNotify);
+                }
+                renderRows();
+                syncSelectedInputs();
+            })
+            .fail(function () {
+                $tbody.html('<tr><td colspan="6" class="text-danger">Не удалось загрузить промокоды</td></tr>');
+            });
+    }
+
+    $modal.on("show.bs.modal", function () {
+        selectedIds = {};
+        $search.val("");
+        $type.val("all");
+        $notifyCheck.prop("checked", true);
+        $notifyEditor.hide();
+        $notifyText.data("touched", false).val(defaultNotify);
+        syncSelectedInputs();
+        loadItems();
+    });
+
+    $tbody.on("click", "tr.assign-promo-row", function () {
+        var $row = $(this);
+        if ($row.attr("data-available") !== "1") {
+            return;
+        }
+        var id = $row.attr("data-id");
+        selectedIds[id] = !selectedIds[id];
+        renderRows();
+        syncSelectedInputs();
+    });
+
+    $search.on("input", renderRows);
+    $type.on("change", renderRows);
+    $notifyToggleBtn.on("click", function () {
+        $notifyEditor.toggle();
+    });
+    $notifyText.on("input", function () {
+        $notifyText.data("touched", true);
+    });
+    $modal.find("form").on("submit", function (e) {
+        if (!selectedList().length) {
+            e.preventDefault();
+        }
+    });
+})(jQuery);
+</script>
 {% endblock %}

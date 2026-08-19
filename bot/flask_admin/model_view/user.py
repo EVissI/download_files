@@ -4,10 +4,11 @@ from datetime import timedelta
 from aiogram import Bot
 from aiogram.types import WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from flask import flash, redirect, request, url_for
+from flask import flash, jsonify, redirect, request, url_for
 from flask_appbuilder import ModelView, expose, has_access, permission_name
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_wtf.csrf import generate_csrf
+from aiogram.enums import ParseMode
 from bot.db.models import (
     ContentCard,
     ContentCardPool,
@@ -25,6 +26,13 @@ from bot.config import create_bot_for_sync_context
 from bot.config import settings
 from bot.flask_admin.content_card_grant import grant_content_cards_from_pool_sync
 from bot.flask_admin.match_analysis_grant import grant_match_analyses_sync
+from bot.flask_admin.promo_assign import (
+    DEFAULT_PROMO_NOTIFY_TEXT,
+    PROMO_UNAVAILABLE_REASONS,
+    assign_promocode_to_user,
+    list_promocodes_for_user,
+    render_promo_notify_text,
+)
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
@@ -342,7 +350,129 @@ class UserModelView(ModelView):
                 ready_available = 0
             kwargs.setdefault("match_analyses_count", ma_count)
             kwargs.setdefault("match_analyses_ready_available", ready_available)
+            kwargs.setdefault(
+                "assignable_promocodes_url",
+                url_for(f"{self.endpoint}.assignable_promocodes", pk=int(current_pk))
+                if current_pk is not None
+                else "",
+            )
+            kwargs.setdefault(
+                "assign_promocodes_url",
+                url_for(f"{self.endpoint}.assign_promocodes", pk=int(current_pk))
+                if current_pk is not None
+                else "",
+            )
+            kwargs.setdefault("default_promo_notify_text", DEFAULT_PROMO_NOTIFY_TEXT)
         return super().render_template(template, **kwargs)
+
+    @expose("/assignable_promocodes/<int:pk>", methods=["GET"])
+    @has_access
+    @permission_name("show")
+    def assignable_promocodes(self, pk: int):
+        user = self.datamodel.get(pk)
+        if not user:
+            return jsonify({"error": "Пользователь не найден"}), 404
+        items = list_promocodes_for_user(self.datamodel.session, pk)
+        return jsonify(
+            {
+                "promocodes": items,
+                "default_notify_text": DEFAULT_PROMO_NOTIFY_TEXT,
+            }
+        )
+
+    @expose("/assign_promocodes/<int:pk>", methods=["POST"])
+    @has_access
+    @permission_name("show")
+    def assign_promocodes(self, pk: int):
+        user = self.datamodel.get(pk)
+        if not user:
+            flash("Пользователь не найден", "danger")
+            return redirect(url_for(f"{self.endpoint}.list"))
+
+        raw_ids = request.form.getlist("promocode_ids")
+        promo_ids: list[int] = []
+        for raw in raw_ids:
+            try:
+                promo_ids.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+        promo_ids = list(dict.fromkeys(promo_ids))
+
+        if not promo_ids:
+            flash("Выберите хотя бы один доступный промокод.", "warning")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        notify_user = bool(request.form.get("notify_user"))
+        notify_text = (request.form.get("notify_text") or "").strip()
+        session = self.datamodel.session
+        assigned_codes: list[str] = []
+        skipped: list[str] = []
+
+        try:
+            promocodes = (
+                session.execute(
+                    select(Promocode)
+                    .where(Promocode.id.in_(promo_ids))
+                    .options(joinedload(Promocode.services))
+                )
+                .unique()
+                .scalars()
+                .all()
+            )
+            by_id = {item.id: item for item in promocodes}
+            for promo_id in promo_ids:
+                promo = by_id.get(promo_id)
+                if not promo:
+                    skipped.append(f"#{promo_id}: не найден")
+                    continue
+                ok, reason = assign_promocode_to_user(session, promo, pk)
+                if ok:
+                    assigned_codes.append(promo.code)
+                else:
+                    reason_text = PROMO_UNAVAILABLE_REASONS.get(reason, reason)
+                    skipped.append(f"{promo.code}: {reason_text}")
+            session.commit()
+        except SQLAlchemyError as e:
+            session.rollback()
+            flash(f"Ошибка выдачи промокодов: {e}", "danger")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        if assigned_codes:
+            flash(
+                "Начислены промокоды: " + ", ".join(assigned_codes) + ".",
+                "success",
+            )
+        if skipped:
+            flash("Не удалось начислить: " + "; ".join(skipped) + ".", "warning")
+        if not assigned_codes:
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        if notify_user:
+            message_text = render_promo_notify_text(notify_text, assigned_codes)
+            try:
+                async def _send(tg_bot: Bot) -> None:
+                    try:
+                        await tg_bot.send_message(
+                            chat_id=pk,
+                            text=message_text,
+                            parse_mode=ParseMode.MARKDOWN,
+                            disable_web_page_preview=True,
+                        )
+                    except Exception:
+                        await tg_bot.send_message(
+                            chat_id=pk,
+                            text=message_text,
+                            disable_web_page_preview=True,
+                        )
+
+                _run_telegram_sync(_send)
+            except Exception as e:
+                flash(
+                    f"Промокоды начислены, но уведомление в Telegram не отправлено: {e}",
+                    "warning",
+                )
+
+        return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
 
     @expose("/update_admin_insert_name/<int:pk>", methods=["POST"])
     @has_access
