@@ -259,7 +259,7 @@
                 const res = await fetch('/web/hints/api/jobs');
                 if (res.status === 401) { window.location.href = '/web/hints/login'; return; }
                 const data = await res.json();
-                const jobs = data.jobs || [];
+                const jobs = (data.jobs || []).filter((job) => job.error !== 'Задача не найдена');
                 latestJobs = jobs;
                 if (!jobs.length) {
                     renderJobsList();

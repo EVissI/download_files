@@ -47,6 +47,7 @@ from bot.common.service.hint_viewer_web_service import (
     list_session_jobs,
     password_matches,
     record_history_if_enabled,
+    replace_session_jobs,
 )
 from bot.common.service.webapp_settings_service import (
     get_hint_viewer_screenshot_font_scale_percent,
@@ -328,6 +329,9 @@ async def _enqueue_batch(
     return job_payload
 
 
+_JOB_NOT_FOUND_ERROR = "Задача не найдена"
+
+
 def _rq_status(job: Job) -> str:
     if job.is_failed:
         return "error"
@@ -338,6 +342,10 @@ def _rq_status(job: Job) -> str:
     return "queued"
 
 
+def _is_missing_job(item: dict[str, Any]) -> bool:
+    return item.get("error") == _JOB_NOT_FOUND_ERROR
+
+
 def _enrich_single_job(stored: dict[str, Any]) -> dict[str, Any]:
     job_id = stored.get("job_id")
     item = {**stored, "status": "queued", "view_url": None, "error": None}
@@ -345,7 +353,7 @@ def _enrich_single_job(stored: dict[str, Any]) -> dict[str, Any]:
         job = Job.fetch(job_id, connection=redis_rq)
     except NoSuchJobError:
         item["status"] = "error"
-        item["error"] = "Задача не найдена"
+        item["error"] = _JOB_NOT_FOUND_ERROR
         return item
     rq_status = _rq_status(job)
     if rq_status == "finished":
@@ -422,7 +430,7 @@ def _enrich_batch_job(stored: dict[str, Any]) -> dict[str, Any]:
     except NoSuchJobError:
         if not done:
             item["status"] = "error"
-            item["error"] = "Задача не найдена"
+            item["error"] = _JOB_NOT_FOUND_ERROR
             return item
     item["status"] = "done"
     return item
@@ -546,11 +554,19 @@ async def web_hints_jobs(request: Request):
     token, _session = await _require_session(request)
     stored = await list_session_jobs(token)
     jobs = []
+    kept = []
     for item in stored:
-        if item.get("kind") == "batch":
-            jobs.append(_enrich_batch_job(item))
-        else:
-            jobs.append(_enrich_single_job(item))
+        enriched = (
+            _enrich_batch_job(item)
+            if item.get("kind") == "batch"
+            else _enrich_single_job(item)
+        )
+        if _is_missing_job(enriched):
+            continue
+        kept.append(item)
+        jobs.append(enriched)
+    if len(kept) != len(stored):
+        await replace_session_jobs(token, kept)
     return {"ok": True, "jobs": jobs, "history_enabled": is_history_enabled()}
 
 

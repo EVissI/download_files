@@ -91,6 +91,13 @@ async def list_session_jobs(token: str) -> list[dict[str, Any]]:
     return data if isinstance(data, list) else []
 
 
+async def replace_session_jobs(token: str, jobs: list[dict[str, Any]]) -> None:
+    key = JOBS_KEY.format(token=token)
+    await redis_client.set(
+        key, json.dumps(jobs, ensure_ascii=False), expire=JOBS_TTL_SEC
+    )
+
+
 async def record_history_if_enabled(**kwargs: Any) -> None:
     """
     Запись истории в БД.
