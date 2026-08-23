@@ -19,6 +19,7 @@ import secrets
 from pydantic import BaseModel, Field
 
 from bot.routers.hint_viewer_router import hint_viewer_api_router
+from bot.routers.hint_viewer_web_router import hint_viewer_web_api_router
 from bot.routers.match_analysis_router import match_analysis_api_router
 from bot.routers.short_board import short_board_api_router
 from bot.flask_admin.appbuilder_main import create_app
@@ -198,6 +199,7 @@ templates.env.globals["cache_timestamp"] = get_static_asset_version()
 
 # Include routers
 app.include_router(hint_viewer_api_router, prefix="")
+app.include_router(hint_viewer_web_api_router, prefix="")
 app.include_router(match_analysis_api_router, prefix="")
 app.include_router(short_board_api_router, prefix="")
 

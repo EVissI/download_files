@@ -1526,3 +1526,45 @@ class MatchAnalysisFolderSchedule(Base):
 
     folder: Mapped["MatchAnalysisFolder"] = relationship("MatchAnalysisFolder")
     created_by_admin: Mapped[Optional["User"]] = relationship("User")
+
+
+class HintViewerWebUploadStatus(str, enum.Enum):
+    QUEUED = "queued"
+    PROCESSING = "processing"
+    DONE = "done"
+    ERROR = "error"
+
+
+class HintViewerWebUpload(Base):
+    """
+    История загрузок веб-версии hint viewer.
+
+    user_id сейчас всегда NULL: аккаунтов ещё нет, запись в таблицу
+    не выполняется (HINT_VIEWER_WEB_HISTORY_ENABLED=false).
+    """
+
+    __tablename__ = "hint_viewer_web_uploads"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    session_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    game_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    job_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    batch_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    red_player: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    black_player: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=HintViewerWebUploadStatus.QUEUED.value,
+    )
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

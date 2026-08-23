@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Загрузка матчей</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: #121212;
+            color: #eee;
+            min-height: 100vh;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid #2a2a2a;
+            background: #1a1a1a;
+        }
+        h1 { margin: 0; font-size: 1.15rem; }
+        .wrap { max-width: 860px; margin: 0 auto; padding: 20px; }
+        .card {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+        h2 { margin: 0 0 12px; font-size: 1rem; }
+        .drop {
+            border: 2px dashed #555;
+            border-radius: 10px;
+            padding: 28px 16px;
+            text-align: center;
+            color: #bbb;
+            cursor: pointer;
+        }
+        .drop.drag { border-color: #4caf50; background: #17301a; }
+        input[type="file"] { display: none; }
+        .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+        button, .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .primary { background: #2e7d32; color: #fff; }
+        .primary:disabled { background: #444; }
+        .ghost { background: #2a2a2a; color: #ddd; }
+        .file-list { margin: 10px 0 0; padding-left: 18px; color: #ccc; }
+        .job {
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #181818;
+        }
+        .job.done { border-color: #2e7d32; }
+        .job.error { border-color: #8d2f2f; }
+        .muted { color: #999; font-size: 0.9rem; }
+        .history-off { color: #888; }
+        .toast {
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            background: #1b5e20;
+            color: #fff;
+            padding: 12px 14px;
+            border-radius: 10px;
+            display: none;
+            max-width: 320px;
+            z-index: 20;
+        }
+        .sub { margin: 8px 0 0; padding-left: 14px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Загрузка матчей</h1>
+        <form method="post" action="/web/hints/logout">
+            <button class="ghost" type="submit">Выйти</button>
+        </form>
+    </header>
+    <div class="wrap">
+        <div class="card">
+            <h2>Новый анализ</h2>
+            <p class="muted">Можно загрузить один или несколько .mat, либо zip с матчами. Когда анализ будет готов, появится уведомление.</p>
+            <div class="drop" id="dropzone">Нажмите или перетащите файлы сюда<br><span class="muted">.mat или .zip</span></div>
+            <input id="fileInput" type="file" accept=".mat,.zip,application/zip" multiple>
+            <ul class="file-list" id="fileList"></ul>
+            <div class="actions">
+                <button class="primary" id="uploadBtn" type="button" disabled>Отправить на анализ</button>
+            </div>
+            <p class="muted" id="uploadStatus"></p>
+        </div>
+
+        <div class="card">
+            <h2>Текущие задачи</h2>
+            <div id="jobs" class="muted">Пока нет загрузок в этой сессии.</div>
+        </div>
+
+        <div class="card history-off">
+            <h2>История загрузок</h2>
+            <p>Раздел заложен в коде, но сейчас не работает: отдельных аккаунтов ещё нет. После появления пользователей история будет привязана к аккаунту.</p>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const dropzone = document.getElementById('dropzone');
+        const fileList = document.getElementById('fileList');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const jobsEl = document.getElementById('jobs');
+        const toast = document.getElementById('toast');
+        let selectedFiles = [];
+        const knownReady = new Set();
+
+        function renderFiles() {
+            fileList.innerHTML = selectedFiles.map(f => `<li>${f.name}</li>`).join('');
+            uploadBtn.disabled = selectedFiles.length === 0;
+        }
+
+        function addFiles(list) {
+            selectedFiles = [...selectedFiles, ...Array.from(list)];
+            renderFiles();
+        }
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => addFiles(e.target.files));
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('drag');
+            addFiles(e.dataTransfer.files);
+        });
+
+        function showToast(text) {
+            toast.textContent = text;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 6000);
+        }
+
+        function notifyReady(title, body) {
+            showToast(body);
+            if (window.Notification && Notification.permission === 'granted') {
+                try { new Notification(title, { body }); } catch (e) {}
+            }
+        }
+
+        function statusLabel(status) {
+            if (status === 'done') return 'Готово';
+            if (status === 'processing') return 'Считается…';
+            if (status === 'error') return 'Ошибка';
+            return 'В очереди';
+        }
+
+        function renderJob(job) {
+            const cls = job.status === 'done' ? 'done' : (job.status === 'error' ? 'error' : '');
+            if (job.kind === 'batch') {
+                const files = (job.files || []).map((f) => {
+                    const open = f.view_url ? `<a class="btn primary" href="${f.view_url}">Открыть</a>` : '';
+                    return `<li>${f.filename} — ${statusLabel(f.status)} ${open} ${f.error ? `<span class="muted">${f.error}</span>` : ''}</li>`;
+                }).join('');
+                return `<div class="job ${cls}">
+                    <strong>Пакет: ${(job.files || []).length} файл(ов)</strong>
+                    <div class="muted">${statusLabel(job.status)} ${job.ready_count != null ? `(готово ${job.ready_count}/${job.total_files || 0})` : ''}</div>
+                    <ul class="sub">${files}</ul>
+                    ${job.error ? `<div class="muted">${job.error}</div>` : ''}
+                </div>`;
+            }
+            const open = job.view_url ? `<a class="btn primary" href="${job.view_url}">Открыть анализ</a>` : '';
+            return `<div class="job ${cls}">
+                <strong>${job.filename || 'Матч'}</strong>
+                <div class="muted">${job.red_player || ''} vs ${job.black_player || ''} · ${statusLabel(job.status)}</div>
+                ${job.error ? `<div class="muted">${job.error}</div>` : ''}
+                <div class="actions">${open}</div>
+            </div>`;
+        }
+
+        async function pollJobs() {
+            try {
+                const res = await fetch('/web/hints/api/jobs');
+                if (res.status === 401) { window.location.href = '/web/hints/login'; return; }
+                const data = await res.json();
+                const jobs = data.jobs || [];
+                if (!jobs.length) {
+                    jobsEl.innerHTML = '<span class="muted">Пока нет загрузок в этой сессии.</span>';
+                    return;
+                }
+                jobsEl.innerHTML = jobs.map(renderJob).join('');
+                jobs.forEach((job) => {
+                    const key = job.job_id;
+                    const ready = job.status === 'done' || (job.kind === 'batch' && (job.ready_count || 0) > 0);
+                    if (ready && key && !knownReady.has(key + ':' + (job.ready_count || job.status))) {
+                        knownReady.add(key + ':' + (job.ready_count || job.status));
+                        if (job.kind === 'batch') {
+                            notifyReady('Анализ готов', `Обработано ${job.ready_count} из ${job.total_files} матчей`);
+                        } else if (job.status === 'done') {
+                            notifyReady('Анализ готов', `${job.filename || 'Матч'} можно открыть`);
+                        }
+                    }
+                });
+            } catch (e) {}
+        }
+
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFiles.length) return;
+            if (window.Notification && Notification.permission === 'default') {
+                try { await Notification.requestPermission(); } catch (e) {}
+            }
+            uploadBtn.disabled = true;
+            uploadStatus.textContent = 'Загрузка…';
+            const fd = new FormData();
+            selectedFiles.forEach((f) => fd.append('files', f));
+            try {
+                const res = await fetch('/web/hints/api/upload', { method: 'POST', body: fd });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    uploadStatus.textContent = data.detail || 'Ошибка загрузки';
+                    uploadBtn.disabled = false;
+                    return;
+                }
+                selectedFiles = [];
+                fileInput.value = '';
+                renderFiles();
+                uploadStatus.textContent = 'Файл(ы) приняты, анализ в очереди.';
+                pollJobs();
+            } catch (e) {
+                uploadStatus.textContent = 'Сеть недоступна';
+                uploadBtn.disabled = false;
+            }
+        });
+
+        renderFiles();
+        pollJobs();
+        setInterval(pollJobs, 4000);
+    </script>
+</body>
+</html>

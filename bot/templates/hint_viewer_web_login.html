@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход — анализ матчей</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: #121212;
+            color: #eee;
+            padding: 24px;
+        }
+        .card {
+            width: 100%;
+            max-width: 420px;
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 14px;
+            padding: 28px 24px;
+        }
+        h1 { margin: 0 0 8px; font-size: 1.35rem; }
+        p { margin: 0 0 20px; color: #aaa; line-height: 1.4; }
+        label { display: block; margin-bottom: 8px; font-size: 0.9rem; }
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #111;
+            color: #fff;
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            border: 0;
+            border-radius: 8px;
+            background: #2e7d32;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:hover { background: #256428; }
+        button:disabled { background: #444; cursor: not-allowed; }
+        .error {
+            background: #3b1c1c;
+            border: 1px solid #8d2f2f;
+            color: #ffb4b4;
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Анализ матчей</h1>
+        <p>Веб-версия просмотра ошибок. Вход по общему паролю.</p>
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="/web/hints/login">
+            <label for="password">Пароль</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" {% if not configured %}disabled{% endif %} required>
+            <button type="submit" {% if not configured %}disabled{% endif %}>Войти</button>
+        </form>
+    </div>
+</body>
+</html>

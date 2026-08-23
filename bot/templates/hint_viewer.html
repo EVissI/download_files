@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="hint-screenshot-font-scale" content="{{ hint_viewer_screenshot_font_scale_percent | default(100) }}">
     <meta name="match-analysis-mode" content="{% if match_analysis_mode|default(false) %}1{% else %}0{% endif %}">
+    <meta name="web-standalone-mode" content="{% if web_standalone_mode|default(false) %}1{% else %}0{% endif %}">
     <title>Backgammon Game Viewer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
@@ -1671,11 +1672,28 @@
                 box-sizing: border-box;
             }
         }
+
+        body.web-standalone .support-container,
+        body.web-standalone #adminButtonContainer,
+        body.web-standalone #screenSaveBtn,
+        body.web-standalone #screenUploadBtn {
+            display: none !important;
+        }
+        .web-standalone-back {
+            display: inline-block;
+            margin: 12px 16px 0;
+            color: #9cdcfe;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .web-standalone-back:hover { text-decoration: underline; }
     </style>
     <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
     <meta name="static-asset-v" content="{{ cache_timestamp }}">
     <script>window.__STATIC_ASSET_V = "{{ cache_timestamp }}";</script>
+    {% if not web_standalone_mode|default(false) %}
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    {% endif %}
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script type="module" src="/static/js/content-editor/bootstrap/index.js?t={{ cache_timestamp }}"></script>
     <script>
@@ -1812,7 +1830,10 @@
     </script>
 </head>
 
-<body>
+<body class="{% if web_standalone_mode|default(false) %}web-standalone{% endif %}">
+    {% if web_standalone_mode|default(false) %}
+    <a class="web-standalone-back" href="/web/hints">← К загрузке матчей</a>
+    {% endif %}
     <div class="container">
         <h1>Backgammon Game Analysis</h1>
         <div class="board-layout">

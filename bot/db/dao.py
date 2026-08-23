@@ -40,6 +40,8 @@ from bot.db.models import (
     AnalizePaymentServiceQuantity,
     PromocodeServiceQuantity,
     MessageForNew,
+    HintViewerWebUpload,
+    HintViewerWebUploadStatus,
 )
 from sqlalchemy import delete, func, insert, literal, not_, or_, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -2676,3 +2678,75 @@ class MatchAnalysisFolderLinkDAO(BaseDAO[MatchAnalysisFolderLink]):
             .limit(1)
         )
         return result.scalar_one_or_none()
+
+
+class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
+    model = HintViewerWebUpload
+
+    async def create_upload(
+        self,
+        *,
+        session_id: str,
+        original_filename: str,
+        user_id: int | None = None,
+        game_id: str | None = None,
+        job_id: str | None = None,
+        batch_id: str | None = None,
+        red_player: str | None = None,
+        black_player: str | None = None,
+        status: str = HintViewerWebUploadStatus.QUEUED.value,
+    ) -> HintViewerWebUpload:
+        row = HintViewerWebUpload(
+            user_id=user_id,
+            session_id=session_id,
+            game_id=game_id,
+            job_id=job_id,
+            batch_id=batch_id,
+            original_filename=original_filename,
+            red_player=red_player,
+            black_player=black_player,
+            status=status,
+        )
+        self._session.add(row)
+        await self._session.flush()
+        return row
+
+    async def list_for_user(self, user_id: int, limit: int = 50) -> list[HintViewerWebUpload]:
+        result = await self._session.execute(
+            select(HintViewerWebUpload)
+            .where(HintViewerWebUpload.user_id == user_id)
+            .order_by(HintViewerWebUpload.id.desc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def list_for_session(
+        self, session_id: str, limit: int = 50
+    ) -> list[HintViewerWebUpload]:
+        result = await self._session.execute(
+            select(HintViewerWebUpload)
+            .where(HintViewerWebUpload.session_id == session_id)
+            .order_by(HintViewerWebUpload.id.desc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def update_status(
+        self,
+        upload_id: int,
+        status: str,
+        *,
+        game_id: str | None = None,
+        error_message: str | None = None,
+        finished: bool = False,
+    ) -> None:
+        row = await self._session.get(HintViewerWebUpload, upload_id)
+        if not row:
+            return
+        row.status = status
+        if game_id:
+            row.game_id = game_id
+        if error_message is not None:
+            row.error_message = error_message
+        if finished:
+            row.finished_at = datetime.now(timezone.utc)
