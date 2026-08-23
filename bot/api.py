@@ -82,6 +82,7 @@ from bot.db.models import (
 )
 from bot.db.schemas import SContentCardCreate, SUserContentCardCreate
 from loguru import logger
+import logging
 import traceback
 import json
 import os
@@ -126,6 +127,27 @@ class CachedStaticFiles(StaticFiles):
 
 
 app = FastAPI(title="Backgammon Hint Viewer API", version="1.0.0")
+
+
+class _SkipHintJobsAccessLogFilter(logging.Filter):
+    """Не логирует опрос статуса веб-загрузки матчей."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        path = ""
+        args = record.args
+        if isinstance(args, dict):
+            path = str(args.get("full_path") or args.get("path") or "")
+        elif isinstance(args, (tuple, list)) and len(args) >= 3:
+            path = str(args[2])
+        if not path:
+            try:
+                path = record.getMessage()
+            except Exception:
+                path = ""
+        return "/web/hints/api/jobs" not in path
+
+
+logging.getLogger("uvicorn.access").addFilter(_SkipHintJobsAccessLogFilter())
 
 
 @app.on_event("startup")

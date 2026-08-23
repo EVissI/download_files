@@ -79,6 +79,23 @@
             z-index: 20;
         }
         .sub { margin: 8px 0 0; padding-left: 14px; }
+        .progress {
+            height: 8px;
+            background: #2a2a2a;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, #2e7d32, #66bb6a);
+            border-radius: 999px;
+            transition: width 0.35s linear;
+        }
+        .job.error .progress-fill { background: #8d2f2f; }
+        .job.done .progress-fill { background: #2e7d32; }
+        .progress-label { margin-top: 6px; }
     </style>
 </head>
 <body>
@@ -108,7 +125,7 @@
 
         <div class="card history-off">
             <h2>История загрузок</h2>
-            <p>Раздел заложен в коде, но сейчас не работает: отдельных аккаунтов ещё нет. После появления пользователей история будет привязана к аккаунту.</p>
+            <p>Пока не доступно</p>
         </div>
     </div>
     <div class="toast" id="toast"></div>
@@ -122,6 +139,8 @@
         const toast = document.getElementById('toast');
         let selectedFiles = [];
         const knownReady = new Set();
+        let notifyArmed = false;
+        let latestJobs = [];
 
         function renderFiles() {
             fileList.innerHTML = selectedFiles.map(f => `<li>${f.name}</li>`).join('');
@@ -163,6 +182,45 @@
             return 'В очереди';
         }
 
+        function formatDuration(sec) {
+            sec = Math.max(0, Math.round(Number(sec) || 0));
+            if (sec < 60) return sec + ' сек';
+            const minutes = Math.round(sec / 60);
+            if (minutes < 60) return minutes + ' мин';
+            const hours = Math.floor(minutes / 60);
+            const rest = minutes % 60;
+            return rest ? hours + ' ч ' + rest + ' мин' : hours + ' ч';
+        }
+
+        function jobProgress(job) {
+            if (job.status === 'done') {
+                return { pct: 100, label: 'Готово' };
+            }
+            if (job.status === 'error') {
+                return { pct: 100, label: 'Ошибка' };
+            }
+            const estimate = Math.max(Number(job.estimated_time) || 60, 15);
+            const started = Date.parse(job.created_at);
+            const startMs = Number.isNaN(started) ? Date.now() : started;
+            const elapsed = Math.max(0, (Date.now() - startMs) / 1000);
+            let pct = (elapsed / estimate) * 100;
+            if (job.kind === 'batch' && job.total_files) {
+                pct = Math.max(pct, ((job.ready_count || 0) / job.total_files) * 100);
+            }
+            pct = Math.max(3, Math.min(pct, 92));
+            const remaining = Math.max(0, estimate - elapsed);
+            const label = remaining > 0
+                ? ('Оценка ~' + formatDuration(estimate) + ' · осталось ~' + formatDuration(remaining))
+                : ('Оценка ~' + formatDuration(estimate) + ' · ещё немного…');
+            return { pct, label };
+        }
+
+        function progressHtml(job) {
+            const p = jobProgress(job);
+            return `<div class="progress"><div class="progress-fill" style="width:${p.pct.toFixed(1)}%"></div></div>
+                <div class="muted progress-label">${p.label}</div>`;
+        }
+
         function renderJob(job) {
             const cls = job.status === 'done' ? 'done' : (job.status === 'error' ? 'error' : '');
             if (job.kind === 'batch') {
@@ -173,6 +231,7 @@
                 return `<div class="job ${cls}">
                     <strong>Пакет: ${(job.files || []).length} файл(ов)</strong>
                     <div class="muted">${statusLabel(job.status)} ${job.ready_count != null ? `(готово ${job.ready_count}/${job.total_files || 0})` : ''}</div>
+                    ${progressHtml(job)}
                     <ul class="sub">${files}</ul>
                     ${job.error ? `<div class="muted">${job.error}</div>` : ''}
                 </div>`;
@@ -181,9 +240,18 @@
             return `<div class="job ${cls}">
                 <strong>${job.filename || 'Матч'}</strong>
                 <div class="muted">${job.red_player || ''} vs ${job.black_player || ''} · ${statusLabel(job.status)}</div>
+                ${progressHtml(job)}
                 ${job.error ? `<div class="muted">${job.error}</div>` : ''}
                 <div class="actions">${open}</div>
             </div>`;
+        }
+
+        function renderJobsList() {
+            if (!latestJobs.length) {
+                jobsEl.innerHTML = '<span class="muted">Пока нет загрузок в этой сессии.</span>';
+                return;
+            }
+            jobsEl.innerHTML = latestJobs.map(renderJob).join('');
         }
 
         async function pollJobs() {
@@ -192,23 +260,31 @@
                 if (res.status === 401) { window.location.href = '/web/hints/login'; return; }
                 const data = await res.json();
                 const jobs = data.jobs || [];
+                latestJobs = jobs;
                 if (!jobs.length) {
-                    jobsEl.innerHTML = '<span class="muted">Пока нет загрузок в этой сессии.</span>';
+                    renderJobsList();
+                    notifyArmed = true;
                     return;
                 }
-                jobsEl.innerHTML = jobs.map(renderJob).join('');
+                renderJobsList();
                 jobs.forEach((job) => {
                     const key = job.job_id;
+                    const snapshot = key + ':' + (job.ready_count != null ? job.ready_count : job.status);
                     const ready = job.status === 'done' || (job.kind === 'batch' && (job.ready_count || 0) > 0);
-                    if (ready && key && !knownReady.has(key + ':' + (job.ready_count || job.status))) {
-                        knownReady.add(key + ':' + (job.ready_count || job.status));
-                        if (job.kind === 'batch') {
-                            notifyReady('Анализ готов', `Обработано ${job.ready_count} из ${job.total_files} матчей`);
-                        } else if (job.status === 'done') {
-                            notifyReady('Анализ готов', `${job.filename || 'Матч'} можно открыть`);
-                        }
+                    if (!ready || !key) return;
+                    if (!notifyArmed) {
+                        knownReady.add(snapshot);
+                        return;
+                    }
+                    if (knownReady.has(snapshot)) return;
+                    knownReady.add(snapshot);
+                    if (job.kind === 'batch') {
+                        notifyReady('Анализ готов', `Обработано ${job.ready_count} из ${job.total_files} матчей`);
+                    } else if (job.status === 'done') {
+                        notifyReady('Анализ готов', `${job.filename || 'Матч'} можно открыть`);
                     }
                 });
+                notifyArmed = true;
             } catch (e) {}
         }
 
@@ -243,6 +319,11 @@
         renderFiles();
         pollJobs();
         setInterval(pollJobs, 4000);
+        setInterval(() => {
+            if (latestJobs.some((j) => j.status === 'queued' || j.status === 'processing')) {
+                renderJobsList();
+            }
+        }, 300);
     </script>
 </body>
 </html>
