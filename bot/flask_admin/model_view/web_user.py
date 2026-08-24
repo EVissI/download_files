@@ -32,19 +32,21 @@ class WebUserModelView(ModelView):
 
     list_columns = ["id", "login", "is_admin", "password_masked"]
     show_columns = ["id", "login", "is_admin", "password_masked"]
-    add_columns = ["login", "is_admin"]
-    edit_columns = ["login", "is_admin"]
+    add_columns = ["login", "password", "is_admin"]
+    edit_columns = ["login", "password", "is_admin"]
     search_columns = ["login"]
     exclude_columns = ["password_hash", "uploads"]
 
     label_columns = {
         "id": "ID",
         "login": "Логин",
+        "password": "Пароль",
         "is_admin": "Админ",
         "password_masked": "Пароль",
     }
     description_columns = {
         "is_admin": "Флаг хранится в БД и не принимается из клиентских запросов веб-ошибок.",
+        "password": "Не короче 6 символов. При редактировании оставьте пустым, чтобы не менять.",
         "password_masked": "Хеш не показывается. Новый пароль задаётся только в форме создания/редактирования.",
     }
 
