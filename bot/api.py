@@ -201,29 +201,35 @@ app.add_middleware(GZipMiddleware, minimum_size=500)
 
 _fab_session_app = Flask("fab_session_probe")
 _fab_session_app.secret_key = settings.SECRET_KEY
-_fab_session_serializer = SecureCookieSessionInterface().get_signing_serializer(
-    _fab_session_app
-)
 
 
-def _is_fab_public_path(path: str) -> bool:
+_FAB_FASTAPI_BRIDGES = {
+    "/admin/cards-cabinet",
+    "/admin/pip-count-cabinet",
+    "/admin/match-analysis-cabinet",
+}
+
+
+def _is_fab_fastapi_bridge(path: str) -> bool:
     stripped = path.rstrip("/") or "/"
-    if stripped in ("/admin/login", "/admin/logout"):
+    if stripped in _FAB_FASTAPI_BRIDGES:
         return True
-    if path.startswith("/admin/static/"):
-        return True
-    return False
+    return path.startswith("/admin/content-card-view/")
 
 
 def _flask_session_user_id(request: Request) -> str | None:
     cookie = request.cookies.get("session")
-    if not cookie or _fab_session_serializer is None:
+    if not cookie:
+        return None
+    app = globals().get("flask_app") or _fab_session_app
+    serializer = SecureCookieSessionInterface().get_signing_serializer(app)
+    if serializer is None:
         return None
     try:
-        data = _fab_session_serializer.loads(cookie)
+        data = serializer.loads(cookie)
     except Exception:
         return None
-    uid = (data or {}).get("_user_id")
+    uid = (data or {}).get("_user_id") or (data or {}).get("_id")
     return str(uid) if uid else None
 
 
@@ -237,9 +243,7 @@ def _acting_telegram_admin_id() -> int:
 @app.middleware("http")
 async def admin_security_middleware(request: Request, call_next):
     path = request.url.path
-    if not path.startswith("/admin"):
-        return await call_next(request)
-    if _is_fab_public_path(path):
+    if not _is_fab_fastapi_bridge(path):
         return await call_next(request)
     if _flask_session_user_id(request):
         return await call_next(request)

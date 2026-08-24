@@ -59,6 +59,21 @@ class WebUserModelView(ModelView):
         "password": _password_field("Новый пароль (оставьте пустым, чтобы не менять)", required=False),
     }
 
+    @staticmethod
+    def _raw_password(item: WebUser) -> str:
+        raw = getattr(item, "password", None)
+        if not isinstance(raw, str) or not raw.strip():
+            raw = request.form.get("password")
+        return (raw or "").strip()
+
+    @staticmethod
+    def _drop_transient_password(item: WebUser) -> None:
+        if hasattr(item, "password"):
+            try:
+                delattr(item, "password")
+            except Exception:
+                pass
+
     def pre_add(self, item: WebUser) -> None:
         item.login = (item.login or request.form.get("login") or "").strip()
         if not item.login:
@@ -72,12 +87,13 @@ class WebUserModelView(ModelView):
         if existing:
             flash("Такой логин уже занят", "danger")
             raise ValueError("duplicate login")
-        raw = (request.form.get("password") or "").strip()
+        raw = self._raw_password(item)
         if len(raw) < 6:
             flash("Пароль должен быть не короче 6 символов", "danger")
             raise ValueError("password too short")
         item.password_hash, item.password_encrypted = store_password(raw)
         item.is_admin = bool(item.is_admin)
+        self._drop_transient_password(item)
 
     def pre_update(self, item: WebUser) -> None:
         item.login = (item.login or request.form.get("login") or "").strip()
@@ -92,10 +108,11 @@ class WebUserModelView(ModelView):
         if existing:
             flash("Такой логин уже занят", "danger")
             raise ValueError("duplicate login")
-        raw = (request.form.get("password") or "").strip()
+        raw = self._raw_password(item)
         if raw:
             if len(raw) < 6:
                 flash("Пароль должен быть не короче 6 символов", "danger")
                 raise ValueError("password too short")
             item.password_hash, item.password_encrypted = store_password(raw)
         item.is_admin = bool(item.is_admin)
+        self._drop_transient_password(item)

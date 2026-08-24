@@ -68,7 +68,7 @@
         {% endif %}
         <form method="post" action="/web/hints/login">
             <label for="login">Логин</label>
-            <input id="login" name="login" type="text" autocomplete="username" required>
+            <input id="login" name="login" type="text" autocomplete="username" value="{{ login_value or '' }}" required>
             <label for="password">Пароль</label>
             <input id="password" name="password" type="password" autocomplete="current-password" required>
             <button type="submit">Войти</button>

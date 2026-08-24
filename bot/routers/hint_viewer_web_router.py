@@ -450,6 +450,7 @@ async def web_hints_login_page(request: Request):
         {
             "request": request,
             "error": None,
+            "login_value": "",
             "cache_timestamp": get_static_asset_version(),
         },
     )
@@ -458,19 +459,20 @@ async def web_hints_login_page(request: Request):
 @hint_viewer_web_api_router.post("/web/hints/login")
 async def web_hints_login(
     request: Request,
-    login: str = Form(...),
-    password: str = Form(...),
+    login: str = Form(""),
+    password: str = Form(""),
 ):
     user = await authenticate_web_user(login, password)
     if not user:
         return templates.TemplateResponse(
             "hint_viewer_web_login.html",
-            {
-                "request": request,
-                "error": "Неверный логин или пароль",
-                "cache_timestamp": get_static_asset_version(),
-            },
-            status_code=401,
+        {
+            "request": request,
+            "error": "Неверный логин или пароль",
+            "login_value": (login or "").strip(),
+            "cache_timestamp": get_static_asset_version(),
+        },
+            status_code=200,
         )
     created = await create_session(user)
     response = RedirectResponse(url="/web/hints", status_code=303)

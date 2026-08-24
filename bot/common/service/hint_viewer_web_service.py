@@ -8,7 +8,7 @@ from typing import Any
 
 from loguru import logger
 
-from bot.common.utils.password import verify_password
+from bot.common.utils.password import passwords_match
 from bot.db.redis import redis_client
 
 COOKIE_NAME = "hint_web_session"
@@ -19,17 +19,28 @@ JOBS_KEY = "hint_web:jobs:{token}"
 
 
 async def authenticate_web_user(login: str, password: str):
+    from types import SimpleNamespace
+
     from bot.db.database import async_session_maker
     from bot.db.dao import WebUserDAO
 
     normalized = (login or "").strip()
-    if not normalized or not password:
+    raw = (password or "").strip()
+    if not normalized or not raw:
         return None
     async with async_session_maker() as session:
         user = await WebUserDAO(session).get_by_login(normalized)
-        if not user or not verify_password(user.password_hash, password):
+        if not user:
+            logger.info("Web login failed: unknown login")
             return None
-        return user
+        if not passwords_match(user.password_hash, user.password_encrypted, raw):
+            logger.info("Web login failed: bad password for login={}", user.login)
+            return None
+        return SimpleNamespace(
+            id=int(user.id),
+            login=user.login,
+            is_admin=bool(user.is_admin),
+        )
 
 
 async def create_session(user) -> dict[str, Any]:

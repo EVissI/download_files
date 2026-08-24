@@ -5,8 +5,10 @@ from __future__ import annotations
 import base64
 import hashlib
 import os
+import secrets
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from loguru import logger
 from werkzeug.security import check_password_hash, generate_password_hash
 
 _AAD = b"web_user.password"
@@ -14,15 +16,40 @@ _NONCE_LEN = 12
 
 
 def hash_password(raw: str) -> str:
-    return generate_password_hash((raw or "").strip())
+    return generate_password_hash(
+        (raw or "").strip(),
+        method="pbkdf2:sha256",
+        salt_length=16,
+    )
 
 
 def verify_password(password_hash: str, raw: str) -> bool:
     if not password_hash or raw is None:
         return False
+    cleaned = raw.strip()
+    if not cleaned:
+        return False
     try:
-        return check_password_hash(password_hash, raw)
-    except (ValueError, TypeError):
+        return bool(check_password_hash(password_hash, cleaned))
+    except Exception:
+        logger.warning("WebUser password hash check failed")
+        return False
+
+
+def passwords_match(
+    password_hash: str, encrypted: str | None, raw: str
+) -> bool:
+    cleaned = (raw or "").strip()
+    if not cleaned:
+        return False
+    if verify_password(password_hash, cleaned):
+        return True
+    plain = decrypt_password(encrypted)
+    if plain is None:
+        return False
+    try:
+        return secrets.compare_digest(plain, cleaned)
+    except (TypeError, ValueError):
         return False
 
 

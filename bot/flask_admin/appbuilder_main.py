@@ -32,6 +32,7 @@ from bot.flask_admin.model_view.users_with_pip_count_cards import UsersWithPipCo
 from bot.flask_admin.model_view.telegram_proxy import TelegramProxyModelView
 from bot.flask_admin.model_view.webapp_settings import WebAppSettingsModelView
 from bot.flask_admin.model_view.web_user import WebUserModelView
+from bot.flask_admin.security import WebAdminSecurityManager
 
 from bot.flask_admin.model_view.content_cards import ContentCardModelView, PipCountContentCardModelView
 
@@ -91,8 +92,8 @@ class CustomIndexView(IndexView):
         except Exception as e:
             logger.warning(f"Failed to load FAB menu data for welcome page: {e}")
 
-        login_url = "/login/"
-        logout_url = "/logout/"
+        login_url = "/admin/login/"
+        logout_url = "/admin/logout/"
         try:
             login_url = url_for("AuthDBView.login")
         except Exception:
@@ -122,6 +123,10 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = settings.SECRET_KEY
     app.config["WTF_CSRF_ENABLED"] = True
+    app.config["WTF_CSRF_SSL_STRICT"] = False
+    app.config["SESSION_COOKIE_PATH"] = "/"
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     try:
         from flask_appbuilder.const import AUTH_DB
     except ImportError:
@@ -140,7 +145,12 @@ def create_app():
 
     with app.app_context():
         try:
-            appbuilder = AppBuilder(app, db.session, indexview=CustomIndexView)
+            appbuilder = AppBuilder(
+                app,
+                db.session,
+                indexview=CustomIndexView,
+                security_manager_class=WebAdminSecurityManager,
+            )
             db.create_all()
             register_models(appbuilder, db)
             logger.info("Flask admin initialized successfully")
