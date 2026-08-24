@@ -1536,6 +1536,7 @@ class WebUser(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     login: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_admin: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=sa_false()
     )
@@ -1548,6 +1549,18 @@ class WebUser(Base):
     @renders("password_masked")
     def password_masked(self) -> str:
         return "********"
+
+    @property
+    @renders("password_display")
+    def password_display(self) -> str:
+        from bot.common.utils.password import decrypt_password
+
+        if not self.password_encrypted:
+            return "Нет расшифруемой копии — задайте пароль заново"
+        plain = decrypt_password(self.password_encrypted)
+        if plain is None:
+            return "Не удалось расшифровать (проверьте WEB_USER_PASSWORD_KEY)"
+        return plain
 
 
 class HintViewerWebUploadStatus(str, enum.Enum):

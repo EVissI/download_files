@@ -4,7 +4,7 @@ from flask_appbuilder.models.sqla.interface import SQLAInterface
 from wtforms import PasswordField
 from wtforms.validators import DataRequired, Length, Optional
 
-from bot.common.utils.password import hash_password
+from bot.common.utils.password import store_password
 from bot.db.models import WebUser
 
 try:
@@ -31,11 +31,11 @@ class WebUserModelView(ModelView):
     edit_title = "Изменить веб-пользователя"
 
     list_columns = ["id", "login", "is_admin", "password_masked"]
-    show_columns = ["id", "login", "is_admin", "password_masked"]
+    show_columns = ["id", "login", "is_admin", "password_display"]
     add_columns = ["login", "password", "is_admin"]
     edit_columns = ["login", "password", "is_admin"]
     search_columns = ["login"]
-    exclude_columns = ["password_hash", "uploads"]
+    exclude_columns = ["password_hash", "password_encrypted", "uploads"]
 
     label_columns = {
         "id": "ID",
@@ -43,11 +43,13 @@ class WebUserModelView(ModelView):
         "password": "Пароль",
         "is_admin": "Админ",
         "password_masked": "Пароль",
+        "password_display": "Пароль",
     }
     description_columns = {
         "is_admin": "Флаг хранится в БД и не принимается из клиентских запросов веб-ошибок.",
         "password": "Не короче 6 символов. При редактировании оставьте пустым, чтобы не менять.",
-        "password_masked": "Хеш не показывается. Новый пароль задаётся только в форме создания/редактирования.",
+        "password_masked": "В списке пароль скрыт. Откройте карточку пользователя, чтобы увидеть исходный пароль.",
+        "password_display": "Расшифрованная копия. Для входа используется отдельный хеш.",
     }
 
     add_form_extra_fields = {
@@ -74,7 +76,7 @@ class WebUserModelView(ModelView):
         if len(raw) < 6:
             flash("Пароль должен быть не короче 6 символов", "danger")
             raise ValueError("password too short")
-        item.password_hash = hash_password(raw)
+        item.password_hash, item.password_encrypted = store_password(raw)
         item.is_admin = bool(item.is_admin)
 
     def pre_update(self, item: WebUser) -> None:
@@ -95,5 +97,5 @@ class WebUserModelView(ModelView):
             if len(raw) < 6:
                 flash("Пароль должен быть не короче 6 символов", "danger")
                 raise ValueError("password too short")
-            item.password_hash = hash_password(raw)
+            item.password_hash, item.password_encrypted = store_password(raw)
         item.is_admin = bool(item.is_admin)

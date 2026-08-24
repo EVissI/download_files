@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     MINI_APP_URL: str
 
     SECRET_KEY: str = "dev-secret-key-change-in-production"
+    # Ключ AES-GCM для копии пароля веб-пользователя (просмотр в FAB).
+    # Если пусто — берётся SECRET_KEY. Смена ключа делает старые копии нечитаемыми.
+    WEB_USER_PASSWORD_KEY: str = ""
 
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
