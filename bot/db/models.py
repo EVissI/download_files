@@ -1528,6 +1528,28 @@ class MatchAnalysisFolderSchedule(Base):
     created_by_admin: Mapped[Optional["User"]] = relationship("User")
 
 
+class WebUser(Base):
+    """Аккаунт отдельной веб-версии hint viewer (не Telegram)."""
+
+    __tablename__ = "web_users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    login: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_false()
+    )
+    uploads: Mapped[list["HintViewerWebUpload"]] = relationship(
+        "HintViewerWebUpload",
+        back_populates="web_user",
+    )
+
+    @property
+    @renders("password_masked")
+    def password_masked(self) -> str:
+        return "********"
+
+
 class HintViewerWebUploadStatus(str, enum.Enum):
     QUEUED = "queued"
     PROCESSING = "processing"
@@ -1536,21 +1558,20 @@ class HintViewerWebUploadStatus(str, enum.Enum):
 
 
 class HintViewerWebUpload(Base):
-    """
-    История загрузок веб-версии hint viewer.
-
-    user_id сейчас всегда NULL: аккаунтов ещё нет, запись в таблицу
-    не выполняется (HINT_VIEWER_WEB_HISTORY_ENABLED=false).
-    """
+    """История загрузок веб-версии hint viewer, привязанная к WebUser."""
 
     __tablename__ = "hint_viewer_web_uploads"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int | None] = mapped_column(
-        BigInteger,
-        ForeignKey("users.id", ondelete="SET NULL"),
+        Integer,
+        ForeignKey("web_users.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
+    )
+    web_user: Mapped[Optional["WebUser"]] = relationship(
+        "WebUser",
+        back_populates="uploads",
     )
     session_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     game_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)

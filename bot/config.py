@@ -40,11 +40,6 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = "dev-secret-key-change-in-production"
 
-    # Отдельная веб-версия hint viewer (не Telegram). Пустой пароль — вход закрыт.
-    HINT_VIEWER_WEB_PASSWORD: str = ""
-    # История загрузок: заготовка под будущие аккаунты, сейчас выключена.
-    HINT_VIEWER_WEB_HISTORY_ENABLED: bool = False
-
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str = "backgammon"

@@ -10,6 +10,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.wsgi import WSGIMiddleware
+from flask import Flask
+from flask.sessions import SecureCookieSessionInterface
 from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
@@ -197,22 +199,58 @@ app.add_middleware(
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
 
+_fab_session_app = Flask("fab_session_probe")
+_fab_session_app.secret_key = settings.SECRET_KEY
+_fab_session_serializer = SecureCookieSessionInterface().get_signing_serializer(
+    _fab_session_app
+)
+
+
+def _is_fab_public_path(path: str) -> bool:
+    stripped = path.rstrip("/") or "/"
+    if stripped in ("/admin/login", "/admin/logout"):
+        return True
+    if path.startswith("/admin/static/"):
+        return True
+    return False
+
+
+def _flask_session_user_id(request: Request) -> str | None:
+    cookie = request.cookies.get("session")
+    if not cookie or _fab_session_serializer is None:
+        return None
+    try:
+        data = _fab_session_serializer.loads(cookie)
+    except Exception:
+        return None
+    uid = (data or {}).get("_user_id")
+    return str(uid) if uid else None
+
+
+def _acting_telegram_admin_id() -> int:
+    ids = settings.ROOT_ADMIN_IDS or []
+    if not ids:
+        raise HTTPException(status_code=403, detail="ROOT_ADMIN_IDS не заданы")
+    return int(ids[0])
+
+
 @app.middleware("http")
 async def admin_security_middleware(request: Request, call_next):
-    if request.url.path.startswith("/admin"):
-        # Allow login and verify bypass
-        if request.url.path in ["/admin/login", "/admin/verify"]:
-            return await call_next(request)
-
-        session_token = request.cookies.get("admin_session")
-        if not session_token:
-            return Response("Unauthorized", status_code=401)
-
+    path = request.url.path
+    if not path.startswith("/admin"):
+        return await call_next(request)
+    if _is_fab_public_path(path):
+        return await call_next(request)
+    if _flask_session_user_id(request):
+        return await call_next(request)
+    session_token = request.cookies.get("admin_session")
+    if session_token:
         admin_id = await redis_client.get(f"admin_session:{session_token}")
-        if not admin_id:
-            return Response("Unauthorized", status_code=401)
-
-    return await call_next(request)
+        if admin_id:
+            return await call_next(request)
+    if request.method in ("GET", "HEAD"):
+        return RedirectResponse(url="/admin/login/", status_code=302)
+    return Response("Unauthorized", status_code=401)
 
 
 app.mount("/static", CachedStaticFiles(directory=str(static_dir)), name="static")
@@ -576,59 +614,6 @@ async def get_pokaz_hints(xgid: str, chat_id: Optional[int] = None):
         logger.error(f"Ошибка при обработке запроса pokaz/hints: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Ошибка сервера: {str(e)}")
-
-
-@app.get("/admin/login", response_class=HTMLResponse)
-async def admin_login(request: Request):
-    webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("admin_login")
-    return templates.TemplateResponse(
-        "admin_login.html",
-        {
-            "request": request,
-            "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
-        },
-    )
-
-
-@app.post("/admin/verify")
-async def admin_verify(request: Request, response: Response):
-    logger.info("Admin verify request received")
-    data = await request.json()
-    init_data = data.get("initData")
-    if not init_data:
-        logger.warning("Missing initData in request")
-        raise HTTPException(status_code=400, detail="Missing initData")
-
-    user_data = verify_telegram_webapp_data(init_data)
-    if not user_data:
-        logger.warning("Failed to verify telegram webapp data")
-        raise HTTPException(status_code=401, detail="Invalid Telegram data")
-
-    user_id = user_data.get("user", {}).get("id")
-    logger.info(f"Verified user_id: {user_id}")
-    if user_id not in settings.ROOT_ADMIN_IDS:
-        logger.warning(
-            f"User {user_id} not in ROOT_ADMIN_IDS: {settings.ROOT_ADMIN_IDS}"
-        )
-        raise HTTPException(status_code=403, detail="Not an admin")
-
-    # Create session
-    session_token = secrets.token_urlsafe(32)
-    # Store session in redis
-    logger.info(f"Creating session for user {user_id}")
-    await redis_client.set(
-        f"admin_session:{session_token}", str(user_id), expire=86400
-    )  # 24h
-
-    logger.info(f"Setting session cookie for user {user_id}")
-    response.set_cookie(
-        key="admin_session",
-        value=session_token,
-        httponly=True,
-        samesite="lax",
-        max_age=86400,
-    )
-    return {"status": "ok"}
 
 
 @app.post("/api/send_to_admin")
@@ -1238,6 +1223,8 @@ async def _resolve_content_cards_user_id(
 
 
 async def _require_admin_session_user_id(request: Request) -> int:
+    if _flask_session_user_id(request):
+        return _acting_telegram_admin_id()
     session_token = request.cookies.get("admin_session")
     if not session_token:
         raise HTTPException(status_code=401, detail="Unauthorized")

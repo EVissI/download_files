@@ -39,15 +39,15 @@ from bot.common.service.hint_viewer_web_service import (
     COOKIE_NAME,
     SESSION_TTL_SEC,
     append_session_job,
+    authenticate_web_user,
     create_session,
     destroy_session,
     get_session,
-    is_history_enabled,
-    is_web_password_configured,
+    list_history_for_user,
     list_session_jobs,
-    password_matches,
-    record_history_if_enabled,
+    record_history,
     replace_session_jobs,
+    sync_history_from_job,
 )
 from bot.common.service.webapp_settings_service import (
     get_hint_viewer_screenshot_font_scale_percent,
@@ -171,6 +171,7 @@ async def _enqueue_single(
     filename: str,
     web_uid: int,
     session_token: str,
+    user_id: int | None,
 ) -> dict[str, Any]:
     game_id = random_filename(ext="")
     job_id = f"web_hint_{abs(web_uid)}_{uuid.uuid4().hex[:8]}"
@@ -216,8 +217,9 @@ async def _enqueue_single(
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await append_session_job(session_token, job_payload)
-    await record_history_if_enabled(
+    await record_history(
         session_id=session_token,
+        user_id=user_id,
         original_filename=filename,
         game_id=game_id,
         job_id=job_id,
@@ -233,6 +235,7 @@ async def _enqueue_batch(
     files: list[tuple[str, str]],
     web_uid: int,
     session_token: str,
+    user_id: int | None,
 ) -> dict[str, Any]:
     batch_id = f"web_batch_{abs(web_uid)}_{uuid.uuid4().hex[:8]}"
     job_id = f"web_batch_job_{batch_id}"
@@ -307,8 +310,9 @@ async def _enqueue_batch(
                 "black_player": black_player,
             }
         )
-        await record_history_if_enabled(
+        await record_history(
             session_id=session_token,
+            user_id=user_id,
             original_filename=fname,
             job_id=job_id,
             batch_id=batch_id,
@@ -446,37 +450,29 @@ async def web_hints_login_page(request: Request):
         {
             "request": request,
             "error": None,
-            "configured": is_web_password_configured(),
             "cache_timestamp": get_static_asset_version(),
         },
     )
 
 
 @hint_viewer_web_api_router.post("/web/hints/login")
-async def web_hints_login(request: Request, password: str = Form(...)):
-    if not is_web_password_configured():
+async def web_hints_login(
+    request: Request,
+    login: str = Form(...),
+    password: str = Form(...),
+):
+    user = await authenticate_web_user(login, password)
+    if not user:
         return templates.TemplateResponse(
             "hint_viewer_web_login.html",
             {
                 "request": request,
-                "error": "Веб-версия не настроена: задайте HINT_VIEWER_WEB_PASSWORD",
-                "configured": False,
-                "cache_timestamp": get_static_asset_version(),
-            },
-            status_code=503,
-        )
-    if not password_matches(password):
-        return templates.TemplateResponse(
-            "hint_viewer_web_login.html",
-            {
-                "request": request,
-                "error": "Неверный пароль",
-                "configured": True,
+                "error": "Неверный логин или пароль",
                 "cache_timestamp": get_static_asset_version(),
             },
             status_code=401,
         )
-    created = await create_session()
+    created = await create_session(user)
     response = RedirectResponse(url="/web/hints", status_code=303)
     response.set_cookie(
         key=COOKIE_NAME,
@@ -508,7 +504,6 @@ async def web_hints_upload_page(request: Request):
         "hint_viewer_web_upload.html",
         {
             "request": request,
-            "history_enabled": is_history_enabled(),
             "cache_timestamp": get_static_asset_version(),
         },
     )
@@ -524,7 +519,9 @@ async def web_hints_upload(request: Request, files: list[UploadFile] = File(...)
         collected = await _collect_mat_files(files, workdir)
         if not collected:
             raise HTTPException(status_code=400, detail="В загрузке нет .mat файлов")
-        web_uid = int(session.get("web_uid") or -1)
+        web_uid = int(session.get("web_uid") or -int(session.get("user_id") or 1))
+        user_id = session.get("user_id")
+        user_id = int(user_id) if user_id else None
         if len(collected) == 1:
             local_mat, filename = collected[0]
             payload = await _enqueue_single(
@@ -532,12 +529,14 @@ async def web_hints_upload(request: Request, files: list[UploadFile] = File(...)
                 filename=filename,
                 web_uid=web_uid,
                 session_token=token,
+                user_id=user_id,
             )
         else:
             payload = await _enqueue_batch(
                 files=collected,
                 web_uid=web_uid,
                 session_token=token,
+                user_id=user_id,
             )
         return JSONResponse({"ok": True, "job": payload})
     except HTTPException:
@@ -565,19 +564,20 @@ async def web_hints_jobs(request: Request):
             continue
         kept.append(item)
         jobs.append(enriched)
+        await sync_history_from_job(enriched)
     if len(kept) != len(stored):
         await replace_session_jobs(token, kept)
-    return {"ok": True, "jobs": jobs, "history_enabled": is_history_enabled()}
+    return {"ok": True, "jobs": jobs}
 
 
 @hint_viewer_web_api_router.get("/web/hints/api/history")
 async def web_hints_history(request: Request):
-    await _require_session(request)
+    _token, session = await _require_session(request)
+    user_id = session.get("user_id")
+    items = await list_history_for_user(int(user_id)) if user_id else []
     return {
         "ok": True,
-        "enabled": is_history_enabled(),
-        "items": [],
-        "message": "История загрузок будет доступна после появления аккаунтов",
+        "items": items,
     }
 
 

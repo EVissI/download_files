@@ -65,7 +65,15 @@
         .job.done { border-color: #2e7d32; }
         .job.error { border-color: #8d2f2f; }
         .muted { color: #999; font-size: 0.9rem; }
-        .history-off { color: #888; }
+        .history-item {
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background: #181818;
+        }
+        .history-item a { color: #81c784; }
+    </style>
         .toast {
             position: fixed;
             right: 16px;
@@ -123,9 +131,9 @@
             <div id="jobs" class="muted">Пока нет загрузок в этой сессии.</div>
         </div>
 
-        <div class="card history-off">
+        <div class="card">
             <h2>История загрузок</h2>
-            <p>Пока не доступно</p>
+            <div id="history" class="muted">Загрузка истории…</div>
         </div>
     </div>
     <div class="toast" id="toast"></div>
@@ -310,15 +318,55 @@
                 renderFiles();
                 uploadStatus.textContent = 'Файл(ы) приняты, анализ в очереди.';
                 pollJobs();
+                pollHistory();
             } catch (e) {
                 uploadStatus.textContent = 'Сеть недоступна';
                 uploadBtn.disabled = false;
             }
         });
 
+        const historyEl = document.getElementById('history');
+
+        function historyStatusLabel(status) {
+            if (status === 'done') return 'Готово';
+            if (status === 'processing') return 'Считается…';
+            if (status === 'error') return 'Ошибка';
+            return 'В очереди';
+        }
+
+        function renderHistory(items) {
+            if (!historyEl) return;
+            if (!items || !items.length) {
+                historyEl.innerHTML = '<span class="muted">Пока нет загрузок у этого аккаунта.</span>';
+                return;
+            }
+            historyEl.innerHTML = items.map((item) => {
+                const players = [item.red_player, item.black_player].filter(Boolean).join(' vs ');
+                const open = item.view_url ? `<a href="${item.view_url}">Открыть</a>` : '';
+                const err = item.error_message ? `<div class="muted">${item.error_message}</div>` : '';
+                return `<div class="history-item">
+                    <strong>${item.original_filename || 'Матч'}</strong>
+                    <div class="muted">${players || '—'} · ${historyStatusLabel(item.status)}</div>
+                    ${err}
+                    <div>${open}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function pollHistory() {
+            try {
+                const res = await fetch('/web/hints/api/history');
+                if (res.status === 401) return;
+                const data = await res.json();
+                renderHistory(data.items || []);
+            } catch (e) {}
+        }
+
         renderFiles();
         pollJobs();
+        pollHistory();
         setInterval(pollJobs, 4000);
+        setInterval(pollHistory, 8000);
         setInterval(() => {
             if (latestJobs.some((j) => j.status === 'queued' || j.status === 'processing')) {
                 renderJobsList();

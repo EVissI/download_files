@@ -27,6 +27,7 @@
         }
         h1 { margin: 0 0 20px; font-size: 1.35rem; }
         label { display: block; margin-bottom: 8px; font-size: 0.9rem; }
+        input[type="text"],
         input[type="password"] {
             width: 100%;
             padding: 12px 14px;
@@ -49,7 +50,6 @@
             cursor: pointer;
         }
         button:hover { background: #256428; }
-        button:disabled { background: #444; cursor: not-allowed; }
         .error {
             background: #3b1c1c;
             border: 1px solid #8d2f2f;
@@ -67,9 +67,11 @@
         <div class="error">{{ error }}</div>
         {% endif %}
         <form method="post" action="/web/hints/login">
+            <label for="login">Логин</label>
+            <input id="login" name="login" type="text" autocomplete="username" required>
             <label for="password">Пароль</label>
-            <input id="password" name="password" type="password" autocomplete="current-password" {% if not configured %}disabled{% endif %} required>
-            <button type="submit" {% if not configured %}disabled{% endif %}>Войти</button>
+            <input id="password" name="password" type="password" autocomplete="current-password" required>
+            <button type="submit">Войти</button>
         </form>
     </div>
 </body>

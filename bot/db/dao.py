@@ -42,6 +42,7 @@ from bot.db.models import (
     MessageForNew,
     HintViewerWebUpload,
     HintViewerWebUploadStatus,
+    WebUser,
 )
 from sqlalchemy import delete, func, insert, literal, not_, or_, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -2680,6 +2681,19 @@ class MatchAnalysisFolderLinkDAO(BaseDAO[MatchAnalysisFolderLink]):
         return result.scalar_one_or_none()
 
 
+class WebUserDAO(BaseDAO[WebUser]):
+    model = WebUser
+
+    async def get_by_login(self, login: str) -> WebUser | None:
+        normalized = (login or "").strip()
+        if not normalized:
+            return None
+        result = await self._session.execute(
+            select(WebUser).where(WebUser.login == normalized)
+        )
+        return result.scalar_one_or_none()
+
+
 class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
     model = HintViewerWebUpload
 
@@ -2750,3 +2764,27 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
             row.error_message = error_message
         if finished:
             row.finished_at = datetime.now(timezone.utc)
+
+    async def update_status_for_job(
+        self,
+        job_id: str,
+        status: str,
+        *,
+        original_filename: str | None = None,
+        game_id: str | None = None,
+        error_message: str | None = None,
+        finished: bool = False,
+    ) -> None:
+        query = select(HintViewerWebUpload).where(HintViewerWebUpload.job_id == job_id)
+        if original_filename:
+            query = query.where(HintViewerWebUpload.original_filename == original_filename)
+        result = await self._session.execute(query)
+        now = datetime.now(timezone.utc)
+        for row in result.scalars().all():
+            row.status = status
+            if game_id:
+                row.game_id = game_id
+            if error_message is not None:
+                row.error_message = error_message
+            if finished:
+                row.finished_at = now

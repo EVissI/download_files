@@ -31,6 +31,7 @@ from bot.flask_admin.model_view.users_with_match_analyses import UsersWithMatchA
 from bot.flask_admin.model_view.users_with_pip_count_cards import UsersWithPipCountCardsView
 from bot.flask_admin.model_view.telegram_proxy import TelegramProxyModelView
 from bot.flask_admin.model_view.webapp_settings import WebAppSettingsModelView
+from bot.flask_admin.model_view.web_user import WebUserModelView
 
 from bot.flask_admin.model_view.content_cards import ContentCardModelView, PipCountContentCardModelView
 
@@ -121,6 +122,11 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = settings.SECRET_KEY
     app.config["WTF_CSRF_ENABLED"] = True
+    try:
+        from flask_appbuilder.const import AUTH_DB
+    except ImportError:
+        AUTH_DB = 1
+    app.config["AUTH_TYPE"] = AUTH_DB
 
     # === FLASK-APPBUILDER КОНФИГ ===
     app.config["FLASK_APP_BUILDER"] = {
@@ -159,6 +165,11 @@ def register_models(appbuilder, db):
     appbuilder.add_view_no_menu(UserPromocodeInline)
     appbuilder.add_view_no_menu(UserAnalizePaymentInline)
     appbuilder.add_view(UserModelView, "Пользователи", icon="fa-users")
+    appbuilder.add_view(
+        WebUserModelView,
+        "Веб-пользователи",
+        icon="fa-user-circle",
+    )
     appbuilder.add_view(
         FabUserGroupsModelView,
         "Группы пользователей",
