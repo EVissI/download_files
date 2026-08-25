@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Загрузка матчей</title>
+    <title>{{ page_title|default('Загрузка матчей') }}</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -20,6 +20,31 @@
             padding: 16px 20px;
             border-bottom: 1px solid #2a2a2a;
             background: #1a1a1a;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .service-nav {
+            display: flex;
+            gap: 4px;
+            background: #111;
+            padding: 4px;
+            border-radius: 10px;
+        }
+        .service-nav a {
+            color: #bbb;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .service-nav a.active {
+            background: #2e7d32;
+            color: #fff;
+        }
+        .service-nav a:hover:not(.active) {
+            background: #2a2a2a;
+            color: #fff;
         }
         .header-actions {
             display: flex;
@@ -128,7 +153,10 @@
 </head>
 <body>
     <header>
-        <h1>Загрузка матчей</h1>
+        <nav class="service-nav" aria-label="Сервисы">
+            <a href="/web/hints" class="{% if web_service|default('hints') == 'hints' %}active{% endif %}">Ошибки</a>
+            <a href="/web/board" class="{% if web_service|default('hints') == 'board' %}active{% endif %}">Плеер</a>
+        </nav>
         <div class="header-actions">
             {% if is_admin %}
             <a class="btn ghost" href="/admin/">Админка</a>
@@ -140,13 +168,13 @@
     </header>
     <div class="wrap">
         <div class="card">
-            <h2>Новый анализ</h2>
-            <p class="muted">Можно загрузить один или несколько .mat, либо zip с матчами. Когда анализ будет готов, появится уведомление.</p>
+            <h2>{{ card_title|default('Новый анализ') }}</h2>
+            <p class="muted">{{ intro_text|default('Можно загрузить один или несколько .mat, либо zip с матчами. Когда анализ будет готов, появится уведомление.') }}</p>
             <div class="drop" id="dropzone">Нажмите или перетащите файлы сюда<br><span class="muted">.mat или .zip</span></div>
             <input id="fileInput" type="file" accept=".mat,.zip,application/zip" multiple>
             <ul class="file-list" id="fileList"></ul>
             <div class="actions">
-                <button class="primary" id="uploadBtn" type="button" disabled>Отправить на анализ</button>
+                <button class="primary" id="uploadBtn" type="button" disabled>{{ upload_btn_label|default('Отправить на анализ') }}</button>
             </div>
             <p class="muted" id="uploadStatus"></p>
         </div>
@@ -164,6 +192,9 @@
     </div>
     <div class="toast" id="toast"></div>
     <script>
+        const apiBase = {{ api_base|default('/web/hints')|tojson }};
+        const loginUrl = {{ login_url|default('/web/hints/login')|tojson }};
+        const uploadOkMessage = {{ upload_ok_message|default('Файл(ы) приняты, анализ в очереди.')|tojson }};
         const fileInput = document.getElementById('fileInput');
         const dropzone = document.getElementById('dropzone');
         const fileList = document.getElementById('fileList');
@@ -308,8 +339,8 @@
 
         async function pollJobs() {
             try {
-                const res = await fetch('/web/hints/api/jobs');
-                if (res.status === 401) { window.location.href = '/web/hints/login'; return; }
+                const res = await fetch(apiBase + '/api/jobs');
+                if (res.status === 401) { window.location.href = loginUrl; return; }
                 const data = await res.json();
                 const jobs = (data.jobs || []).filter((job) => job.error !== 'Задача не найдена');
                 latestJobs = jobs;
@@ -350,7 +381,7 @@
             const fd = new FormData();
             selectedFiles.forEach((f) => fd.append('files', f));
             try {
-                const res = await fetch('/web/hints/api/upload', { method: 'POST', body: fd });
+                const res = await fetch(apiBase + '/api/upload', { method: 'POST', body: fd });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) {
                     uploadStatus.textContent = data.detail || 'Ошибка загрузки';
@@ -360,7 +391,7 @@
                 selectedFiles = [];
                 fileInput.value = '';
                 renderFiles();
-                uploadStatus.textContent = 'Файл(ы) приняты, анализ в очереди.';
+                uploadStatus.textContent = uploadOkMessage;
                 pollJobs();
                 historyPage = 1;
                 pollHistory();
@@ -429,8 +460,8 @@
 
         async function pollHistory() {
             try {
-                const res = await fetch('/web/hints/api/history?page=' + encodeURIComponent(historyPage));
-                if (res.status === 401) return;
+                const res = await fetch(apiBase + '/api/history?page=' + encodeURIComponent(historyPage));
+                if (res.status === 401) { window.location.href = loginUrl; return; }
                 const data = await res.json();
                 if (data.page && data.page !== historyPage) {
                     historyPage = data.page;

@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 
 from bot.routers.hint_viewer_router import hint_viewer_api_router
 from bot.routers.hint_viewer_web_router import hint_viewer_web_api_router
+from bot.routers.board_viewer_web_router import board_viewer_web_api_router
 from bot.routers.match_analysis_router import match_analysis_api_router
 from bot.routers.short_board import short_board_api_router
 from bot.flask_admin.appbuilder_main import create_app
@@ -134,7 +135,12 @@ app = FastAPI(title="Backgammon Hint Viewer API", version="1.0.0")
 class _SkipHintWebPollAccessLogFilter(logging.Filter):
     """Не логирует частый опрос веб-загрузки матчей."""
 
-    _SKIP = ("/web/hints/api/jobs", "/web/hints/api/history")
+    _SKIP = (
+        "/web/hints/api/jobs",
+        "/web/hints/api/history",
+        "/web/board/api/jobs",
+        "/web/board/api/history",
+    )
 
     def filter(self, record: logging.LogRecord) -> bool:
         path = ""
@@ -266,6 +272,7 @@ templates.env.globals["cache_timestamp"] = get_static_asset_version()
 # Include routers
 app.include_router(hint_viewer_api_router, prefix="")
 app.include_router(hint_viewer_web_api_router, prefix="")
+app.include_router(board_viewer_web_api_router, prefix="")
 app.include_router(match_analysis_api_router, prefix="")
 app.include_router(short_board_api_router, prefix="")
 

@@ -1604,8 +1604,13 @@ class HintViewerWebUploadStatus(str, enum.Enum):
     ERROR = "error"
 
 
+class WebUploadService(str, enum.Enum):
+    HINTS = "hints"
+    BOARD = "board"
+
+
 class HintViewerWebUpload(Base):
-    """История загрузок веб-версии hint viewer, привязанная к WebUser."""
+    """История загрузок веб-кабинета (ошибки / плеер), привязанная к WebUser."""
 
     __tablename__ = "hint_viewer_web_uploads"
 
@@ -1625,6 +1630,13 @@ class HintViewerWebUpload(Base):
     job_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
     batch_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    service: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=WebUploadService.HINTS.value,
+        server_default="hints",
+        index=True,
+    )
     red_player: Mapped[str | None] = mapped_column(String(100), nullable=True)
     black_player: Mapped[str | None] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(

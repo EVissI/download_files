@@ -50,8 +50,10 @@ from bot.common.service.hint_viewer_web_service import (
     record_history,
     replace_session_jobs,
     sync_history_from_job,
+    web_cabinet_page_vars,
     web_hint_open_links,
     web_user_is_admin,
+    safe_web_next,
 )
 from bot.common.service.webapp_settings_service import (
     get_hint_viewer_screenshot_font_scale_percent,
@@ -504,16 +506,18 @@ def _enrich_batch_job(stored: dict[str, Any]) -> dict[str, Any]:
 
 
 @hint_viewer_web_api_router.get("/web/hints/login", response_class=HTMLResponse)
-async def web_hints_login_page(request: Request):
+async def web_hints_login_page(request: Request, next: str = "/web/hints"):
     token = request.cookies.get(COOKIE_NAME)
+    next_path = safe_web_next(next)
     if await get_session(token):
-        return RedirectResponse(url="/web/hints", status_code=303)
+        return RedirectResponse(url=next_path, status_code=303)
     return templates.TemplateResponse(
         "hint_viewer_web_login.html",
         {
             "request": request,
             "error": None,
             "login_value": "",
+            "next_path": next_path,
             "cache_timestamp": get_static_asset_version(),
         },
     )
@@ -524,7 +528,9 @@ async def web_hints_login(
     request: Request,
     login: str = Form(""),
     password: str = Form(""),
+    next: str = Form("/web/hints"),
 ):
+    next_path = safe_web_next(next)
     user, auth_error = await authenticate_web_user(login, password)
     if not user:
         message = (
@@ -538,12 +544,13 @@ async def web_hints_login(
                 "request": request,
                 "error": message,
                 "login_value": (login or "").strip(),
+                "next_path": next_path,
                 "cache_timestamp": get_static_asset_version(),
             },
             status_code=200,
         )
     created = await create_session(user)
-    response = RedirectResponse(url="/web/hints", status_code=303)
+    response = RedirectResponse(url=next_path, status_code=303)
     response.set_cookie(
         key=COOKIE_NAME,
         value=created["token"],
@@ -577,6 +584,7 @@ async def web_hints_upload_page(request: Request):
             "request": request,
             "cache_timestamp": get_static_asset_version(),
             "is_admin": is_admin,
+            **web_cabinet_page_vars("hints"),
         },
     )
 
@@ -650,7 +658,12 @@ async def web_hints_history(request: Request, page: int = 1):
     _token, session = await _require_session(request)
     user_id = session.get("user_id")
     payload = (
-        await list_history_for_user(int(user_id), page=page, page_size=HISTORY_PAGE_SIZE)
+        await list_history_for_user(
+            int(user_id),
+            page=page,
+            page_size=HISTORY_PAGE_SIZE,
+            service="hints",
+        )
         if user_id
         else {
             "items": [],

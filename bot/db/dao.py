@@ -2709,6 +2709,8 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         red_player: str | None = None,
         black_player: str | None = None,
         status: str = HintViewerWebUploadStatus.QUEUED.value,
+        service: str = "hints",
+        error_message: str | None = None,
     ) -> HintViewerWebUpload:
         row = HintViewerWebUpload(
             user_id=user_id,
@@ -2720,28 +2722,47 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
             red_player=red_player,
             black_player=black_player,
             status=status,
+            service=service or "hints",
+            error_message=error_message,
         )
+        if status in {
+            HintViewerWebUploadStatus.DONE.value,
+            HintViewerWebUploadStatus.ERROR.value,
+        }:
+            row.finished_at = datetime.now(timezone.utc)
         self._session.add(row)
         await self._session.flush()
         return row
 
+    def _user_service_filter(self, user_id: int, service: str | None):
+        conditions = [HintViewerWebUpload.user_id == user_id]
+        if service:
+            conditions.append(HintViewerWebUpload.service == service)
+        return conditions
+
     async def list_for_user(
-        self, user_id: int, limit: int = 10, offset: int = 0
+        self,
+        user_id: int,
+        limit: int = 10,
+        offset: int = 0,
+        service: str | None = None,
     ) -> list[HintViewerWebUpload]:
         result = await self._session.execute(
             select(HintViewerWebUpload)
-            .where(HintViewerWebUpload.user_id == user_id)
+            .where(*self._user_service_filter(user_id, service))
             .order_by(HintViewerWebUpload.id.desc())
             .limit(limit)
             .offset(offset)
         )
         return list(result.scalars().all())
 
-    async def count_for_user(self, user_id: int) -> int:
+    async def count_for_user(
+        self, user_id: int, service: str | None = None
+    ) -> int:
         result = await self._session.execute(
             select(func.count())
             .select_from(HintViewerWebUpload)
-            .where(HintViewerWebUpload.user_id == user_id)
+            .where(*self._user_service_filter(user_id, service))
         )
         return int(result.scalar_one() or 0)
 

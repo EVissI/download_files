@@ -17,6 +17,21 @@ SESSION_TTL_SEC = 7 * 24 * 3600
 JOBS_TTL_SEC = 7 * 24 * 3600
 SESSION_KEY = "hint_web:session:{token}"
 JOBS_KEY = "hint_web:jobs:{token}"
+WEB_SERVICE_HINTS = "hints"
+WEB_SERVICE_BOARD = "board"
+WEB_ALLOWED_NEXT = ("/web/hints", "/web/board")
+
+
+def safe_web_next(value: str | None) -> str:
+    if value in WEB_ALLOWED_NEXT:
+        return value
+    return "/web/hints"
+
+
+def _jobs_key(token: str, service: str = WEB_SERVICE_HINTS) -> str:
+    if service == WEB_SERVICE_HINTS:
+        return JOBS_KEY.format(token=token)
+    return f"hint_web:jobs:{service}:{token}"
 
 
 def web_hint_open_links(
@@ -37,6 +52,24 @@ def web_hint_open_links(
         {"label": f"Ошибки {red}", "url": f"{base}&error=2"},
         {"label": f"Ошибки {black}", "url": f"{base}&error=3"},
     ]
+
+
+def web_board_open_links(game_id: str | None) -> list[dict[str, str]]:
+    if not game_id:
+        return []
+    gid = quote(str(game_id), safe="")
+    return [{"label": "Открыть игру", "url": f"/web/board/view?game_id={gid}"}]
+
+
+def web_open_links_for_service(
+    service: str | None,
+    game_id: str | None,
+    red_player: str | None = None,
+    black_player: str | None = None,
+) -> list[dict[str, str]]:
+    if service == WEB_SERVICE_BOARD:
+        return web_board_open_links(game_id)
+    return web_hint_open_links(game_id, red_player, black_player)
 
 
 async def authenticate_web_user(login: str, password: str):
@@ -79,6 +112,36 @@ async def create_session(user) -> dict[str, Any]:
         SESSION_KEY.format(token=token), json.dumps(payload), expire=SESSION_TTL_SEC
     )
     return {"token": token, **payload}
+
+
+def web_cabinet_page_vars(service: str) -> dict[str, Any]:
+    if service == WEB_SERVICE_BOARD:
+        return {
+            "web_service": WEB_SERVICE_BOARD,
+            "api_base": "/web/board",
+            "page_title": "Плеер",
+            "intro_text": (
+                "Можно загрузить один или несколько .mat, либо zip с матчами. "
+                "Парсинг обычно занимает несколько секунд, после этого появится ссылка на плеер."
+            ),
+            "upload_ok_message": "Файл(ы) обработаны, можно открыть плеер.",
+            "login_url": "/web/hints/login?next=/web/board",
+            "card_title": "Новый матч",
+            "upload_btn_label": "Отправить",
+        }
+    return {
+        "web_service": WEB_SERVICE_HINTS,
+        "api_base": "/web/hints",
+        "page_title": "Ошибки",
+        "intro_text": (
+            "Можно загрузить один или несколько .mat, либо zip с матчами. "
+            "Когда анализ будет готов, появится уведомление."
+        ),
+        "upload_ok_message": "Файл(ы) приняты, анализ в очереди.",
+        "login_url": "/web/hints/login",
+        "card_title": "Новый анализ",
+        "upload_btn_label": "Отправить на анализ",
+    }
 
 
 async def get_session(token: str | None) -> dict[str, Any] | None:
@@ -136,11 +199,14 @@ async def destroy_session(token: str | None) -> None:
     if not token:
         return
     await redis_client.delete(SESSION_KEY.format(token=token))
-    await redis_client.delete(JOBS_KEY.format(token=token))
+    await redis_client.delete(_jobs_key(token, WEB_SERVICE_HINTS))
+    await redis_client.delete(_jobs_key(token, WEB_SERVICE_BOARD))
 
 
-async def append_session_job(token: str, job: dict[str, Any]) -> None:
-    key = JOBS_KEY.format(token=token)
+async def append_session_job(
+    token: str, job: dict[str, Any], service: str = WEB_SERVICE_HINTS
+) -> None:
+    key = _jobs_key(token, service)
     raw = await redis_client.get(key)
     items: list[dict[str, Any]] = []
     if raw:
@@ -153,8 +219,10 @@ async def append_session_job(token: str, job: dict[str, Any]) -> None:
     await redis_client.set(key, json.dumps(items, ensure_ascii=False), expire=JOBS_TTL_SEC)
 
 
-async def list_session_jobs(token: str) -> list[dict[str, Any]]:
-    raw = await redis_client.get(JOBS_KEY.format(token=token))
+async def list_session_jobs(
+    token: str, service: str = WEB_SERVICE_HINTS
+) -> list[dict[str, Any]]:
+    raw = await redis_client.get(_jobs_key(token, service))
     if not raw:
         return []
     try:
@@ -164,8 +232,10 @@ async def list_session_jobs(token: str) -> list[dict[str, Any]]:
     return data if isinstance(data, list) else []
 
 
-async def replace_session_jobs(token: str, jobs: list[dict[str, Any]]) -> None:
-    key = JOBS_KEY.format(token=token)
+async def replace_session_jobs(
+    token: str, jobs: list[dict[str, Any]], service: str = WEB_SERVICE_HINTS
+) -> None:
+    key = _jobs_key(token, service)
     await redis_client.set(
         key, json.dumps(jobs, ensure_ascii=False), expire=JOBS_TTL_SEC
     )
@@ -189,8 +259,9 @@ HISTORY_PAGE_SIZE = 10
 
 def _history_item(row) -> dict[str, Any]:
     game_id = row.game_id
+    service = getattr(row, "service", None) or WEB_SERVICE_HINTS
     links = (
-        web_hint_open_links(game_id, row.red_player, row.black_player)
+        web_open_links_for_service(service, game_id, row.red_player, row.black_player)
         if row.status == "done" and game_id
         else []
     )
@@ -210,7 +281,10 @@ def _history_item(row) -> dict[str, Any]:
 
 
 async def list_history_for_user(
-    user_id: int, page: int = 1, page_size: int = HISTORY_PAGE_SIZE
+    user_id: int,
+    page: int = 1,
+    page_size: int = HISTORY_PAGE_SIZE,
+    service: str = WEB_SERVICE_HINTS,
 ) -> dict[str, Any]:
     empty = {
         "items": [],
@@ -227,13 +301,15 @@ async def list_history_for_user(
     size = max(1, min(int(page_size or HISTORY_PAGE_SIZE), 50))
     async with async_session_maker() as session:
         dao = HintViewerWebUploadDAO(session)
-        total = await dao.count_for_user(user_id)
+        total = await dao.count_for_user(user_id, service=service)
         pages = max(1, (total + size - 1) // size) if total else 1
         current = max(1, int(page or 1))
         if current > pages:
             current = pages
         offset = (current - 1) * size
-        rows = await dao.list_for_user(user_id, limit=size, offset=offset)
+        rows = await dao.list_for_user(
+            user_id, limit=size, offset=offset, service=service
+        )
         return {
             "items": [_history_item(row) for row in rows],
             "page": current,

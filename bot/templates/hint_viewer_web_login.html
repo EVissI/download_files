@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход — анализ матчей</title>
+    <title>Вход — веб-кабинет</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -62,11 +62,12 @@
 </head>
 <body>
     <div class="card">
-        <h1>Анализ матчей</h1>
+        <h1>Веб-кабинет</h1>
         {% if error %}
         <div class="error">{{ error }}</div>
         {% endif %}
         <form method="post" action="/web/hints/login">
+            <input type="hidden" name="next" value="{{ next_path or '/web/hints' }}">
             <label for="login">Логин</label>
             <input id="login" name="login" type="text" autocomplete="username" value="{{ login_value or '' }}" required>
             <label for="password">Пароль</label>
