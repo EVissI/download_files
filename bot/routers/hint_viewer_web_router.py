@@ -48,6 +48,7 @@ from bot.common.service.hint_viewer_web_service import (
     record_history,
     replace_session_jobs,
     sync_history_from_job,
+    web_hint_open_links,
 )
 from bot.common.service.webapp_settings_service import (
     get_hint_viewer_screenshot_font_scale_percent,
@@ -370,14 +371,17 @@ def _enrich_single_job(stored: dict[str, Any]) -> dict[str, Any]:
             item["status"] = "done"
             item["game_id"] = game_id
             item["has_games"] = bool(result.get("has_games"))
-            if game_id and result.get("has_games"):
-                item["view_url"] = f"/web/hints/view?game_id={game_id}"
-            elif game_id:
-                item["view_url"] = f"/web/hints/view?game_id={game_id}"
+            item["open_links"] = web_hint_open_links(
+                game_id, stored.get("red_player"), stored.get("black_player")
+            )
+            item["view_url"] = item["open_links"][0]["url"] if item["open_links"] else None
         else:
             item["status"] = "done"
             game_id = stored.get("game_id")
-            item["view_url"] = f"/web/hints/view?game_id={game_id}" if game_id else None
+            item["open_links"] = web_hint_open_links(
+                game_id, stored.get("red_player"), stored.get("black_player")
+            )
+            item["view_url"] = item["open_links"][0]["url"] if item["open_links"] else None
     else:
         item["status"] = rq_status
     return item
@@ -409,8 +413,14 @@ def _enrich_batch_job(stored: dict[str, Any]) -> dict[str, Any]:
                 entry["status"] = "done"
                 entry["game_id"] = payload.get("game_id")
                 entry["has_games"] = bool(payload.get("has_games"))
-                if payload.get("game_id"):
-                    entry["view_url"] = f"/web/hints/view?game_id={payload['game_id']}"
+                entry["open_links"] = web_hint_open_links(
+                    payload.get("game_id"),
+                    meta.get("red_player"),
+                    meta.get("black_player"),
+                )
+                entry["view_url"] = (
+                    entry["open_links"][0]["url"] if entry["open_links"] else None
+                )
                 ready += 1
         files_out.append(entry)
     item["files"] = files_out

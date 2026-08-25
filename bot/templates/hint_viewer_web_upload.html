@@ -73,6 +73,8 @@
             background: #181818;
         }
         .history-item a { color: #81c784; }
+        .open-modes { margin-top: 8px; }
+        .open-modes .btn { font-size: 0.85rem; padding: 8px 10px; }
         .toast {
             position: fixed;
             right: 16px;
@@ -228,12 +230,30 @@
                 <div class="muted progress-label">${p.label}</div>`;
         }
 
+        function escapeHtml(value) {
+            return String(value || '').replace(/[&<>"']/g, (ch) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;',
+            }[ch]));
+        }
+
+        function openMatchButtons(links) {
+            if (!links || !links.length) return '';
+            return `<div class="actions open-modes">${links.map((link, idx) => {
+                const cls = idx === 0 ? 'btn primary' : 'btn ghost';
+                return `<a class="${cls}" href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a>`;
+            }).join('')}</div>`;
+        }
+
         function renderJob(job) {
             const cls = job.status === 'done' ? 'done' : (job.status === 'error' ? 'error' : '');
             if (job.kind === 'batch') {
                 const files = (job.files || []).map((f) => {
-                    const open = f.view_url ? `<a class="btn primary" href="${f.view_url}">Открыть</a>` : '';
-                    return `<li>${f.filename} — ${statusLabel(f.status)} ${open} ${f.error ? `<span class="muted">${f.error}</span>` : ''}</li>`;
+                    const open = openMatchButtons(f.open_links);
+                    return `<li>${escapeHtml(f.filename)} — ${statusLabel(f.status)} ${open} ${f.error ? `<span class="muted">${escapeHtml(f.error)}</span>` : ''}</li>`;
                 }).join('');
                 return `<div class="job ${cls}">
                     <strong>Пакет: ${(job.files || []).length} файл(ов)</strong>
@@ -243,13 +263,13 @@
                     ${job.error ? `<div class="muted">${job.error}</div>` : ''}
                 </div>`;
             }
-            const open = job.view_url ? `<a class="btn primary" href="${job.view_url}">Открыть анализ</a>` : '';
+            const open = openMatchButtons(job.open_links);
             return `<div class="job ${cls}">
-                <strong>${job.filename || 'Матч'}</strong>
-                <div class="muted">${job.red_player || ''} vs ${job.black_player || ''} · ${statusLabel(job.status)}</div>
+                <strong>${escapeHtml(job.filename || 'Матч')}</strong>
+                <div class="muted">${escapeHtml(job.red_player || '')} vs ${escapeHtml(job.black_player || '')} · ${statusLabel(job.status)}</div>
                 ${progressHtml(job)}
-                ${job.error ? `<div class="muted">${job.error}</div>` : ''}
-                <div class="actions">${open}</div>
+                ${job.error ? `<div class="muted">${escapeHtml(job.error)}</div>` : ''}
+                ${open}
             </div>`;
         }
 
@@ -341,13 +361,13 @@
             }
             historyEl.innerHTML = items.map((item) => {
                 const players = [item.red_player, item.black_player].filter(Boolean).join(' vs ');
-                const open = item.view_url ? `<a href="${item.view_url}">Открыть</a>` : '';
-                const err = item.error_message ? `<div class="muted">${item.error_message}</div>` : '';
+                const open = openMatchButtons(item.open_links);
+                const err = item.error_message ? `<div class="muted">${escapeHtml(item.error_message)}</div>` : '';
                 return `<div class="history-item">
-                    <strong>${item.original_filename || 'Матч'}</strong>
-                    <div class="muted">${players || '—'} · ${historyStatusLabel(item.status)}</div>
+                    <strong>${escapeHtml(item.original_filename || 'Матч')}</strong>
+                    <div class="muted">${escapeHtml(players || '—')} · ${historyStatusLabel(item.status)}</div>
                     ${err}
-                    <div>${open}</div>
+                    ${open}
                 </div>`;
             }).join('');
         }

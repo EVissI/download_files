@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import secrets
 from typing import Any
+from urllib.parse import quote
 
 from loguru import logger
 
@@ -16,6 +17,26 @@ SESSION_TTL_SEC = 7 * 24 * 3600
 JOBS_TTL_SEC = 7 * 24 * 3600
 SESSION_KEY = "hint_web:session:{token}"
 JOBS_KEY = "hint_web:jobs:{token}"
+
+
+def web_hint_open_links(
+    game_id: str | None,
+    red_player: str | None = None,
+    black_player: str | None = None,
+) -> list[dict[str, str]]:
+    """Те же режимы просмотра, что кнопки WebApp в Telegram: error=0..3."""
+    if not game_id:
+        return []
+    gid = quote(str(game_id), safe="")
+    red = (red_player or "").strip() or "Red"
+    black = (black_player or "").strip() or "Black"
+    base = f"/web/hints/view?game_id={gid}"
+    return [
+        {"label": "Все ходы", "url": f"{base}&error=0"},
+        {"label": "Ошибки обоих", "url": f"{base}&error=1"},
+        {"label": f"Ошибки {red}", "url": f"{base}&error=2"},
+        {"label": f"Ошибки {black}", "url": f"{base}&error=3"},
+    ]
 
 
 async def authenticate_web_user(login: str, password: str):
@@ -134,6 +155,11 @@ async def list_history_for_user(user_id: int, limit: int = 50) -> list[dict[str,
         items = []
         for row in rows:
             game_id = row.game_id
+            links = (
+                web_hint_open_links(game_id, row.red_player, row.black_player)
+                if row.status == "done" and game_id
+                else []
+            )
             items.append(
                 {
                     "id": row.id,
@@ -143,7 +169,8 @@ async def list_history_for_user(user_id: int, limit: int = 50) -> list[dict[str,
                     "status": row.status,
                     "error_message": row.error_message,
                     "game_id": game_id,
-                    "view_url": f"/web/hints/view?game_id={game_id}" if game_id else None,
+                    "view_url": links[0]["url"] if links else None,
+                    "open_links": links,
                     "created_at": row.created_at.isoformat() if row.created_at else None,
                     "finished_at": row.finished_at.isoformat() if row.finished_at else None,
                 }
