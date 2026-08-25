@@ -131,8 +131,10 @@ class CachedStaticFiles(StaticFiles):
 app = FastAPI(title="Backgammon Hint Viewer API", version="1.0.0")
 
 
-class _SkipHintJobsAccessLogFilter(logging.Filter):
-    """Не логирует опрос статуса веб-загрузки матчей."""
+class _SkipHintWebPollAccessLogFilter(logging.Filter):
+    """Не логирует частый опрос веб-загрузки матчей."""
+
+    _SKIP = ("/web/hints/api/jobs", "/web/hints/api/history")
 
     def filter(self, record: logging.LogRecord) -> bool:
         path = ""
@@ -146,10 +148,10 @@ class _SkipHintJobsAccessLogFilter(logging.Filter):
                 path = record.getMessage()
             except Exception:
                 path = ""
-        return "/web/hints/api/jobs" not in path
+        return not any(skip in path for skip in self._SKIP)
 
 
-logging.getLogger("uvicorn.access").addFilter(_SkipHintJobsAccessLogFilter())
+logging.getLogger("uvicorn.access").addFilter(_SkipHintWebPollAccessLogFilter())
 
 
 @app.on_event("startup")
