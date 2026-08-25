@@ -105,6 +105,19 @@
         .job.error .progress-fill { background: #8d2f2f; }
         .job.done .progress-fill { background: #2e7d32; }
         .progress-label { margin-top: 6px; }
+        .pager {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+        .pager button {
+            padding: 8px 12px;
+            min-width: 40px;
+        }
+        .pager button.active { background: #2e7d32; color: #fff; }
+        .pager .pager-info { color: #999; font-size: 0.85rem; margin-left: 4px; }
     </style>
 </head>
 <body>
@@ -135,6 +148,7 @@
         <div class="card">
             <h2>История загрузок</h2>
             <div id="history" class="muted">Загрузка истории…</div>
+            <div id="historyPager" class="pager" hidden></div>
         </div>
     </div>
     <div class="toast" id="toast"></div>
@@ -337,6 +351,7 @@
                 renderFiles();
                 uploadStatus.textContent = 'Файл(ы) приняты, анализ в очереди.';
                 pollJobs();
+                historyPage = 1;
                 pollHistory();
             } catch (e) {
                 uploadStatus.textContent = 'Сеть недоступна';
@@ -345,6 +360,8 @@
         });
 
         const historyEl = document.getElementById('history');
+        const historyPagerEl = document.getElementById('historyPager');
+        let historyPage = 1;
 
         function historyStatusLabel(status) {
             if (status === 'done') return 'Готово';
@@ -353,10 +370,35 @@
             return 'В очереди';
         }
 
-        function renderHistory(items) {
+        function renderHistoryPager(page, pages, total) {
+            if (!historyPagerEl) return;
+            if (!total || pages <= 1) {
+                historyPagerEl.hidden = true;
+                historyPagerEl.innerHTML = '';
+                return;
+            }
+            historyPagerEl.hidden = false;
+            const buttons = [];
+            buttons.push(`<button type="button" class="ghost" data-page="${page - 1}" ${page <= 1 ? 'disabled' : ''}>Назад</button>`);
+            const windowSize = 5;
+            let from = Math.max(1, page - Math.floor(windowSize / 2));
+            let to = Math.min(pages, from + windowSize - 1);
+            from = Math.max(1, to - windowSize + 1);
+            for (let i = from; i <= to; i += 1) {
+                const cls = i === page ? 'primary active' : 'ghost';
+                buttons.push(`<button type="button" class="${cls}" data-page="${i}">${i}</button>`);
+            }
+            buttons.push(`<button type="button" class="ghost" data-page="${page + 1}" ${page >= pages ? 'disabled' : ''}>Вперёд</button>`);
+            buttons.push(`<span class="pager-info">${page} / ${pages} · ${total}</span>`);
+            historyPagerEl.innerHTML = buttons.join('');
+        }
+
+        function renderHistory(data) {
             if (!historyEl) return;
-            if (!items || !items.length) {
+            const items = data.items || [];
+            if (!items.length && !(data.total > 0)) {
                 historyEl.innerHTML = '<span class="muted">Пока нет загрузок у этого аккаунта.</span>';
+                renderHistoryPager(1, 1, 0);
                 return;
             }
             historyEl.innerHTML = items.map((item) => {
@@ -370,15 +412,31 @@
                     ${open}
                 </div>`;
             }).join('');
+            historyPage = data.page || historyPage;
+            renderHistoryPager(data.page || 1, data.pages || 1, data.total || 0);
         }
 
         async function pollHistory() {
             try {
-                const res = await fetch('/web/hints/api/history');
+                const res = await fetch('/web/hints/api/history?page=' + encodeURIComponent(historyPage));
                 if (res.status === 401) return;
                 const data = await res.json();
-                renderHistory(data.items || []);
+                if (data.page && data.page !== historyPage) {
+                    historyPage = data.page;
+                }
+                renderHistory(data);
             } catch (e) {}
+        }
+
+        if (historyPagerEl) {
+            historyPagerEl.addEventListener('click', (event) => {
+                const btn = event.target.closest('button[data-page]');
+                if (!btn || btn.disabled) return;
+                const next = parseInt(btn.getAttribute('data-page'), 10);
+                if (!next || next === historyPage) return;
+                historyPage = next;
+                pollHistory();
+            });
         }
 
         renderFiles();

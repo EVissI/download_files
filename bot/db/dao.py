@@ -2725,14 +2725,25 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         await self._session.flush()
         return row
 
-    async def list_for_user(self, user_id: int, limit: int = 50) -> list[HintViewerWebUpload]:
+    async def list_for_user(
+        self, user_id: int, limit: int = 10, offset: int = 0
+    ) -> list[HintViewerWebUpload]:
         result = await self._session.execute(
             select(HintViewerWebUpload)
             .where(HintViewerWebUpload.user_id == user_id)
             .order_by(HintViewerWebUpload.id.desc())
             .limit(limit)
+            .offset(offset)
         )
         return list(result.scalars().all())
+
+    async def count_for_user(self, user_id: int) -> int:
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(HintViewerWebUpload)
+            .where(HintViewerWebUpload.user_id == user_id)
+        )
+        return int(result.scalar_one() or 0)
 
     async def list_for_session(
         self, session_id: str, limit: int = 50

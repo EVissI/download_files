@@ -144,38 +144,63 @@ async def record_history(**kwargs: Any) -> None:
         logger.exception("hint viewer web history write failed: {}", e)
 
 
-async def list_history_for_user(user_id: int, limit: int = 50) -> list[dict[str, Any]]:
+HISTORY_PAGE_SIZE = 10
+
+
+def _history_item(row) -> dict[str, Any]:
+    game_id = row.game_id
+    links = (
+        web_hint_open_links(game_id, row.red_player, row.black_player)
+        if row.status == "done" and game_id
+        else []
+    )
+    return {
+        "id": row.id,
+        "original_filename": row.original_filename,
+        "red_player": row.red_player,
+        "black_player": row.black_player,
+        "status": row.status,
+        "error_message": row.error_message,
+        "game_id": game_id,
+        "view_url": links[0]["url"] if links else None,
+        "open_links": links,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+    }
+
+
+async def list_history_for_user(
+    user_id: int, page: int = 1, page_size: int = HISTORY_PAGE_SIZE
+) -> dict[str, Any]:
+    empty = {
+        "items": [],
+        "page": 1,
+        "pages": 1,
+        "page_size": page_size,
+        "total": 0,
+    }
     if not user_id:
-        return []
+        return empty
     from bot.db.database import async_session_maker
     from bot.db.dao import HintViewerWebUploadDAO
 
+    size = max(1, min(int(page_size or HISTORY_PAGE_SIZE), 50))
     async with async_session_maker() as session:
-        rows = await HintViewerWebUploadDAO(session).list_for_user(user_id, limit=limit)
-        items = []
-        for row in rows:
-            game_id = row.game_id
-            links = (
-                web_hint_open_links(game_id, row.red_player, row.black_player)
-                if row.status == "done" and game_id
-                else []
-            )
-            items.append(
-                {
-                    "id": row.id,
-                    "original_filename": row.original_filename,
-                    "red_player": row.red_player,
-                    "black_player": row.black_player,
-                    "status": row.status,
-                    "error_message": row.error_message,
-                    "game_id": game_id,
-                    "view_url": links[0]["url"] if links else None,
-                    "open_links": links,
-                    "created_at": row.created_at.isoformat() if row.created_at else None,
-                    "finished_at": row.finished_at.isoformat() if row.finished_at else None,
-                }
-            )
-        return items
+        dao = HintViewerWebUploadDAO(session)
+        total = await dao.count_for_user(user_id)
+        pages = max(1, (total + size - 1) // size) if total else 1
+        current = max(1, int(page or 1))
+        if current > pages:
+            current = pages
+        offset = (current - 1) * size
+        rows = await dao.list_for_user(user_id, limit=size, offset=offset)
+        return {
+            "items": [_history_item(row) for row in rows],
+            "page": current,
+            "pages": pages,
+            "page_size": size,
+            "total": total,
+        }
 
 
 async def sync_history_from_job(job: dict[str, Any]) -> None:

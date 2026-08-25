@@ -37,6 +37,7 @@ from bot.common.hint_job_state import (
 from bot.common.service.hint_s3_service import HintS3Storage
 from bot.common.service.hint_viewer_web_service import (
     COOKIE_NAME,
+    HISTORY_PAGE_SIZE,
     SESSION_TTL_SEC,
     append_session_job,
     authenticate_web_user,
@@ -583,14 +584,21 @@ async def web_hints_jobs(request: Request):
 
 
 @hint_viewer_web_api_router.get("/web/hints/api/history")
-async def web_hints_history(request: Request):
+async def web_hints_history(request: Request, page: int = 1):
     _token, session = await _require_session(request)
     user_id = session.get("user_id")
-    items = await list_history_for_user(int(user_id)) if user_id else []
-    return {
-        "ok": True,
-        "items": items,
-    }
+    payload = (
+        await list_history_for_user(int(user_id), page=page, page_size=HISTORY_PAGE_SIZE)
+        if user_id
+        else {
+            "items": [],
+            "page": 1,
+            "pages": 1,
+            "page_size": HISTORY_PAGE_SIZE,
+            "total": 0,
+        }
+    )
+    return {"ok": True, **payload}
 
 
 @hint_viewer_web_api_router.get("/web/hints/view", response_class=HTMLResponse)
