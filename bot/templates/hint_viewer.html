@@ -1674,9 +1674,7 @@
         }
 
         body.web-standalone .support-container,
-        body.web-standalone #adminButtonContainer,
-        body.web-standalone #screenSaveBtn,
-        body.web-standalone #screenUploadBtn {
+        body.web-standalone #adminButtonContainer {
             display: none !important;
         }
         .web-standalone-back {
@@ -1797,6 +1795,11 @@
         }
 
         // Add cache-busting to CSS background images
+        function isWebStandaloneHintViewer() {
+            const meta = document.querySelector('meta[name="web-standalone-mode"]');
+            return !!(meta && meta.getAttribute('content') === '1');
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
@@ -1821,6 +1824,10 @@
             }
             if (screenUploadBtn) {
                 screenUploadBtn.style.backgroundImage = "url('/static/ScreenUpload.webp?t={{ cache_timestamp }}')";
+            }
+            if (isWebStandaloneHintViewer()) {
+                if (screenSaveBtn) screenSaveBtn.title = 'Добавить скриншот в архив';
+                if (screenUploadBtn) screenUploadBtn.title = 'Скачать архив со скриншотами';
             }
             const supportBtn = document.getElementById('supportBtn');
             if (supportBtn) {
@@ -4568,12 +4575,17 @@
                     const formData = new FormData();
                     formData.append('photo', blob);
                     appendMatchAnalysisAudioToFormData(formData);
-                    fetch(`/api/save_screenshot?chat_id=${getActiveHintViewerChatId()}`, {
+                    const saveUrl = isWebStandaloneHintViewer()
+                        ? '/web/hints/api/save_screenshot'
+                        : `/api/save_screenshot?chat_id=${getActiveHintViewerChatId()}`;
+                    fetch(saveUrl, {
                         method: 'POST',
                         body: formData
                     }).then(response => {
                         if (response.ok) {
                             showMessageModal('Скриншот сохранен в буфер', 'success');
+                        } else if (response.status === 401) {
+                            showMessageModal('Нужна авторизация', 'error');
                         } else {
                             showMessageModal('Ошибка при сохранении скриншота', 'error');
                         }
@@ -4592,6 +4604,36 @@
         }
 
         function uploadScreenshots() {
+            if (isWebStandaloneHintViewer()) {
+                fetch('/web/hints/api/download_screenshots', { method: 'POST' }).then(async response => {
+                    if (response.status === 401) {
+                        showMessageModal('Нужна авторизация', 'error');
+                        return;
+                    }
+                    if (response.status === 404) {
+                        showMessageModal('В архиве нет скриншотов', 'warning');
+                        return;
+                    }
+                    if (!response.ok) {
+                        showMessageModal('Ошибка при скачивании архива', 'error');
+                        return;
+                    }
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'screenshots.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                    showMessageModal('Архив со скриншотами скачан', 'success');
+                }).catch(error => {
+                    console.error('Error downloading screenshots:', error);
+                    showMessageModal('Ошибка при скачивании архива', 'error');
+                });
+                return;
+            }
             fetch(`/api/upload_screenshots?chat_id=${getActiveHintViewerChatId()}`, { method: 'POST' }).then(async response => {
                 if (response.ok) {
                     showMessageModal('Скриншоты отправлены', 'success');

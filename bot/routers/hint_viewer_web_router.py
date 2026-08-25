@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import os
 import shutil
@@ -14,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 from redis import Redis
@@ -86,6 +87,12 @@ async def _require_session(request: Request) -> tuple[str, dict[str, Any]]:
     if not token or not session:
         raise HTTPException(status_code=401, detail="Нужна авторизация")
     return token, session
+
+
+def _web_screenshots_dir(user_id: int) -> Path:
+    path = Path("files/screenshots") / f"web_{int(user_id)}"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def _safe_filename(name: str) -> str:
@@ -599,6 +606,54 @@ async def web_hints_history(request: Request, page: int = 1):
         }
     )
     return {"ok": True, **payload}
+
+
+@hint_viewer_web_api_router.post("/web/hints/api/save_screenshot")
+async def web_save_screenshot(request: Request, photo: UploadFile = File(...)):
+    _token, session = await _require_session(request)
+    user_id = session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Нужна авторизация")
+    photo_bytes = await photo.read()
+    if not photo_bytes:
+        raise HTTPException(status_code=400, detail="Пустой скриншот")
+    buffer_dir = _web_screenshots_dir(int(user_id))
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filepath = buffer_dir / f"screenshot_{timestamp}.png"
+    filepath.write_bytes(photo_bytes)
+    return {"status": "success"}
+
+
+@hint_viewer_web_api_router.post("/web/hints/api/download_screenshots")
+async def web_download_screenshots(request: Request):
+    _token, session = await _require_session(request)
+    user_id = session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Нужна авторизация")
+    buffer_dir = Path("files/screenshots") / f"web_{int(user_id)}"
+    if not buffer_dir.is_dir():
+        raise HTTPException(status_code=404, detail="В архиве нет скриншотов")
+    screenshots = sorted(p for p in buffer_dir.iterdir() if p.is_file() and p.suffix.lower() == ".png")
+    if not screenshots:
+        raise HTTPException(status_code=404, detail="В архиве нет скриншотов")
+    extras = sorted(
+        p
+        for p in buffer_dir.iterdir()
+        if p.is_file() and p.suffix.lower() != ".png"
+    )
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for path in screenshots:
+            zf.write(path, path.name)
+        for path in extras:
+            zf.write(path, path.name)
+    zip_data = zip_buffer.getvalue()
+    shutil.rmtree(buffer_dir, ignore_errors=True)
+    return Response(
+        content=zip_data,
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="screenshots.zip"'},
+    )
 
 
 @hint_viewer_web_api_router.get("/web/hints/view", response_class=HTMLResponse)
