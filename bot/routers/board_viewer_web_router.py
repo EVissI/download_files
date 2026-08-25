@@ -6,7 +6,8 @@ import os
 import shutil
 import tempfile
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
@@ -19,12 +20,9 @@ from bot.common.service.hint_viewer_web_service import (
     COOKIE_NAME,
     HISTORY_PAGE_SIZE,
     WEB_SERVICE_BOARD,
-    append_session_job,
     get_session,
     list_history_for_user,
-    list_session_jobs,
     record_history,
-    replace_session_jobs,
     web_board_open_links,
     web_cabinet_page_vars,
     web_user_is_admin,
@@ -39,7 +37,7 @@ board_viewer_web_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
 templates.env.globals["cache_timestamp"] = get_static_asset_version()
 
-_CURRENT_JOB_KEEP_AFTER_FINISH = timedelta(minutes=20)
+MAX_UPLOAD_BYTES = 30 * 1024 * 1024
 
 
 def _login_redirect() -> RedirectResponse:
@@ -52,32 +50,6 @@ async def _require_session(request: Request) -> tuple[str, dict[str, Any]]:
     if not token or not session:
         raise HTTPException(status_code=401, detail="Нужна авторизация")
     return token, session
-
-
-def _parse_dt(value: Any) -> datetime | None:
-    if isinstance(value, datetime):
-        ts = value
-        if ts.tzinfo is None:
-            ts = ts.replace(tzinfo=timezone.utc)
-        return ts.astimezone(timezone.utc)
-    if isinstance(value, str) and value:
-        try:
-            ts = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            return None
-        if ts.tzinfo is None:
-            ts = ts.replace(tzinfo=timezone.utc)
-        return ts.astimezone(timezone.utc)
-    return None
-
-
-def _is_stale_current_job(item: dict[str, Any]) -> bool:
-    if item.get("status") not in {"done", "error"}:
-        return False
-    finished = _parse_dt(item.get("finished_at"))
-    if not finished:
-        return False
-    return datetime.now(timezone.utc) - finished >= _CURRENT_JOB_KEEP_AFTER_FINISH
 
 
 def _read_names(path: str) -> tuple[str, str]:
@@ -95,7 +67,6 @@ async def _process_mat(
     filename: str,
     session_token: str,
     user_id: int | None,
-    batch_id: str | None = None,
 ) -> dict[str, Any]:
     dir_name = str(uuid.uuid4())
     files_dir = os.path.join(os.getcwd(), "files", dir_name)
@@ -109,8 +80,7 @@ async def _process_mat(
     with open(dest_path, "r", encoding="utf-8", errors="ignore") as f:
         content = f.read()
     red_player, black_player = _read_names(dest_path)
-    now = datetime.now(timezone.utc)
-    now_iso = now.isoformat()
+    now_iso = datetime.now(timezone.utc).isoformat()
     status = HintViewerWebUploadStatus.DONE.value
     error = None
     try:
@@ -147,29 +117,12 @@ async def _process_mat(
         original_filename=filename,
         game_id=game_id,
         job_id=job_id,
-        batch_id=batch_id,
         red_player=red_player,
         black_player=black_player,
         status=status,
         service=WEB_SERVICE_BOARD,
         error_message=error,
     )
-    return job
-
-
-def _enrich_board_job(item: dict[str, Any]) -> dict[str, Any]:
-    job = {**item}
-    if job.get("kind") == "batch":
-        files = []
-        for entry in job.get("files") or []:
-            files.append(_enrich_board_job(entry))
-        job["files"] = files
-        return job
-    game_id = job.get("game_id")
-    if job.get("status") == "done" and game_id:
-        links = web_board_open_links(game_id)
-        job["open_links"] = links
-        job["view_url"] = links[0]["url"] if links else None
     return job
 
 
@@ -193,46 +146,33 @@ async def web_board_upload_page(request: Request):
 
 @board_viewer_web_api_router.post("/web/board/api/upload")
 async def web_board_upload(request: Request, files: list[UploadFile] = File(...)):
-    from bot.routers.hint_viewer_web_router import _collect_mat_files
-
     token, session = await _require_session(request)
-    if not files:
-        raise HTTPException(status_code=400, detail="Файлы не выбраны")
+    uploads = [item for item in files if item and item.filename]
+    if len(uploads) != 1:
+        raise HTTPException(status_code=400, detail="Нужен один файл .mat")
+    upload = uploads[0]
+    filename = Path(upload.filename or "match.mat").name
+    if not filename.lower().endswith(".mat"):
+        raise HTTPException(status_code=400, detail="Нужен файл .mat")
+    data = await upload.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Файл пустой")
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=400, detail="Файл слишком большой (макс. 30 МБ)")
+
     workdir = tempfile.mkdtemp(prefix="board_web_")
     try:
-        collected = await _collect_mat_files(files, workdir)
-        if not collected:
-            raise HTTPException(status_code=400, detail="В загрузке нет .mat файлов")
+        local_mat = os.path.join(workdir, filename)
+        with open(local_mat, "wb") as f:
+            f.write(data)
         user_id = session.get("user_id")
         user_id = int(user_id) if user_id else None
-        now_iso = datetime.now(timezone.utc).isoformat()
-        if len(collected) == 1:
-            payload = await _process_mat(
-                collected[0][0], collected[0][1], token, user_id
+        payload = await _process_mat(local_mat, filename, token, user_id)
+        if payload.get("status") != HintViewerWebUploadStatus.DONE.value:
+            raise HTTPException(
+                status_code=400,
+                detail=payload.get("error") or "Не удалось разобрать матч",
             )
-            await append_session_job(token, payload, service=WEB_SERVICE_BOARD)
-        else:
-            batch_id = f"web_board_batch_{uuid.uuid4().hex[:8]}"
-            file_jobs = []
-            for local_mat, filename in collected:
-                file_jobs.append(
-                    await _process_mat(
-                        local_mat, filename, token, user_id, batch_id=batch_id
-                    )
-                )
-            ready = sum(1 for j in file_jobs if j.get("status") == "done")
-            status = "done" if ready == len(file_jobs) else "error"
-            payload = {
-                "kind": "batch",
-                "job_id": batch_id,
-                "status": status,
-                "files": file_jobs,
-                "ready_count": ready,
-                "total_files": len(file_jobs),
-                "created_at": now_iso,
-                "finished_at": now_iso,
-            }
-            await append_session_job(token, payload, service=WEB_SERVICE_BOARD)
         return JSONResponse({"ok": True, "job": payload})
     except HTTPException:
         raise
@@ -241,22 +181,6 @@ async def web_board_upload(request: Request, files: list[UploadFile] = File(...)
         raise HTTPException(status_code=500, detail="Не удалось обработать матч")
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
-
-
-@board_viewer_web_api_router.get("/web/board/api/jobs")
-async def web_board_jobs(request: Request):
-    token, _session = await _require_session(request)
-    stored = await list_session_jobs(token, service=WEB_SERVICE_BOARD)
-    jobs = []
-    kept = []
-    for item in stored:
-        enriched = _enrich_board_job(item)
-        if _is_stale_current_job(enriched):
-            continue
-        kept.append(item)
-        jobs.append(enriched)
-    await replace_session_jobs(token, kept, service=WEB_SERVICE_BOARD)
-    return {"ok": True, "jobs": jobs}
 
 
 @board_viewer_web_api_router.get("/web/board/api/history")

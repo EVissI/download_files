@@ -121,13 +121,18 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
             "api_base": "/web/board",
             "page_title": "Плеер",
             "intro_text": (
-                "Можно загрузить один или несколько .mat, либо zip с матчами. "
-                "Парсинг обычно занимает несколько секунд, после этого появится ссылка на плеер."
+                "Загрузите один .mat — сразу откроется просмотр партии."
             ),
-            "upload_ok_message": "Файл(ы) обработаны, можно открыть плеер.",
+            "upload_ok_message": "Открываем плеер…",
             "login_url": "/web/hints/login?next=/web/board",
             "card_title": "Новый матч",
-            "upload_btn_label": "Отправить",
+            "upload_btn_label": "Открыть",
+            "show_current_jobs": False,
+            "allow_multiple": False,
+            "open_on_upload": True,
+            "dropzone_hint": ".mat",
+            "accept": ".mat",
+            "dropzone_title": "Нажмите или перетащите файл сюда",
         }
     return {
         "web_service": WEB_SERVICE_HINTS,
@@ -141,6 +146,12 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
         "login_url": "/web/hints/login",
         "card_title": "Новый анализ",
         "upload_btn_label": "Отправить на анализ",
+        "show_current_jobs": True,
+        "allow_multiple": True,
+        "open_on_upload": False,
+        "dropzone_hint": ".mat или .zip",
+        "accept": ".mat,.zip,application/zip",
+        "dropzone_title": "Нажмите или перетащите файлы сюда",
     }
 
 

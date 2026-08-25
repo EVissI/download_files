@@ -138,7 +138,6 @@ class _SkipHintWebPollAccessLogFilter(logging.Filter):
     _SKIP = (
         "/web/hints/api/jobs",
         "/web/hints/api/history",
-        "/web/board/api/jobs",
         "/web/board/api/history",
     )
 

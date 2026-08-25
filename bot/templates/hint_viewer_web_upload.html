@@ -170,19 +170,21 @@
         <div class="card">
             <h2>{{ card_title|default('Новый анализ') }}</h2>
             <p class="muted">{{ intro_text|default('Можно загрузить один или несколько .mat, либо zip с матчами. Когда анализ будет готов, появится уведомление.') }}</p>
-            <div class="drop" id="dropzone">Нажмите или перетащите файлы сюда<br><span class="muted">.mat или .zip</span></div>
-            <input id="fileInput" type="file" accept=".mat,.zip,application/zip" multiple>
+            <div class="drop" id="dropzone">{{ dropzone_title|default('Нажмите или перетащите файлы сюда') }}<br><span class="muted">{{ dropzone_hint|default('.mat или .zip') }}</span></div>
+            <input id="fileInput" type="file" accept="{{ accept|default('.mat,.zip,application/zip') }}" {% if allow_multiple|default(true) %}multiple{% endif %}>
             <ul class="file-list" id="fileList"></ul>
-            <div class="actions">
+            <div class="actions"{% if not show_current_jobs|default(true) and open_on_upload|default(false) %} hidden{% endif %}>
                 <button class="primary" id="uploadBtn" type="button" disabled>{{ upload_btn_label|default('Отправить на анализ') }}</button>
             </div>
             <p class="muted" id="uploadStatus"></p>
         </div>
 
+        {% if show_current_jobs|default(true) %}
         <div class="card">
             <h2>Текущие задачи</h2>
             <div id="jobs" class="muted">Пока нет загрузок в этой сессии.</div>
         </div>
+        {% endif %}
 
         <div class="card">
             <h2>История загрузок</h2>
@@ -195,6 +197,8 @@
         const apiBase = {{ api_base|default('/web/hints')|tojson }};
         const loginUrl = {{ login_url|default('/web/hints/login')|tojson }};
         const uploadOkMessage = {{ upload_ok_message|default('Файл(ы) приняты, анализ в очереди.')|tojson }};
+        const allowMultiple = {{ allow_multiple|default(true)|tojson }};
+        const openOnUpload = {{ open_on_upload|default(false)|tojson }};
         const fileInput = document.getElementById('fileInput');
         const dropzone = document.getElementById('dropzone');
         const fileList = document.getElementById('fileList');
@@ -206,14 +210,28 @@
         const knownReady = new Set();
         let notifyArmed = false;
         let latestJobs = [];
+        let uploading = false;
 
         function renderFiles() {
             fileList.innerHTML = selectedFiles.map(f => `<li>${f.name}</li>`).join('');
-            uploadBtn.disabled = selectedFiles.length === 0;
+            if (uploadBtn) uploadBtn.disabled = selectedFiles.length === 0 || uploading;
         }
 
         function addFiles(list) {
-            selectedFiles = [...selectedFiles, ...Array.from(list)];
+            const incoming = Array.from(list || []).filter(Boolean);
+            if (!incoming.length) return;
+            if (!allowMultiple) {
+                const mat = incoming.find((f) => (f.name || '').toLowerCase().endsWith('.mat'));
+                if (!mat) {
+                    uploadStatus.textContent = 'Нужен один файл .mat';
+                    return;
+                }
+                selectedFiles = [mat];
+                renderFiles();
+                if (openOnUpload) startUpload();
+                return;
+            }
+            selectedFiles = [...selectedFiles, ...incoming];
             renderFiles();
         }
 
@@ -330,6 +348,7 @@
         }
 
         function renderJobsList() {
+            if (!jobsEl) return;
             if (!latestJobs.length) {
                 jobsEl.innerHTML = '<span class="muted">Пока нет загрузок в этой сессии.</span>';
                 return;
@@ -338,6 +357,7 @@
         }
 
         async function pollJobs() {
+            if (!jobsEl) return;
             try {
                 const res = await fetch(apiBase + '/api/jobs');
                 if (res.status === 401) { window.location.href = loginUrl; return; }
@@ -371,13 +391,11 @@
             } catch (e) {}
         }
 
-        uploadBtn.addEventListener('click', async () => {
-            if (!selectedFiles.length) return;
-            if (window.Notification && Notification.permission === 'default') {
-                try { await Notification.requestPermission(); } catch (e) {}
-            }
-            uploadBtn.disabled = true;
-            uploadStatus.textContent = 'Загрузка…';
+        async function startUpload() {
+            if (!selectedFiles.length || uploading) return;
+            uploading = true;
+            if (uploadBtn) uploadBtn.disabled = true;
+            uploadStatus.textContent = openOnUpload ? 'Открываем…' : 'Загрузка…';
             const fd = new FormData();
             selectedFiles.forEach((f) => fd.append('files', f));
             try {
@@ -385,11 +403,27 @@
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) {
                     uploadStatus.textContent = data.detail || 'Ошибка загрузки';
-                    uploadBtn.disabled = false;
+                    uploading = false;
+                    if (uploadBtn) uploadBtn.disabled = false;
+                    fileInput.value = '';
+                    return;
+                }
+                if (openOnUpload) {
+                    const job = data.job || {};
+                    const url = job.view_url || (job.open_links && job.open_links[0] && job.open_links[0].url);
+                    if (url) {
+                        window.location.href = url;
+                        return;
+                    }
+                    uploadStatus.textContent = data.detail || job.error || 'Не удалось открыть матч';
+                    uploading = false;
+                    if (uploadBtn) uploadBtn.disabled = false;
+                    fileInput.value = '';
                     return;
                 }
                 selectedFiles = [];
                 fileInput.value = '';
+                uploading = false;
                 renderFiles();
                 uploadStatus.textContent = uploadOkMessage;
                 pollJobs();
@@ -397,9 +431,21 @@
                 pollHistory();
             } catch (e) {
                 uploadStatus.textContent = 'Сеть недоступна';
-                uploadBtn.disabled = false;
+                uploading = false;
+                if (uploadBtn) uploadBtn.disabled = false;
+                fileInput.value = '';
             }
-        });
+        }
+
+        if (uploadBtn) {
+            uploadBtn.addEventListener('click', async () => {
+                if (!selectedFiles.length) return;
+                if (window.Notification && Notification.permission === 'default') {
+                    try { await Notification.requestPermission(); } catch (e) {}
+                }
+                startUpload();
+            });
+        }
 
         const historyEl = document.getElementById('history');
         const historyPagerEl = document.getElementById('historyPager');
@@ -482,15 +528,17 @@
         }
 
         renderFiles();
-        pollJobs();
+        if (jobsEl) {
+            pollJobs();
+            setInterval(pollJobs, 4000);
+            setInterval(() => {
+                if (latestJobs.some((j) => j.status === 'queued' || j.status === 'processing')) {
+                    renderJobsList();
+                }
+            }, 300);
+        }
         pollHistory();
-        setInterval(pollJobs, 4000);
         setInterval(pollHistory, 8000);
-        setInterval(() => {
-            if (latestJobs.some((j) => j.status === 'queued' || j.status === 'processing')) {
-                renderJobsList();
-            }
-        }, 300);
     </script>
 </body>
 </html>
