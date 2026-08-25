@@ -1528,6 +1528,15 @@ class MatchAnalysisFolderSchedule(Base):
     created_by_admin: Mapped[Optional["User"]] = relationship("User")
 
 
+def web_user_expires_at_passed(expires_at: datetime | None) -> bool:
+    if expires_at is None:
+        return False
+    ts = expires_at
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) >= ts
+
+
 class WebUser(Base):
     """Аккаунт отдельной веб-версии hint viewer (не Telegram)."""
 
@@ -1540,10 +1549,35 @@ class WebUser(Base):
     is_admin: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=sa_false()
     )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     uploads: Mapped[list["HintViewerWebUpload"]] = relationship(
         "HintViewerWebUpload",
         back_populates="web_user",
     )
+
+    def is_expired(self) -> bool:
+        return web_user_expires_at_passed(self.expires_at)
+
+    @property
+    @renders("expires_at_display")
+    def expires_at_display(self) -> str:
+        if self.expires_at is None:
+            return "Бессрочно"
+        ts = self.expires_at
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        return ts.astimezone(timezone(timedelta(hours=3))).strftime("%d.%m.%Y %H:%M")
+
+    @property
+    @renders("account_status")
+    def account_status(self) -> str:
+        if self.is_expired():
+            return "Истёк"
+        if self.expires_at is None:
+            return "Бессрочный"
+        return "Активен"
 
     @property
     @renders("password_masked")

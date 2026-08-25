@@ -525,16 +525,21 @@ async def web_hints_login(
     login: str = Form(""),
     password: str = Form(""),
 ):
-    user = await authenticate_web_user(login, password)
+    user, auth_error = await authenticate_web_user(login, password)
     if not user:
+        message = (
+            "Срок действия аккаунта истёк"
+            if auth_error == "expired"
+            else "Неверный логин или пароль"
+        )
         return templates.TemplateResponse(
             "hint_viewer_web_login.html",
-        {
-            "request": request,
-            "error": "Неверный логин или пароль",
-            "login_value": (login or "").strip(),
-            "cache_timestamp": get_static_asset_version(),
-        },
+            {
+                "request": request,
+                "error": message,
+                "login_value": (login or "").strip(),
+                "cache_timestamp": get_static_asset_version(),
+            },
             status_code=200,
         )
     created = await create_session(user)

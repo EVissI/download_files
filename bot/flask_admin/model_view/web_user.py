@@ -1,7 +1,10 @@
+from datetime import timezone
+from zoneinfo import ZoneInfo
+
 from flask import flash, request
 from flask_appbuilder import ModelView
 from flask_appbuilder.models.sqla.interface import SQLAInterface
-from wtforms import PasswordField
+from wtforms import BooleanField, DateTimeLocalField, PasswordField
 from wtforms.validators import DataRequired, Length, Optional
 
 from bot.common.utils.password import store_password
@@ -11,6 +14,8 @@ try:
     from flask_appbuilder.fieldwidgets import BS3PasswordFieldWidget
 except ImportError:  # pragma: no cover
     BS3PasswordFieldWidget = None
+
+MSK = ZoneInfo("Europe/Moscow")
 
 
 def _password_field(label: str, required: bool) -> PasswordField:
@@ -22,6 +27,10 @@ def _password_field(label: str, required: bool) -> PasswordField:
     return PasswordField(label, **kwargs)
 
 
+def _unlimited_checked() -> bool:
+    return request.form.get("unlimited") in ("y", "on", "1", "true", "True")
+
+
 class WebUserModelView(ModelView):
     datamodel = SQLAInterface(WebUser)
 
@@ -30,10 +39,24 @@ class WebUserModelView(ModelView):
     add_title = "Создать веб-пользователя"
     edit_title = "Изменить веб-пользователя"
 
-    list_columns = ["id", "login", "is_admin", "password_masked"]
-    show_columns = ["id", "login", "is_admin", "password_display"]
-    add_columns = ["login", "password", "is_admin"]
-    edit_columns = ["login", "password", "is_admin"]
+    list_columns = [
+        "id",
+        "login",
+        "is_admin",
+        "account_status",
+        "expires_at_display",
+        "password_masked",
+    ]
+    show_columns = [
+        "id",
+        "login",
+        "is_admin",
+        "account_status",
+        "expires_at_display",
+        "password_display",
+    ]
+    add_columns = ["login", "password", "is_admin", "unlimited", "expires_at"]
+    edit_columns = ["login", "password", "is_admin", "unlimited", "expires_at"]
     search_columns = ["login"]
     exclude_columns = ["password_hash", "password_encrypted", "uploads"]
 
@@ -42,6 +65,10 @@ class WebUserModelView(ModelView):
         "login": "Логин",
         "password": "Пароль",
         "is_admin": "Админ",
+        "unlimited": "Бессрочный",
+        "expires_at": "Активен до",
+        "expires_at_display": "Активен до",
+        "account_status": "Статус",
         "password_masked": "Пароль",
         "password_display": "Пароль",
     }
@@ -50,13 +77,27 @@ class WebUserModelView(ModelView):
         "password": "Не короче 6 символов. При редактировании оставьте пустым, чтобы не менять.",
         "password_masked": "В списке пароль скрыт. Откройте карточку пользователя, чтобы увидеть исходный пароль.",
         "password_display": "Расшифрованная копия. Для входа используется отдельный хеш.",
+        "unlimited": "Если отмечено, срок не ограничен и вход всегда разрешён.",
+        "expires_at": "Московское время. После этой даты войти нельзя. Не нужно, если аккаунт бессрочный.",
     }
 
     add_form_extra_fields = {
         "password": _password_field("Пароль", required=True),
+        "unlimited": BooleanField("Бессрочный", default=False),
+        "expires_at": DateTimeLocalField(
+            "Активен до",
+            validators=[Optional()],
+            format="%Y-%m-%dT%H:%M",
+        ),
     }
     edit_form_extra_fields = {
         "password": _password_field("Новый пароль (оставьте пустым, чтобы не менять)", required=False),
+        "unlimited": BooleanField("Бессрочный", default=False),
+        "expires_at": DateTimeLocalField(
+            "Активен до",
+            validators=[Optional()],
+            format="%Y-%m-%dT%H:%M",
+        ),
     }
 
     @staticmethod
@@ -68,11 +109,35 @@ class WebUserModelView(ModelView):
 
     @staticmethod
     def _drop_transient_password(item: WebUser) -> None:
-        if hasattr(item, "password"):
-            try:
-                delattr(item, "password")
-            except Exception:
-                pass
+        for name in ("password", "unlimited"):
+            if hasattr(item, name):
+                try:
+                    delattr(item, name)
+                except Exception:
+                    pass
+
+    def _apply_expiry(self, item: WebUser) -> None:
+        if _unlimited_checked():
+            item.expires_at = None
+            return
+        expires_at = item.expires_at
+        if expires_at is None:
+            flash("Укажите срок действия или отметьте «Бессрочный»", "danger")
+            raise ValueError("expires_at required")
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=MSK)
+        item.expires_at = expires_at.astimezone(timezone.utc)
+
+    def edit_form(self, obj=None, **kwargs):
+        form = super().edit_form(obj, **kwargs)
+        if obj is not None and getattr(form, "unlimited", None) is not None:
+            form.unlimited.data = obj.expires_at is None
+            if obj.expires_at is not None and getattr(form, "expires_at", None) is not None:
+                local = obj.expires_at
+                if local.tzinfo is None:
+                    local = local.replace(tzinfo=timezone.utc)
+                form.expires_at.data = local.astimezone(MSK).replace(tzinfo=None)
+        return form
 
     def pre_add(self, item: WebUser) -> None:
         item.login = (item.login or request.form.get("login") or "").strip()
@@ -93,6 +158,7 @@ class WebUserModelView(ModelView):
             raise ValueError("password too short")
         item.password_hash, item.password_encrypted = store_password(raw)
         item.is_admin = bool(item.is_admin)
+        self._apply_expiry(item)
         self._drop_transient_password(item)
 
     def pre_update(self, item: WebUser) -> None:
@@ -115,4 +181,5 @@ class WebUserModelView(ModelView):
                 raise ValueError("password too short")
             item.password_hash, item.password_encrypted = store_password(raw)
         item.is_admin = bool(item.is_admin)
+        self._apply_expiry(item)
         self._drop_transient_password(item)

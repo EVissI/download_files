@@ -48,20 +48,23 @@ async def authenticate_web_user(login: str, password: str):
     normalized = (login or "").strip()
     raw = (password or "").strip()
     if not normalized or not raw:
-        return None
+        return None, "invalid"
     async with async_session_maker() as session:
         user = await WebUserDAO(session).get_by_login(normalized)
         if not user:
             logger.info("Web login failed: unknown login")
-            return None
+            return None, "invalid"
         if not passwords_match(user.password_hash, user.password_encrypted, raw):
             logger.info("Web login failed: bad password for login={}", user.login)
-            return None
+            return None, "invalid"
+        if user.is_expired():
+            logger.info("Web login failed: expired login={}", user.login)
+            return None, "expired"
         return SimpleNamespace(
             id=int(user.id),
             login=user.login,
             is_admin=bool(user.is_admin),
-        )
+        ), None
 
 
 async def create_session(user) -> dict[str, Any]:
@@ -90,7 +93,28 @@ async def get_session(token: str | None) -> dict[str, Any] | None:
         return None
     if not data.get("ok") or not data.get("user_id"):
         return None
+    if not await web_user_account_active(data.get("user_id")):
+        await destroy_session(token)
+        return None
     return data
+
+
+async def web_user_account_active(user_id: int | None) -> bool:
+    if not user_id:
+        return False
+    from sqlalchemy import select
+
+    from bot.db.database import async_session_maker
+    from bot.db.models import WebUser, web_user_expires_at_passed
+
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(WebUser.id, WebUser.expires_at).where(WebUser.id == int(user_id))
+        )
+        row = result.one_or_none()
+        if row is None:
+            return False
+        return not web_user_expires_at_passed(row.expires_at)
 
 
 async def web_user_is_admin(user_id: int | None) -> bool:

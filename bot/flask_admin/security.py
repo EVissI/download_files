@@ -24,6 +24,9 @@ class WebAdminSecurityManager(SecurityManager):
         web = self.session.query(WebUser).filter(WebUser.login == name).first()
         if not web or not web.is_admin:
             return None
+        if web.is_expired():
+            logger.info("FAB login blocked: WebUser expired login={}", web.login)
+            return None
         if not passwords_match(web.password_hash, web.password_encrypted, raw):
             return None
         user = self.find_user(username=web.login)
