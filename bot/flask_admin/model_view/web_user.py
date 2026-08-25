@@ -128,16 +128,17 @@ class WebUserModelView(ModelView):
             expires_at = expires_at.replace(tzinfo=MSK)
         item.expires_at = expires_at.astimezone(timezone.utc)
 
-    def edit_form(self, obj=None, **kwargs):
-        form = super().edit_form(obj, **kwargs)
-        if obj is not None and getattr(form, "unlimited", None) is not None:
-            form.unlimited.data = obj.expires_at is None
-            if obj.expires_at is not None and getattr(form, "expires_at", None) is not None:
-                local = obj.expires_at
-                if local.tzinfo is None:
-                    local = local.replace(tzinfo=timezone.utc)
-                form.expires_at.data = local.astimezone(MSK).replace(tzinfo=None)
-        return form
+    def prefill_form(self, form, pk):
+        item = self.datamodel.get(pk)
+        if item is None:
+            return
+        if getattr(form, "unlimited", None) is not None:
+            form.unlimited.data = item.expires_at is None
+        if item.expires_at is not None and getattr(form, "expires_at", None) is not None:
+            local = item.expires_at
+            if local.tzinfo is None:
+                local = local.replace(tzinfo=timezone.utc)
+            form.expires_at.data = local.astimezone(MSK).replace(tzinfo=None)
 
     def pre_add(self, item: WebUser) -> None:
         item.login = (item.login or request.form.get("login") or "").strip()
