@@ -21,6 +21,12 @@
             border-bottom: 1px solid #2a2a2a;
             background: #1a1a1a;
         }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .header-actions form { margin: 0; }
         h1 { margin: 0; font-size: 1.15rem; }
         .wrap { max-width: 860px; margin: 0 auto; padding: 20px; }
         .card {
@@ -123,9 +129,14 @@
 <body>
     <header>
         <h1>Загрузка матчей</h1>
-        <form method="post" action="/web/hints/logout">
-            <button class="ghost" type="submit">Выйти</button>
-        </form>
+        <div class="header-actions">
+            {% if is_admin %}
+            <a class="btn ghost" href="/admin/">Админка</a>
+            {% endif %}
+            <form method="post" action="/web/hints/logout">
+                <button class="ghost" type="submit">Выйти</button>
+            </form>
+        </div>
     </header>
     <div class="wrap">
         <div class="card">

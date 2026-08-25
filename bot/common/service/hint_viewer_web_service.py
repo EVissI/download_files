@@ -70,6 +70,7 @@ async def create_session(user) -> dict[str, Any]:
         "ok": True,
         "user_id": int(user.id),
         "web_uid": -int(user.id),
+        "is_admin": bool(getattr(user, "is_admin", False)),
     }
     await redis_client.set(
         SESSION_KEY.format(token=token), json.dumps(payload), expire=SESSION_TTL_SEC
@@ -90,6 +91,21 @@ async def get_session(token: str | None) -> dict[str, Any] | None:
     if not data.get("ok") or not data.get("user_id"):
         return None
     return data
+
+
+async def web_user_is_admin(user_id: int | None) -> bool:
+    if not user_id:
+        return False
+    from sqlalchemy import select
+
+    from bot.db.database import async_session_maker
+    from bot.db.models import WebUser
+
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(WebUser.is_admin).where(WebUser.id == int(user_id))
+        )
+        return bool(result.scalar_one_or_none())
 
 
 async def destroy_session(token: str | None) -> None:

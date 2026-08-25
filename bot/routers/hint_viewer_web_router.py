@@ -10,7 +10,7 @@ import shutil
 import tempfile
 import uuid
 import zipfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +51,7 @@ from bot.common.service.hint_viewer_web_service import (
     replace_session_jobs,
     sync_history_from_job,
     web_hint_open_links,
+    web_user_is_admin,
 )
 from bot.common.service.webapp_settings_service import (
     get_hint_viewer_screenshot_font_scale_percent,
@@ -343,6 +344,7 @@ async def _enqueue_batch(
 
 
 _JOB_NOT_FOUND_ERROR = "Задача не найдена"
+_CURRENT_JOB_KEEP_AFTER_FINISH = timedelta(minutes=20)
 
 
 def _rq_status(job: Job) -> str:
@@ -357,6 +359,43 @@ def _rq_status(job: Job) -> str:
 
 def _is_missing_job(item: dict[str, Any]) -> bool:
     return item.get("error") == _JOB_NOT_FOUND_ERROR
+
+
+def _parse_dt(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        ts = value
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        return ts.astimezone(timezone.utc)
+    if isinstance(value, str) and value:
+        try:
+            ts = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        return ts.astimezone(timezone.utc)
+    return None
+
+
+def _stamp_finished_at(item: dict[str, Any], rq_job: Job | None = None) -> None:
+    if item.get("status") not in {"done", "error"}:
+        return
+    existing = _parse_dt(item.get("finished_at"))
+    if existing:
+        item["finished_at"] = existing.isoformat()
+        return
+    ended = _parse_dt(getattr(rq_job, "ended_at", None) if rq_job is not None else None)
+    item["finished_at"] = (ended or datetime.now(timezone.utc)).isoformat()
+
+
+def _is_stale_current_job(item: dict[str, Any]) -> bool:
+    if item.get("status") not in {"done", "error"}:
+        return False
+    finished = _parse_dt(item.get("finished_at"))
+    if not finished:
+        return False
+    return datetime.now(timezone.utc) - finished >= _CURRENT_JOB_KEEP_AFTER_FINISH
 
 
 def _enrich_single_job(stored: dict[str, Any]) -> dict[str, Any]:
@@ -390,8 +429,11 @@ def _enrich_single_job(stored: dict[str, Any]) -> dict[str, Any]:
                 game_id, stored.get("red_player"), stored.get("black_player")
             )
             item["view_url"] = item["open_links"][0]["url"] if item["open_links"] else None
+        _stamp_finished_at(item, job)
     else:
         item["status"] = rq_status
+        if rq_status == "error":
+            _stamp_finished_at(item, job)
     return item
 
 
@@ -435,12 +477,14 @@ def _enrich_batch_job(stored: dict[str, Any]) -> dict[str, Any]:
     item["ready_count"] = ready
     item["error_count"] = errors
     done = bool(total_files and batch_id and is_batch_effectively_done(batch_id, total_files))
+    job = None
     try:
         job = Job.fetch(job_id, connection=redis_rq)
         rq_status = _rq_status(job)
         if rq_status == "error" and not done:
             item["status"] = "error"
             item["error"] = "Пакетный анализ завершился с ошибкой"
+            _stamp_finished_at(item, job)
             return item
         if rq_status == "finished":
             done = True
@@ -455,6 +499,7 @@ def _enrich_batch_job(stored: dict[str, Any]) -> dict[str, Any]:
             item["error"] = _JOB_NOT_FOUND_ERROR
             return item
     item["status"] = "done"
+    _stamp_finished_at(item, job)
     return item
 
 
@@ -520,11 +565,13 @@ async def web_hints_upload_page(request: Request):
     session = await get_session(token)
     if not session:
         return _login_redirect()
+    is_admin = await web_user_is_admin(session.get("user_id"))
     return templates.TemplateResponse(
         "hint_viewer_web_upload.html",
         {
             "request": request,
             "cache_timestamp": get_static_asset_version(),
+            "is_admin": is_admin,
         },
     )
 
@@ -582,11 +629,14 @@ async def web_hints_jobs(request: Request):
         )
         if _is_missing_job(enriched):
             continue
+        if _is_stale_current_job(enriched):
+            continue
+        if enriched.get("finished_at"):
+            item["finished_at"] = enriched["finished_at"]
         kept.append(item)
         jobs.append(enriched)
         await sync_history_from_job(enriched)
-    if len(kept) != len(stored):
-        await replace_session_jobs(token, kept)
+    await replace_session_jobs(token, kept)
     return {"ok": True, "jobs": jobs}
 
 
