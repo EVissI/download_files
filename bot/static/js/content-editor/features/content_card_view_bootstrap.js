@@ -108,18 +108,28 @@ export async function bootstrapContentCardViewPageImpl(editor) {
         return;
     }
     let initData = '';
-    if (!fabToken) {
+    const webStandalone = (function () {
+        try {
+            const meta = document.querySelector('meta[name="web-standalone-mode"]');
+            return !!(meta && meta.getAttribute('content') === '1');
+        } catch (_e) {
+            return false;
+        }
+    })();
+    if (!fabToken && !webStandalone) {
         initData =
             (await waitForTelegramWebAppInitData(5000, 50)) ||
             (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) ||
             '';
     }
-    if (!initData && !fabToken) {
+    if (!initData && !fabToken && !webStandalone) {
         showErr('Откройте страницу из Telegram');
         return;
     }
     try {
-        const authPayload = initData ? { init_data: initData } : { fab_token: fabToken };
+        const authPayload = initData
+            ? { init_data: initData }
+            : (fabToken ? { fab_token: fabToken } : {});
         const pageParams = new URLSearchParams(window.location.search || '');
         const folderToken = String(pageParams.get('folder_token') || '').trim();
         if (folderToken) {

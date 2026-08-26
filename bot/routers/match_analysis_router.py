@@ -200,6 +200,11 @@ async def _resolve_ma_user_id(
         if not token_val:
             raise HTTPException(status_code=401, detail="Недействительный FAB-токен")
         return int(token_val)
+    from bot.common.service.web_grant_user import get_web_grant_uid
+
+    web_uid = get_web_grant_uid()
+    if web_uid:
+        return int(web_uid)
     raise HTTPException(status_code=401, detail="Требуется init_data или fab_token")
 
 
@@ -476,8 +481,13 @@ def _serialize_list_item(
 # ---------------------------------------------------------------------------
 
 
-@match_analysis_api_router.get("/match-analysis-cabinet")
-async def match_analysis_cabinet_page(request: Request):
+async def render_match_analysis_cabinet_page(
+    request: Request,
+    *,
+    web_standalone: bool = False,
+    is_admin: bool = False,
+    cabinet_base_path: str = "/match-analysis-cabinet",
+):
     from bot.common.utils.static_assets import get_static_asset_version
 
     cache_timestamp = get_static_asset_version()
@@ -488,9 +498,12 @@ async def match_analysis_cabinet_page(request: Request):
             "request": request,
             "cache_timestamp": cache_timestamp,
             "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
+            "web_standalone_mode": web_standalone,
+            "is_admin": is_admin,
+            "web_service": "match_analysis",
             "cabinet_kind": "match_analysis",
             "cabinet_pool": "match_analysis",
-            "cabinet_base_path": "/match-analysis-cabinet",
+            "cabinet_base_path": cabinet_base_path,
             "cabinet_title": "Анализ матча",
             "cabinet_state_key": "match_analysis_cabinet_state_v1",
             "show_open_hints_toggle": False,
@@ -516,9 +529,15 @@ async def match_analysis_cabinet_page(request: Request):
     return response
 
 
+@match_analysis_api_router.get("/match-analysis-cabinet")
+async def match_analysis_cabinet_page(request: Request):
+    return await render_match_analysis_cabinet_page(request)
+
+
 @match_analysis_api_router.get("/match-analysis-view")
 async def match_analysis_view_page(request: Request, id: int | None = None):
     """Просмотр сохранённого анализа — тот же UI, что hint-viewer, в режиме match_analysis."""
+    from bot.common.service.hint_viewer_web_service import COOKIE_NAME, get_session
     from bot.common.service.webapp_settings_service import (
         get_hint_viewer_screenshot_font_scale_percent,
     )
@@ -531,6 +550,8 @@ async def match_analysis_view_page(request: Request, id: int | None = None):
     cache_timestamp = get_static_asset_version()
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("hints")
     font_scale = await get_hint_viewer_screenshot_font_scale_percent()
+    web_session = await get_session(request.cookies.get(COOKIE_NAME))
+    web_standalone = bool(web_session)
     response = templates.TemplateResponse(
         "hint_viewer.html",
         {
@@ -539,6 +560,9 @@ async def match_analysis_view_page(request: Request, id: int | None = None):
             "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
             "hint_viewer_screenshot_font_scale_percent": font_scale,
             "match_analysis_mode": True,
+            "web_standalone_mode": web_standalone,
+            "web_service": "match_analysis",
+            "is_admin": bool((web_session or {}).get("is_admin")),
         },
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"

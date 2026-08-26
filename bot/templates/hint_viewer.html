@@ -1839,7 +1839,11 @@
 
 <body class="{% if web_standalone_mode|default(false) %}web-standalone{% endif %}">
     {% if web_standalone_mode|default(false) %}
+    {% if match_analysis_mode|default(false) %}
+    <a class="web-standalone-back" href="/web/match-analysis">← К кабинету «Анализ матча»</a>
+    {% else %}
     <a class="web-standalone-back" href="/web/hints">← К загрузке матчей</a>
+    {% endif %}
     {% endif %}
     <div class="container">
         <h1>Backgammon Game Analysis</h1>
@@ -6096,7 +6100,9 @@
         }
 
         function openMatchAnalysisCabinet() {
-            window.location.href = '/match-analysis-cabinet';
+            var meta = document.querySelector('meta[name="web-standalone-mode"]');
+            var web = meta && meta.getAttribute('content') === '1';
+            window.location.href = web ? '/web/match-analysis' : '/match-analysis-cabinet';
         }
 
         // Функция открытия редактора контента

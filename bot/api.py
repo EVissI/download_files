@@ -25,6 +25,7 @@ from bot.routers.hint_viewer_web_router import hint_viewer_web_api_router
 from bot.routers.board_viewer_web_router import board_viewer_web_api_router
 from bot.routers.pokaz_web_router import pokaz_web_api_router
 from bot.routers.match_analysis_router import match_analysis_api_router
+from bot.routers.content_cards_web_router import content_cards_web_api_router
 from bot.routers.short_board import short_board_api_router
 from bot.flask_admin.appbuilder_main import create_app
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
@@ -265,6 +266,39 @@ async def admin_security_middleware(request: Request, call_next):
     return Response("Unauthorized", status_code=401)
 
 
+_WEB_GRANT_SKIP_PREFIXES = ("/static", "/admin", "/favicon")
+
+
+@app.middleware("http")
+async def web_grant_user_middleware(request: Request, call_next):
+    """Cookie-сессия веб-кабинета → ContextVar с id теневого User (отрицательный)."""
+    path = request.url.path or ""
+    token = None
+    if not path.startswith(_WEB_GRANT_SKIP_PREFIXES):
+        try:
+            from bot.common.service.hint_viewer_web_service import COOKIE_NAME, get_session
+            from bot.common.service.web_grant_user import (
+                ensure_web_grant_user_async,
+                set_web_grant_uid,
+            )
+
+            cookie = request.cookies.get(COOKIE_NAME)
+            session = await get_session(cookie) if cookie else None
+            web_user_id = int((session or {}).get("user_id") or 0)
+            if web_user_id > 0:
+                uid = await ensure_web_grant_user_async(web_user_id)
+                token = set_web_grant_uid(uid)
+        except Exception:
+            logger.exception("web grant middleware failed path={}", path)
+    try:
+        return await call_next(request)
+    finally:
+        if token is not None:
+            from bot.common.service.web_grant_user import reset_web_grant_uid
+
+            reset_web_grant_uid(token)
+
+
 app.mount("/static", CachedStaticFiles(directory=str(static_dir)), name="static")
 templates = Jinja2Templates(directory=str(templates_dir))
 templates.env.globals["cache_timestamp"] = get_static_asset_version()
@@ -275,6 +309,7 @@ app.include_router(hint_viewer_web_api_router, prefix="")
 app.include_router(board_viewer_web_api_router, prefix="")
 app.include_router(pokaz_web_api_router, prefix="")
 app.include_router(match_analysis_api_router, prefix="")
+app.include_router(content_cards_web_api_router, prefix="")
 app.include_router(short_board_api_router, prefix="")
 
 
@@ -484,14 +519,29 @@ async def update_board_viewer_screenshot_font_scale(request: Request):
 @app.get("/content-card-view")
 async def content_card_view_page(request: Request):
     """Просмотр сохранённой карточки контента (кадры, только переключение)."""
+    from bot.common.service.hint_viewer_web_service import COOKIE_NAME, get_session
+
     cache_timestamp = get_static_asset_version()
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("cards")
+    web_session = await get_session(request.cookies.get(COOKIE_NAME))
+    web_standalone = bool(web_session)
+    pool = str(request.query_params.get("pool") or "cards").strip()
+    if web_standalone:
+        cabinet_return_path = (
+            "/web/pip-count" if pool == "pip_count" else "/web/cards"
+        )
+    else:
+        cabinet_return_path = (
+            "/pip-count-cabinet" if pool == "pip_count" else "/cards-cabinet"
+        )
     response = templates.TemplateResponse(
         "content_card_view.html",
         {
             "request": request,
             "cache_timestamp": cache_timestamp,
             "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
+            "web_standalone_mode": web_standalone,
+            "cabinet_return_path": cabinet_return_path,
         },
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -513,7 +563,12 @@ async def pip_count_cabinet_page(request: Request):
 
 
 async def _render_content_cards_cabinet_page(
-    request: Request, card_pool: ContentCardPool
+    request: Request,
+    card_pool: ContentCardPool,
+    *,
+    web_standalone: bool = False,
+    is_admin: bool = False,
+    cabinet_base_path: str | None = None,
 ) -> HTMLResponse:
     cache_timestamp = get_static_asset_version()
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("cards")
@@ -534,23 +589,25 @@ async def _render_content_cards_cabinet_page(
         cabinet_ctx = {
             "cabinet_kind": "content_cards",
             "cabinet_pool": ContentCardPool.PIP_COUNT.value,
-            "cabinet_base_path": "/pip-count-cabinet",
+            "cabinet_base_path": cabinet_base_path or "/pip-count-cabinet",
             "cabinet_title": "Подсчёт пипсов",
             "cabinet_state_key": "pip_count_cabinet_state_v1",
             "cabinet_open_hints_key": "pip_count_cabinet_open_hints_v1",
             "show_open_hints_toggle": False,
             "cabinet_features": content_cards_features,
+            "web_service": "pip_count",
         }
     else:
         cabinet_ctx = {
             "cabinet_kind": "content_cards",
             "cabinet_pool": ContentCardPool.CARDS.value,
-            "cabinet_base_path": "/cards-cabinet",
+            "cabinet_base_path": cabinet_base_path or "/cards-cabinet",
             "cabinet_title": "Мои карточки",
             "cabinet_state_key": "cards_cabinet_state_v1",
             "cabinet_open_hints_key": "cards_cabinet_open_hints_v1",
             "show_open_hints_toggle": True,
             "cabinet_features": content_cards_features,
+            "web_service": "cards",
         }
     response = templates.TemplateResponse(
         "cards_cabinet.html",
@@ -558,6 +615,8 @@ async def _render_content_cards_cabinet_page(
             "request": request,
             "cache_timestamp": cache_timestamp,
             "webapp_fullscreen_enabled": webapp_fullscreen_enabled,
+            "web_standalone_mode": web_standalone,
+            "is_admin": is_admin,
             **cabinet_ctx,
         },
     )
@@ -1218,8 +1277,8 @@ class CabinetGalleryShareBody(BaseModel):
 async def _resolve_content_cards_user_id(
     init_data: str | None, fab_token: str | None
 ) -> int:
-    if init_data:
-        user_data = verify_telegram_webapp_data(init_data)
+    if init_data and str(init_data).strip():
+        user_data = verify_telegram_webapp_data(str(init_data).strip())
         if not user_data:
             raise HTTPException(status_code=401, detail="Недействительные данные Telegram")
         uid = (user_data.get("user") or {}).get("id")
@@ -1227,11 +1286,17 @@ async def _resolve_content_cards_user_id(
             raise HTTPException(status_code=401, detail="В init_data нет user")
         return int(uid)
 
-    if fab_token:
-        token_val = await redis_client.get(f"fab_cards_auth:{fab_token}")
+    if fab_token and str(fab_token).strip():
+        token_val = await redis_client.get(f"fab_cards_auth:{str(fab_token).strip()}")
         if not token_val:
             raise HTTPException(status_code=401, detail="Недействительный FAB-токен")
         return int(token_val)
+
+    from bot.common.service.web_grant_user import get_web_grant_uid
+
+    web_uid = get_web_grant_uid()
+    if web_uid:
+        return int(web_uid)
 
     raise HTTPException(status_code=401, detail="Требуется init_data или fab_token")
 

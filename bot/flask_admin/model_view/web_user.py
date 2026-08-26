@@ -1,14 +1,20 @@
 from datetime import timezone
 from zoneinfo import ZoneInfo
 
-from flask import flash, request
-from flask_appbuilder import ModelView
+from flask import flash, redirect, request, url_for
+from flask_appbuilder import ModelView, expose, has_access, permission_name
 from flask_appbuilder.models.sqla.interface import SQLAInterface
+from flask_wtf.csrf import generate_csrf
+from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 from wtforms import BooleanField, DateTimeLocalField, PasswordField
 from wtforms.validators import DataRequired, Length, Optional
 
+from bot.common.service.web_grant_user import ensure_web_grant_user_sync, web_grant_user_id
 from bot.common.utils.password import store_password
-from bot.db.models import WebUser
+from bot.db.models import ContentCard, ContentCardPool, MatchAnalysis, UserMatchAnalysis, WebUser
+from bot.flask_admin.content_card_grant import grant_content_cards_from_pool_sync
+from bot.flask_admin.match_analysis_grant import grant_match_analyses_sync
 
 try:
     from flask_appbuilder.fieldwidgets import BS3PasswordFieldWidget
@@ -38,6 +44,7 @@ class WebUserModelView(ModelView):
     show_title = "Веб-пользователь"
     add_title = "Создать веб-пользователя"
     edit_title = "Изменить веб-пользователя"
+    show_template = "show_web_user.html"
 
     list_columns = [
         "id",
@@ -184,3 +191,202 @@ class WebUserModelView(ModelView):
         item.is_admin = bool(item.is_admin)
         self._apply_expiry(item)
         self._drop_transient_password(item)
+
+    def post_add(self, item: WebUser) -> None:
+        try:
+            ensure_web_grant_user_sync(self.datamodel.session, int(item.id), item.login)
+            self.datamodel.session.commit()
+        except Exception:
+            self.datamodel.session.rollback()
+            flash(
+                "Пользователь создан, но теневой аккаунт для карточек не создан.",
+                "warning",
+            )
+
+    def post_update(self, item: WebUser) -> None:
+        try:
+            ensure_web_grant_user_sync(self.datamodel.session, int(item.id), item.login)
+            self.datamodel.session.commit()
+        except Exception:
+            self.datamodel.session.rollback()
+
+    def render_template(self, template, **kwargs):
+        kwargs.setdefault(
+            "user_fab_endpoint", getattr(self, "endpoint", self.__class__.__name__)
+        )
+        kwargs.setdefault("csrf_token_value", generate_csrf())
+        if template == self.show_template:
+            current_pk = kwargs.get("pk")
+            session = self.datamodel.session
+            ma_count = 0
+            ready_available = 0
+            try:
+                if current_pk is not None:
+                    grant_id = web_grant_user_id(int(current_pk))
+                    ma_count = int(
+                        session.scalar(
+                            select(func.count())
+                            .select_from(UserMatchAnalysis)
+                            .where(UserMatchAnalysis.user_id == grant_id)
+                        )
+                        or 0
+                    )
+                    owned = select(UserMatchAnalysis.match_analysis_id).where(
+                        UserMatchAnalysis.user_id == grant_id
+                    )
+                    ready_available = int(
+                        session.scalar(
+                            select(func.count())
+                            .select_from(MatchAnalysis)
+                            .where(
+                                MatchAnalysis.is_ready.is_(True),
+                                MatchAnalysis.id.not_in(owned),
+                            )
+                        )
+                        or 0
+                    )
+            except SQLAlchemyError:
+                ma_count = 0
+                ready_available = 0
+            kwargs.setdefault("match_analyses_count", ma_count)
+            kwargs.setdefault("match_analyses_ready_available", ready_available)
+        return super().render_template(template, **kwargs)
+
+    def _grant_user_id_or_redirect(self, pk: int):
+        user = self.datamodel.get(pk)
+        if not user:
+            flash("Веб-пользователь не найден", "danger")
+            return None, redirect(url_for(f"{self.endpoint}.list"))
+        grant_id = ensure_web_grant_user_sync(
+            self.datamodel.session, int(pk), user.login
+        )
+        return grant_id, None
+
+    @expose("/grant_cards/<int:pk>", methods=["POST"])
+    @has_access
+    @permission_name("show")
+    def grant_cards(self, pk: int):
+        return self._grant_cards_for_pool(pk, ContentCardPool.CARDS)
+
+    @expose("/grant_pip_count_cards/<int:pk>", methods=["POST"])
+    @has_access
+    @permission_name("show")
+    def grant_pip_count_cards(self, pk: int):
+        return self._grant_cards_for_pool(pk, ContentCardPool.PIP_COUNT)
+
+    @expose("/grant_match_analyses/<int:pk>", methods=["POST"])
+    @has_access
+    @permission_name("show")
+    def grant_match_analyses(self, pk: int):
+        grant_id, err = self._grant_user_id_or_redirect(pk)
+        if err is not None:
+            return err
+
+        raw_qty = (request.form.get("cards_quantity") or "").strip()
+        try:
+            quantity = int(raw_qty)
+        except (TypeError, ValueError):
+            quantity = 0
+
+        if quantity <= 0:
+            flash("Введите корректное количество анализов (целое число > 0).", "warning")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        session = self.datamodel.session
+        issued_count = 0
+        try:
+            issued_count = grant_match_analyses_sync(
+                session, user_id=grant_id, quantity=quantity
+            )
+            if issued_count == 0:
+                any_ready = session.execute(
+                    select(MatchAnalysis.id)
+                    .where(MatchAnalysis.is_ready.is_(True))
+                    .limit(1)
+                ).first()
+                if not any_ready:
+                    flash(
+                        "Нет готовых к выдаче анализов матча (is_ready).",
+                        "warning",
+                    )
+                else:
+                    flash(
+                        "У пользователя уже есть все доступные анализы матча.",
+                        "warning",
+                    )
+                return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+        except SQLAlchemyError as e:
+            session.rollback()
+            flash(f"Ошибка выдачи анализов матча: {e}", "danger")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        if issued_count < quantity:
+            flash(
+                f"Выдано {issued_count} из {quantity}: больше доступных анализов нет.",
+                "warning",
+            )
+        else:
+            flash(f"Пользователю выдано {issued_count} анализов матча.", "success")
+
+        return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+    def _grant_cards_for_pool(self, pk: int, card_pool: ContentCardPool):
+        grant_id, err = self._grant_user_id_or_redirect(pk)
+        if err is not None:
+            return err
+
+        raw_qty = (request.form.get("cards_quantity") or "").strip()
+        try:
+            cards_quantity = int(raw_qty)
+        except (TypeError, ValueError):
+            cards_quantity = 0
+
+        if cards_quantity <= 0:
+            flash("Введите корректное количество карточек (целое число > 0).", "warning")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        is_pip = card_pool == ContentCardPool.PIP_COUNT
+        pool_label = "карточек (пипсы)" if is_pip else "карточек"
+        empty_pool_msg = (
+            "В системе нет карточек пула «Подсчёт пипсов» для выдачи."
+            if is_pip
+            else "В системе нет карточек для выдачи."
+        )
+
+        session = self.datamodel.session
+        issued_count = 0
+        try:
+            issued_count = grant_content_cards_from_pool_sync(
+                session,
+                user_id=grant_id,
+                quantity=cards_quantity,
+                card_pool=card_pool,
+            )
+            if issued_count == 0:
+                all_in_pool = session.execute(
+                    select(ContentCard.id)
+                    .where(ContentCard.card_pool == card_pool.value)
+                    .limit(1)
+                ).first()
+                if not all_in_pool:
+                    flash(empty_pool_msg, "warning")
+                else:
+                    flash(
+                        "У пользователя уже есть все доступные карточки из этого пула.",
+                        "warning",
+                    )
+                return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+        except SQLAlchemyError as e:
+            session.rollback()
+            flash(f"Ошибка выдачи карточек: {e}", "danger")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        if issued_count < cards_quantity:
+            flash(
+                f"Выдано {issued_count} из {cards_quantity}: больше доступных карточек в пуле нет.",
+                "warning",
+            )
+        else:
+            flash(f"Пользователю выдано {issued_count} {pool_label}.", "success")
+
+        return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))

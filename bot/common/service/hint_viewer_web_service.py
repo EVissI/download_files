@@ -19,7 +19,14 @@ SESSION_KEY = "hint_web:session:{token}"
 JOBS_KEY = "hint_web:jobs:{token}"
 WEB_SERVICE_HINTS = "hints"
 WEB_SERVICE_BOARD = "board"
-WEB_ALLOWED_NEXT = ("/web/hints", "/web/board", "/web/pokaz")
+WEB_ALLOWED_NEXT = (
+    "/web/hints",
+    "/web/board",
+    "/web/pokaz",
+    "/web/cards",
+    "/web/pip-count",
+    "/web/match-analysis",
+)
 
 
 def safe_web_next(value: str | None) -> str:
@@ -111,6 +118,14 @@ async def create_session(user) -> dict[str, Any]:
     await redis_client.set(
         SESSION_KEY.format(token=token), json.dumps(payload), expire=SESSION_TTL_SEC
     )
+    try:
+        from bot.common.service.web_grant_user import ensure_web_grant_user_async
+
+        await ensure_web_grant_user_async(
+            int(user.id), login=getattr(user, "login", None)
+        )
+    except Exception:
+        logger.exception("web grant user ensure failed for web_user_id={}", user.id)
     return {"token": token, **payload}
 
 

@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
     <meta name="static-asset-v" content="{{ cache_timestamp }}">
+    <meta name="web-standalone-mode" content="{% if web_standalone_mode|default(false) %}1{% else %}0{% endif %}">
+    <meta name="cabinet-return-path" content="{{ cabinet_return_path|default('') }}">
     <script>window.__STATIC_ASSET_V = "{{ cache_timestamp }}";</script>
     <style>
         html {
@@ -247,7 +249,9 @@
             } catch (_e) {}
         })();
     </script>
+    {% if not web_standalone_mode|default(false) %}
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    {% endif %}
     <script type="module" src="/static/js/content-editor/bootstrap/index.js?t={{ cache_timestamp }}"></script>
 </head>
 
@@ -315,8 +319,16 @@
                     params.set('folder_token', folderToken);
                 }
                 var qs = params.toString();
+                var returnMeta = document.querySelector('meta[name="cabinet-return-path"]');
+                var fromMeta = returnMeta ? String(returnMeta.getAttribute('content') || '').trim() : '';
+                if (fromMeta) {
+                    return fromMeta + (qs ? '?' + qs : '');
+                }
                 var pool = getCardPool();
                 var basePath = pool === 'pip_count' ? '/pip-count-cabinet' : '/cards-cabinet';
+                if (isWebStandalone()) {
+                    basePath = pool === 'pip_count' ? '/web/pip-count' : '/web/cards';
+                }
                 return basePath + (qs ? '?' + qs : '');
             }
 
@@ -328,6 +340,13 @@
 
             function getInitData() {
                 return (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+            }
+            function isWebStandalone() {
+                var meta = document.querySelector('meta[name="web-standalone-mode"]');
+                return !!(meta && meta.getAttribute('content') === '1');
+            }
+            function hasCardAuth() {
+                return !!(getInitData() || getFabToken() || isWebStandalone());
             }
             function authPayload(extra) {
                 var initData = getInitData();
@@ -395,11 +414,9 @@
 
             function openStatusModal() {
                 var cardId = getCardId();
-                var initData = getInitData();
-                var fabToken = getFabToken();
                 var modal = ensureStatusModal();
                 var select = document.getElementById('contentCardStatusSelect');
-                if (!cardId || (!initData && !fabToken) || !select) return;
+                if (!cardId || !hasCardAuth() || !select) return;
                 setStatusMessage('');
                 select.value = 'SOLVED';
 
@@ -425,11 +442,9 @@
 
             function saveStatus() {
                 var cardId = getCardId();
-                var initData = getInitData();
-                var fabToken = getFabToken();
                 var modal = document.getElementById('contentCardStatusModal');
                 var select = document.getElementById('contentCardStatusSelect');
-                if (!cardId || (!initData && !fabToken) || !select) return;
+                if (!cardId || !hasCardAuth() || !select) return;
                 setStatusMessage('');
 
                 fetch('/api/content_cards/set_status', {

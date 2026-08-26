@@ -29,14 +29,15 @@
             background: #111;
             padding: 4px;
             border-radius: 10px;
+            flex-wrap: wrap;
         }
         .service-nav a {
             color: #bbb;
             text-decoration: none;
-            padding: 8px 14px;
+            padding: 8px 10px;
             border-radius: 8px;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
         }
         .service-nav a.active {
             background: #2e7d32;
@@ -153,11 +154,7 @@
 </head>
 <body>
     <header>
-        <nav class="service-nav" aria-label="Сервисы">
-            <a href="/web/hints" class="{% if web_service|default('hints') == 'hints' %}active{% endif %}">Ошибки</a>
-            <a href="/web/board" class="{% if web_service|default('hints') == 'board' %}active{% endif %}">Плеер</a>
-            <a href="/web/pokaz" class="{% if web_service|default('hints') == 'pokaz' %}active{% endif %}">Позиции</a>
-        </nav>
+        {% include "includes/web_service_nav.html" %}
         <div class="header-actions">
             {% if is_admin %}
             <a class="btn ghost" href="/admin/">Админка</a>

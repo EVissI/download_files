@@ -47,6 +47,14 @@ export function waitForTelegramWebAppInitData(maxWaitMs = 5000, stepMs = 50) {
     } catch (_e) {
         // ignore
     }
+    try {
+        const meta = document.querySelector('meta[name="web-standalone-mode"]');
+        if (meta && meta.getAttribute('content') === '1') {
+            return Promise.resolve('');
+        }
+    } catch (_e) {
+        // ignore
+    }
     const tg = window.Telegram && window.Telegram.WebApp;
     if (!tg) {
         return Promise.resolve('');

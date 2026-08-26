@@ -39,6 +39,7 @@ class UsersWithMatchAnalysesView(BaseView):
                     func.max(UserMatchAnalysis.created_at).label("last_card_at"),
                 )
                 .join(UserMatchAnalysis, UserMatchAnalysis.user_id == User.id)
+                .where(User.id > 0)
                 .group_by(User.id, User.username, User.admin_insert_name)
                 .order_by(func.count(UserMatchAnalysis.id).desc(), User.id.asc())
             )

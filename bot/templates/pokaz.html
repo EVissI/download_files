@@ -4343,14 +4343,15 @@
             background: #111;
             padding: 4px;
             border-radius: 10px;
+            flex-wrap: wrap;
         }
         .web-cabinet-header .service-nav a {
             color: #bbb;
             text-decoration: none;
-            padding: 8px 14px;
+            padding: 8px 10px;
             border-radius: 8px;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
         }
         .web-cabinet-header .service-nav a.active {
             background: #2e7d32;
@@ -4508,11 +4509,7 @@
 <body class="{% if web_standalone_mode|default(false) %}web-standalone{% endif %}">
     {% if web_standalone_mode|default(false) %}
     <header class="web-cabinet-header">
-        <nav class="service-nav" aria-label="Сервисы">
-            <a href="/web/hints">Ошибки</a>
-            <a href="/web/board">Плеер</a>
-            <a href="/web/pokaz" class="active">Позиции</a>
-        </nav>
+        {% include "includes/web_service_nav.html" %}
         <div class="header-actions">
             {% if is_admin %}
             <a class="btn" href="/admin/">Админка</a>

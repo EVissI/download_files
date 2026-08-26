@@ -6,7 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ cabinet_title|default('Мои карточки') }}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <meta name="web-standalone-mode" content="{% if web_standalone_mode|default(false) %}1{% else %}0{% endif %}">
+    {% if not web_standalone_mode|default(false) %}
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    {% endif %}
     <style>
         html,
         body {
@@ -22,6 +25,62 @@
             padding-bottom: 84px;
             max-width: 480px;
             margin: 0 auto;
+        }
+
+        .web-cabinet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            border-bottom: 1px solid #2a2a2a;
+            background: #1a1a1a;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .web-cabinet-header .service-nav {
+            display: flex;
+            gap: 4px;
+            background: #111;
+            padding: 4px;
+            border-radius: 10px;
+            flex-wrap: wrap;
+        }
+        .web-cabinet-header .service-nav a {
+            color: #bbb;
+            text-decoration: none;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        .web-cabinet-header .service-nav a.active {
+            background: #2e7d32;
+            color: #fff;
+        }
+        .web-cabinet-header .service-nav a:hover:not(.active) {
+            background: #2a2a2a;
+            color: #fff;
+        }
+        .web-cabinet-header .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .web-cabinet-header .header-actions form { margin: 0; }
+        .web-cabinet-header button,
+        .web-cabinet-header .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            background: #2a2a2a;
+            color: #ddd;
+        }
+        body.web-standalone .wrap {
+            max-width: 720px;
         }
 
         /* Смартфоны: 7vh; планшеты: 5vh — блок над контентом (статус-бар / жесты) */
@@ -2283,7 +2342,20 @@
     </style>
 </head>
 
-<body>
+<body class="{% if web_standalone_mode|default(false) %}web-standalone{% endif %}">
+    {% if web_standalone_mode|default(false) %}
+    <header class="web-cabinet-header">
+        {% include "includes/web_service_nav.html" %}
+        <div class="header-actions">
+            {% if is_admin %}
+            <a class="btn" href="/admin/">Админка</a>
+            {% endif %}
+            <form method="post" action="/web/hints/logout">
+                <button type="submit">Выйти</button>
+            </form>
+        </div>
+    </header>
+    {% endif %}
     <div class="wrap">
         <div class="cabinet-top-spacer" aria-hidden="true"></div>
         <div class="cabinet-header">
@@ -2748,7 +2820,8 @@
             "cabinet_title": {{ cabinet_title|default('Мои карточки')|tojson }},
             "cabinet_state_key": {{ cabinet_state_key|default('cards_cabinet_state_v1')|tojson }},
             "cabinet_open_hints_key": {{ cabinet_open_hints_key|default('cards_cabinet_open_hints_v1')|tojson }},
-            "cabinet_user_preview_key": {{ cabinet_user_preview_key|default('match_analysis_cabinet_user_preview_v1')|tojson }}
+            "cabinet_user_preview_key": {{ cabinet_user_preview_key|default('match_analysis_cabinet_user_preview_v1')|tojson }},
+            "web_standalone_mode": {{ 'true' if web_standalone_mode|default(false) else 'false' }}
         }
     </script>
     <script>
@@ -2761,7 +2834,8 @@
                 console.warn('cards_cabinet boot config parse failed:', bootErr);
                 boot = {};
             }
-            if (window.Telegram && window.Telegram.WebApp) {
+            var WEB_STANDALONE = !!boot.web_standalone_mode;
+            if (!WEB_STANDALONE && window.Telegram && window.Telegram.WebApp) {
                 var tg = window.Telegram.WebApp;
                 var allowFullscreen = !!boot.webapp_fullscreen_enabled;
                 var cabinetChromeColor = '#1a1a1a';
@@ -3294,6 +3368,9 @@
 
             /** На части клиентов Telegram (в т.ч. Desktop) initData может появиться позже tg.ready(). */
             function waitForTelegramWebAppInitData(maxMs, stepMs) {
+                if (WEB_STANDALONE) {
+                    return Promise.resolve('');
+                }
                 maxMs = typeof maxMs === 'number' ? maxMs : 5000;
                 stepMs = typeof stepMs === 'number' ? stepMs : 50;
                 if (fabToken) {
@@ -3500,19 +3577,21 @@
                 }
             }
 
-            waitForTelegramWebAppInitData(5000, 50).then(function (resolvedInitData) {
+            function beginCabinetAuth(resolvedInitData) {
                 initData =
                     resolvedInitData ||
                     (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) ||
                     '';
-                if (IS_MATCH_ANALYSIS) {
-                    if (!initData && !fabToken) {
-                        showErr('Откройте кабинет через Telegram (/match_analysis) или через FAB.');
+                if (!WEB_STANDALONE) {
+                    if (IS_MATCH_ANALYSIS) {
+                        if (!initData && !fabToken) {
+                            showErr('Откройте кабинет через Telegram (/match_analysis) или через FAB.');
+                            return;
+                        }
+                    } else if (!initData && !fabToken) {
+                        showErr('Откройте страницу из Telegram или через FAB-мост.');
                         return;
                     }
-                } else if (!initData && !fabToken) {
-                    showErr('Откройте страницу из Telegram или через FAB-мост.');
-                    return;
                 }
                 restoreCabinetState();
 
@@ -7876,7 +7955,12 @@
                     folderScheduleDeleteBtn.addEventListener('click', submitFolderScheduleDelete);
                 }
 
-            });
+            }
+            if (WEB_STANDALONE || fabToken) {
+                beginCabinetAuth('');
+            } else {
+                waitForTelegramWebAppInitData(5000, 50).then(beginCabinetAuth);
+            }
         })();
     </script>
 </body>

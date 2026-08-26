@@ -300,11 +300,14 @@ class UserModelView(ModelView):
     search_columns = ["id", "username", "player_username", "admin_insert_name"]
 
     def get_query(self):
-        return super().get_query().options(
+        return super().get_query().filter(User.id > 0).options(
             joinedload(User.user_content_cards),
             joinedload(User.used_promocodes).joinedload(UserPromocode.promocode),
             joinedload(User.analize_payments_assoc).joinedload(UserAnalizePayment.analize_payment),
         )
+
+    def get_count_query(self):
+        return super().get_count_query().filter(User.id > 0)
 
     def render_template(self, template, **kwargs):
         kwargs.setdefault(
@@ -559,25 +562,26 @@ class UserModelView(ModelView):
             flash(f"Ошибка выдачи анализов матча: {e}", "danger")
             return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
 
-        try:
-            async def _send(tg_bot: Bot) -> None:
-                await tg_bot.send_message(
-                    chat_id=pk,
-                    text=(
-                        f"Вам зачислено {issued_count} анализов матча.\n"
-                        "Посмотрите их в кабинете «Анализ матча»."
-                    ),
-                    reply_markup=_cards_cabinet_webapp_markup(
-                        "/match-analysis-cabinet"
-                    ),
-                )
+        if pk > 0:
+            try:
+                async def _send(tg_bot: Bot) -> None:
+                    await tg_bot.send_message(
+                        chat_id=pk,
+                        text=(
+                            f"Вам зачислено {issued_count} анализов матча.\n"
+                            "Посмотрите их в кабинете «Анализ матча»."
+                        ),
+                        reply_markup=_cards_cabinet_webapp_markup(
+                            "/match-analysis-cabinet"
+                        ),
+                    )
 
-            _run_telegram_sync(_send)
-        except Exception as e:
-            flash(
-                f"Анализы выданы, но сообщение в Telegram не отправлено: {e}",
-                "warning",
-            )
+                _run_telegram_sync(_send)
+            except Exception as e:
+                flash(
+                    f"Анализы выданы, но сообщение в Telegram не отправлено: {e}",
+                    "warning",
+                )
 
         if issued_count < quantity:
             flash(
@@ -640,20 +644,21 @@ class UserModelView(ModelView):
             flash(f"Ошибка выдачи карточек: {e}", "danger")
             return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
 
-        try:
-            async def _send(tg_bot: Bot) -> None:
-                await tg_bot.send_message(
-                    chat_id=pk,
-                    text=(
-                        f"Вам зачислено {issued_count} {pool_label}.\n"
-                        "Посмотрите их в личном кабинете."
-                    ),
-                    reply_markup=_cards_cabinet_webapp_markup(cabinet_path),
-                )
+        if pk > 0:
+            try:
+                async def _send(tg_bot: Bot) -> None:
+                    await tg_bot.send_message(
+                        chat_id=pk,
+                        text=(
+                            f"Вам зачислено {issued_count} {pool_label}.\n"
+                            "Посмотрите их в личном кабинете."
+                        ),
+                        reply_markup=_cards_cabinet_webapp_markup(cabinet_path),
+                    )
 
-            _run_telegram_sync(_send)
-        except Exception as e:
-            flash(f"Карточки выданы, но сообщение в Telegram не отправлено: {e}", "warning")
+                _run_telegram_sync(_send)
+            except Exception as e:
+                flash(f"Карточки выданы, но сообщение в Telegram не отправлено: {e}", "warning")
 
         if issued_count < cards_quantity:
             flash(
