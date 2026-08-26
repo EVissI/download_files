@@ -53,6 +53,7 @@ html {
             width: calc(99% * 0.4);
             max-width: calc(99% * 0.4);
             margin: 1.5rem auto 0;
+            margin-bottom: 0;
             box-sizing: border-box;
             --board-ui-scale: 1;
             --board-point-font-size: calc(30px * var(--board-ui-scale));
@@ -77,7 +78,7 @@ html {
         .board-panel {
             width: calc(99% * 0.5);
             max-width: calc(99% * 0.5);
-            margin: 16px auto 0;
+            margin: 0 auto;
             padding-top: 4px;
             padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
             box-sizing: border-box;
@@ -920,6 +921,7 @@ html {
 
             .board-block {
                 margin-top: 2rem;
+                margin-bottom: 0;
             }
         }
 
@@ -1006,6 +1008,7 @@ html {
                 max-width: 100%;
                 margin-left: 0;
                 margin-right: 0;
+                margin-bottom: 0;
             }
 
             .board-panel {
