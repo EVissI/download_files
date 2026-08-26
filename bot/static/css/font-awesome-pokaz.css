@@ -15,6 +15,9 @@
     -moz-osx-font-smoothing: grayscale;
 }
 
+.fa-star:before { content: "\f005"; }
+.fa-star-o:before { content: "\f006"; }
+.fa-th-large:before { content: "\f009"; }
 .fa-home:before { content: "\f015"; }
 .fa-download:before { content: "\f019"; }
 .fa-headphones:before { content: "\f025"; }

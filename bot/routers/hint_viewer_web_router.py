@@ -740,6 +740,7 @@ async def web_hints_view(request: Request, game_id: str | None = None):
             "hint_viewer_screenshot_font_scale_percent": font_scale,
             "match_analysis_mode": False,
             "web_standalone_mode": True,
+            "is_admin": bool(session.get("is_admin")),
         },
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"

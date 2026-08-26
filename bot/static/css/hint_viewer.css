@@ -1,0 +1,1675 @@
+html {
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            color: white;
+            background-color: #1a1a1a;
+            margin: 0;
+            padding: 20px;
+            padding-top: max(20px, env(safe-area-inset-top, 0px));
+            padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
+            min-height: 100%;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 20px;
+            padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+            box-sizing: border-box;
+            /* Мобильный столбец ≈ половине ширины; на десктопе переопределяется */
+            --viewer-col-width: calc(99% * 0.5);
+        }
+
+        h1 {
+            display: none;
+        }
+
+        canvas {
+            border: 2px solid #333;
+            border-radius: 8px;
+            background-color: #2a2a2a;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            display: block;
+            box-sizing: border-box;
+        }
+
+        .board-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        .board-block,
+        .board-panel {
+            width: var(--viewer-col-width);
+            max-width: var(--viewer-col-width);
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
+        }
+
+        .board-block {
+            position: relative;
+            margin-top: 1.5rem;
+            margin-bottom: 20px;
+            --board-ui-scale: 1;
+            --board-point-font-size: calc(30px * var(--board-ui-scale));
+            --board-pip-padding-y: calc(3px * var(--board-ui-scale));
+            --board-pip-padding-x: calc(6px * var(--board-ui-scale));
+            --board-pip-radius: calc(4px * var(--board-ui-scale));
+        }
+
+        .board-block .header,
+        .board-block .board-footer {
+            width: 100%;
+        }
+
+        .board-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            padding-top: 4px;
+            padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+            min-width: 0;
+            overflow: visible;
+        }
+
+        .board-panel > #top-row,
+        .board-panel > .hints-table,
+        .board-panel > .viewer-below-board,
+        .board-panel > .support-container,
+        .board-panel > #adminButtonContainer {
+            width: 100%;
+            max-width: 100%;
+            margin-left: 0;
+            margin-right: 0;
+            box-sizing: border-box;
+        }
+
+        #boardCanvas {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            margin: 0;
+            display: block;
+            vertical-align: top;
+        }
+
+        .game-info {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 0;
+            border: 1px solid #444;
+            width: 30%;
+            display: block;
+        }
+
+        .hints-table {
+            background-color: #2d2d2d;
+            border-radius: 8px;
+            border: 1px solid #444;
+            overflow-x: auto;
+        }
+
+        .hints-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .hint-toggle-btn {
+            width: 49%;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .hint-toggle-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .hint-toggle-btn.active {
+            background-color: #0056b3;
+        }
+
+        .hints-buttons button:hover {
+            background-color: #0056b3;
+        }
+
+        .hints-buttons button.active {
+            background-color: #0056b3;
+        }
+
+        .hints-content {
+            display: none;
+            position: relative;
+        }
+
+        .hints-content.active {
+            display: block;
+        }
+
+        table {
+            margin: 0 auto;
+            border-collapse: collapse;
+            width: 100%;
+            max-width: 100%;
+            background-color: #333;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            border: 1px solid #555;
+            padding: 20px 30px;
+            text-align: left;
+            color: white;
+            word-spacing: 16px;
+        }
+
+        td:nth-child(2),
+        td:nth-child(3),
+        td:nth-child(4) {
+            text-align: center;
+        }
+
+        th {
+            background-color: #444;
+            font-weight: bold;
+            text-align: center;
+            font-size: 18px;
+            padding: 6px 12px;
+            word-spacing: normal;
+        }
+
+        tr:nth-child(even) {
+            background-color: #2a2a2a;
+        }
+
+        tr:hover {
+            background-color: #3a3a3a;
+        }
+
+        .hint-best {
+            background-color: #2e7d32 !important;
+        }
+
+        .hint-good {
+            background-color: #fbc02d !important;
+        }
+
+        .hint-good td {
+            color: #1a1a1a !important;
+        }
+
+        .hint-poor {
+            background-color: #d32f2f !important;
+        }
+
+        #top-row {
+            margin-top: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .left-controls {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+
+        .right-controls {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            margin-left: auto;
+        }
+
+        /* По умолчанию (планшет/ПК): один ряд кнопок */
+        .screenshot-controls {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .screenshot-controls > div {
+            display: flex;
+            flex-direction: row;
+            gap: 6px;
+        }
+
+        .ma-audio-controls {
+            display: none;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .ma-audio-controls__buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        .ma-audio-controls__grid {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .ma-audio-controls__grid > div {
+            display: flex;
+            flex-direction: row;
+            gap: 15px;
+        }
+
+        .ma-audio-controls__buttons button {
+            width: 41px;
+            height: 41px;
+            min-width: 0;
+            padding: 0;
+            margin: 0;
+            border-radius: 6px;
+            font-size: 16px;
+            line-height: 1;
+            background: #2f2f2f;
+            border: 1px solid #555;
+            color: #eee;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+
+        .ma-audio-controls__buttons button:hover:not(:disabled) {
+            background: #3a3a3a;
+            border-color: #777;
+        }
+
+        .ma-audio-controls__buttons button:disabled {
+            opacity: 0.35;
+            background: #2f2f2f;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+        .ma-audio-controls__buttons button.is-recording {
+            background: #c0392b;
+            border-color: #e74c3c;
+            color: #fff;
+            animation: ma-audio-pulse 1.1s ease-in-out infinite;
+        }
+
+        .ma-audio-controls__buttons button.is-playing {
+            background: #1f6f8f;
+            border-color: #2a9bb8;
+            color: #fff;
+        }
+
+        .ma-audio-controls.has-audio #matchAnalysisAudioPlayBtn:not(:disabled) {
+            border-color: #2ecc71;
+            color: #2ecc71;
+        }
+
+        .ma-audio-autoplay {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 41px;
+            min-width: 41px;
+            padding: 0 8px;
+            margin: 0;
+            border-radius: 6px;
+            font-size: 11px;
+            line-height: 1;
+            background: #2f2f2f;
+            border: 1px solid #555;
+            color: #eee;
+            box-sizing: border-box;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+
+        .ma-audio-autoplay input {
+            width: 14px;
+            height: 14px;
+            margin: 0;
+            accent-color: #2ecc71;
+            cursor: pointer;
+        }
+
+        .ma-audio-autoplay:has(input:checked) {
+            border-color: #2ecc71;
+            color: #2ecc71;
+        }
+
+        .ma-audio-controls.is-user-mode .ma-audio-controls__status,
+        .ma-audio-controls.is-user-mode #matchAnalysisAudioAttachBtn,
+        .ma-audio-controls.is-user-mode #matchAnalysisAudioEditRow {
+            display: none !important;
+        }
+
+        .ma-audio-controls__status {
+            max-width: 168px;
+            font-size: 10px;
+            line-height: 1.15;
+            color: #999;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: left;
+        }
+
+        .ma-audio-controls.has-audio .ma-audio-controls__status {
+            color: #2ecc71;
+        }
+
+        @keyframes ma-audio-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.55; }
+        }
+
+        .navigation-controls {
+            display: flex;
+            align-items: center;
+            height: auto;
+            min-height: 42px;
+            justify-content: center;
+        }
+
+        .turn-display {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #turnLabel {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 0;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .game-select {
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 5px;
+        }
+
+        .match-game-label {
+            display: block;
+            text-align: center;
+            margin-bottom: 0.15rem;
+            font: inherit;
+            font-weight: inherit;
+            color: inherit;
+        }
+
+        .match-info-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+            align-items: center;
+            column-gap: 0.6rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .match-info-row .match-length {
+            justify-self: end;
+            text-align: right;
+            white-space: nowrap;
+            min-width: 0;
+        }
+
+        .match-info-row .game-select {
+            justify-self: center;
+            grid-column: 2;
+        }
+
+        .match-info-row .match-info-trailing {
+            grid-column: 3;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .match-info-row .match-score {
+            white-space: nowrap;
+            text-align: left;
+        }
+
+        .match-info-row .right-group {
+            margin-left: auto;
+            flex: 0 0 auto;
+        }
+
+        .settings-modal select {
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            color: white;
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 5px;
+            box-sizing: border-box;
+            display: block;
+        }
+
+        #prevBtn,
+        #nextBtn {
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            color: transparent;
+            background-color: transparent;
+            border: none;
+        }
+
+        #invertBtn,
+        #screenshotBtn,
+        #screenSaveBtn,
+        #screenUploadBtn {
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            color: transparent;
+            background-color: transparent;
+            border: none;
+        }
+
+
+        #prevBtn:hover,
+        #nextBtn:hover,
+        #invertBtn:hover,
+        #screenshotBtn:hover,
+        #screenSaveBtn:hover,
+        #screenUploadBtn:hover {
+            background-color: transparent;
+        }
+
+        #prevBtn:disabled,
+        #nextBtn:disabled,
+        #invertBtn:disabled,
+        #screenshotBtn:disabled,
+        #screenSaveBtn:disabled,
+        #screenUploadBtn:disabled {
+            opacity: 0.5;
+            background-color: transparent;
+        }
+
+
+        .info-text {
+            color: #ccc;
+            margin: 5px 0;
+        }
+
+
+        .board-footer {
+            position: relative;
+        }
+
+        .move-info {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+            text-align: center;
+        }
+
+        .pips-below-board {
+            position: absolute;
+            right: 0;
+            top: 0;
+            margin: 0;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: max(0px, env(safe-area-inset-top, 0px)) 10px 10px;
+                padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .pips-above-board,
+            .pips-below-board {
+                font-size: 16px;
+                padding: 8px 16px;
+            }
+
+            canvas {
+                width: 100%;
+                height: auto;
+            }
+
+            #top-row {
+                flex-direction: row;
+                align-items: center;
+                gap: 10px;
+                justify-content: space-between;
+                width: 100%;
+            }
+
+            #controls {
+                flex-direction: row;
+                align-items: center;
+                gap: 10px;
+                justify-content: center;
+                width: 100%;
+            }
+
+            #turnLabel {
+                margin: 5px 0;
+                font-size: 20px;
+            }
+
+            #top-row {
+                flex-direction: row;
+                align-items: center;
+                gap: 10px;
+                justify-content: space-between;
+                width: 100%;
+            }
+
+            button {
+                width: auto;
+                min-width: 60px;
+                padding: 10px 20px;
+            }
+
+            table {
+                font-size: 24px;
+            }
+
+            th,
+            td {
+                padding: 8px 12px;
+                word-spacing: 12px;
+            }
+
+            th {
+                font-size: 18px;
+                padding: 6px 10px;
+                word-spacing: normal;
+            }
+
+            /* Верхний отступ на смартфонах (как board_viewer / кабинет) */
+            .container {
+                padding: calc(max(10vh, 24px) + env(safe-area-inset-top, 0px)) 10px 0 10px;
+            }
+
+            .hints-table {
+                padding: 15px;
+            }
+
+            #prevBtn,
+            #nextBtn {
+                width: 48px;
+                height: 48px;
+            }
+
+
+            #turnLabel {
+                min-width: 30px;
+                margin: 0 2px;
+            }
+
+            #invertBtn,
+            #screenshotBtn,
+            #screenSaveBtn,
+            #screenUploadBtn,
+            #supportBtn {
+                width: 36px;
+                height: 36px;
+            }
+
+            .ma-audio-controls__buttons button {
+                width: 41px;
+                height: 41px;
+                font-size: 16px;
+            }
+
+            .ma-audio-autoplay {
+                height: 41px;
+                min-width: 41px;
+                font-size: 11px;
+            }
+
+            .ma-audio-controls__status {
+                max-width: 152px;
+                font-size: 10px;
+                text-align: center;
+            }
+
+            /* На узком экране оставляем компактную сетку 2×2 */
+            .screenshot-controls {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .ma-audio-controls {
+                align-items: center;
+            }
+
+            .ma-audio-controls__grid {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
+
+        /* Планшеты: один ряд, крупнее для пальца */
+        @media (min-width: 601px) and (max-width: 1024px) {
+            body {
+                padding: max(0px, env(safe-area-inset-top, 0px)) 20px 20px;
+                padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
+            }
+
+            .container {
+                padding: calc(max(5vh, 24px) + env(safe-area-inset-top, 0px)) 20px 0 20px;
+            }
+
+            .screenshot-controls,
+            .ma-audio-controls__grid,
+            .screenshot-controls > div,
+            .ma-audio-controls__grid > div {
+                gap: 8px;
+            }
+
+            #prevBtn,
+            #nextBtn {
+                width: 56px;
+                height: 56px;
+            }
+
+            #invertBtn,
+            #screenshotBtn,
+            #screenSaveBtn,
+            #screenUploadBtn,
+            #supportBtn {
+                width: 44px;
+                height: 44px;
+            }
+
+            .ma-audio-controls__buttons button {
+                width: 51px;
+                height: 51px;
+                font-size: 20px;
+            }
+
+            .ma-audio-autoplay {
+                height: 51px;
+                min-width: 51px;
+                font-size: 13px;
+            }
+
+            .ma-audio-controls__status {
+                max-width: 200px;
+                font-size: 11px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            canvas {
+                width: 100%;
+                height: auto;
+            }
+
+            button {
+                width: auto;
+                min-width: 60px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+
+            table {
+                font-size: 16px;
+            }
+
+            th,
+            td {
+                padding: 6px 8px;
+                word-spacing: 4px;
+            }
+
+            #prevBtn,
+            #nextBtn {
+                width: 37px;
+                height: 37px;
+            }
+
+
+            #turnLabel {
+                min-width: 0px;
+                margin: 0 2px;
+                font-size: 18px;
+            }
+
+            #invertBtn,
+            #screenshotBtn,
+            #screenSaveBtn,
+            #screenUploadBtn,
+            #supportBtn {
+                width: 28px;
+                height: 28px;
+            }
+
+            .ma-audio-controls__buttons button {
+                width: 35px;
+                height: 35px;
+                font-size: 17px;
+            }
+
+            .ma-audio-autoplay {
+                height: 35px;
+                min-width: 35px;
+                padding: 0 6px;
+                font-size: 10px;
+            }
+
+            .ma-audio-controls__status {
+                max-width: 60px;
+                font-size: 9px;
+            }
+
+            .left-controls {
+                gap: 8px;
+            }
+        }
+
+        /* Широкий ПК: кнопки управления чуть крупнее в правой панели */
+        @media (min-width: 1025px) {
+            #prevBtn,
+            #nextBtn {
+                width: 56px;
+                height: 56px;
+            }
+
+            #invertBtn,
+            #screenshotBtn,
+            #screenSaveBtn,
+            #screenUploadBtn,
+            #supportBtn {
+                width: 40px;
+                height: 40px;
+            }
+
+            .ma-audio-controls__buttons button {
+                width: 44px;
+                height: 44px;
+                font-size: 17px;
+            }
+
+            .ma-audio-autoplay {
+                height: 44px;
+                min-width: 44px;
+                font-size: 12px;
+            }
+
+            .ma-audio-controls__status {
+                max-width: 200px;
+                font-size: 11px;
+            }
+
+            .screenshot-controls,
+            .ma-audio-controls__grid,
+            .screenshot-controls > div,
+            .ma-audio-controls__grid > div {
+                gap: 6px;
+            }
+
+            #controls {
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .left-controls,
+            .right-controls {
+                margin-left: 0;
+            }
+
+            .right-controls {
+                margin-left: auto;
+            }
+
+            .hints-table {
+                flex: 1 1 auto;
+                min-height: 0;
+            }
+
+            table {
+                font-size: 15px;
+            }
+
+            th,
+            td {
+                padding: 10px 14px;
+                word-spacing: 10px;
+            }
+
+            th {
+                font-size: 15px;
+                padding: 8px 10px;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            #prevBtn,
+            #nextBtn {
+                width: 64px;
+                height: 64px;
+            }
+
+            #invertBtn,
+            #screenshotBtn,
+            #screenSaveBtn,
+            #screenUploadBtn,
+            #supportBtn {
+                width: 44px;
+                height: 44px;
+            }
+
+            .ma-audio-controls__buttons button {
+                width: 46px;
+                height: 46px;
+                font-size: 18px;
+            }
+
+            .ma-audio-autoplay {
+                height: 46px;
+                min-width: 46px;
+                font-size: 12px;
+            }
+
+            .ma-audio-controls__status {
+                max-width: 220px;
+                font-size: 11px;
+            }
+        }
+
+        .loading {
+            color: #007bff;
+            font-style: italic;
+        }
+
+        .error {
+            color: #dc3545;
+            background-color: #2d1b1b;
+            border: 1px solid #dc3545;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        .header {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .ma-cabinet-back-btn {
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 3;
+            width: 34px;
+            height: 34px;
+            min-width: 0;
+            padding: 0;
+            margin: 0;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background: rgba(45, 45, 45, 0.92);
+            color: #ddd;
+            font-size: 16px;
+            line-height: 1;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .ma-cabinet-back-btn:hover {
+            background: #3a3a3a;
+            border-color: #777;
+            color: #fff;
+        }
+
+        .ma-status-btn {
+            position: absolute;
+            right: 0;
+            top: 0;
+            z-index: 3;
+            width: 34px;
+            height: 34px;
+            min-width: 0;
+            padding: 0;
+            margin: 0;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background: rgba(45, 45, 45, 0.92);
+            color: #ddd;
+            font-size: 16px;
+            line-height: 1;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .ma-status-btn:hover {
+            background: #3a3a3a;
+            border-color: #777;
+            color: #fff;
+        }
+
+        .ma-status-btn.is-favorite {
+            border-color: #c9a227;
+            background: rgba(201, 162, 39, 0.22);
+            color: #f0d878;
+        }
+
+        .ma-status-btn.is-favorite:hover {
+            background: rgba(201, 162, 39, 0.35);
+            color: #ffe9a0;
+        }
+
+        .ma-status-btn.is-busy {
+            opacity: 0.65;
+            pointer-events: none;
+        }
+
+        .header.has-ma-cabinet-back #match-info {
+            padding-left: 42px;
+            padding-right: 42px;
+            box-sizing: border-box;
+        }
+
+        /* Матч: Игра n → игроки → Матч до / выбор / Счет / пипсы */
+        .header:has(.match-info-row) #match-info {
+            display: contents;
+        }
+
+        .header:has(.match-info-row) .match-game-label {
+            order: 1;
+        }
+
+        .header:has(.match-info-row) #players-info {
+            order: 2;
+        }
+
+        .header:has(.match-info-row) .match-info-row {
+            order: 3;
+            margin-bottom: 0;
+        }
+
+        .header:has(.match-info-row) #top-bar {
+            order: 4;
+            margin: 0;
+            padding: 0;
+            min-height: 0;
+            height: 0;
+            overflow: visible;
+            position: relative;
+            z-index: 2;
+        }
+
+        .header:has(.match-info-row) #crawfordLabel {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            transform: translateY(-100%);
+        }
+
+        .header:has(.match-info-row) .match-info-row .right-group {
+            margin-left: auto;
+            flex: 0 0 auto;
+        }
+
+        .header:has(.match-info-row) .match-info-row .pips-above-board,
+        .header:has(.match-info-row) .match-info-row .pips-above-board-inverted {
+            margin: 0;
+        }
+
+        .header.has-ma-cabinet-back:has(.match-info-row) .match-game-label,
+        .header.has-ma-cabinet-back:has(.match-info-row) #players-info,
+        .header.has-ma-cabinet-back:has(.match-info-row) .match-info-row {
+            padding-left: 42px;
+            padding-right: 42px;
+            box-sizing: border-box;
+        }
+
+        #top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #hideInfoCheckbox {
+            margin-right: 10px;
+        }
+
+        .animation-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: stretch;
+        }
+
+        .animation-controls label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .right-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+
+        #players-info {
+            width: 100%;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .pips-above-board {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
+        .pips-above-board-inverted {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
+        .pips-below-board-inverted {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+            position: absolute;
+            right: 0;
+            top: 0;
+            margin: 0;
+        }
+
+        .pips-below-board {
+            background-color: #ffffff;
+            color: #000000;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+        }
+
+        /* Support Button and Modal */
+        .settings-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            color: #ccc;
+            font-size: 16px;
+        }
+
+        .viewer-below-board {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .viewer-below-board .settings-container {
+            margin: 0;
+        }
+
+        .support-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #ccc;
+            font-size: 16px;
+        }
+
+        #supportBtn {
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            color: transparent;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        #supportBtn:hover {
+            opacity: 0.8;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 20000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-content {
+            background-color: #2d2d2d;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+            color: white;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            min-height: 300px;
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            color: #007bff;
+        }
+
+        .modal-content textarea {
+            width: 100%;
+            height: 100px;
+            background-color: #1a1a1a;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-footer button {
+            padding: 8px 16px;
+        }
+
+        .confirm-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .confirm-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .modal-body>div select,
+        .modal-body>div input[type="number"] {
+            width: 40%;
+            padding: 8px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background-color: #1a1a1a;
+            color: white;
+            font-size: 16px;
+            font-family: Arial, sans-serif;
+        }
+
+        .eq-threshold-controls {
+            gap: 10px;
+        }
+
+        .eq-label {
+            gap: 8px;
+        }
+
+        .label-text {
+            min-width: 60px;
+            font-size: 14px;
+        }
+
+        .select-wrapper {
+            flex: 1;
+        }
+
+        .select-wrapper select {
+            width: 100%;
+        }
+
+        .eq-threshold-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .eq-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .label-text {
+            min-width: 80px;
+            color: #ccc;
+            font-size: 16px;
+        }
+
+        .select-wrapper {
+            flex: 1;
+        }
+
+        .select-wrapper select {
+            width: 100%;
+        }
+
+        .modal-body .select-wrapper select {
+            width: 100%;
+        }
+
+        #eqThresholdSelect {
+            font-size: 65%;
+        }
+
+        .modal-body>div select:focus,
+        .modal-body>div input[type="number"]:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+        }
+
+        .cancel-btn {
+            background-color: #6c757d;
+        }
+
+        .cancel-btn:hover {
+            padding-top: 10px;
+            background-color: #5a6268;
+        }
+
+        /* Tabs */
+        .tabs-header {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #2d2d2d;
+            color: white;
+            border: 1px solid #444;
+            border-bottom: none;
+        }
+
+        .tab-btn.active {
+            background-color: #007bff;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px 20px;
+            border: 1px solid #444;
+            background-color: #2d2d2d;
+        }
+
+        .tab-content.active {
+            display: block;
+            flex: 1;
+        }
+
+        /* Модальное окно сообщений */
+        .msg-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .msg-modal-overlay.show {
+            display: flex;
+        }
+        .msg-modal {
+            background-color: #2d2d2d;
+            border-radius: 12px;
+            padding: 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            min-width: 280px;
+            max-width: 90%;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: msgModalFadeIn 0.25s ease-out;
+        }
+        @keyframes msgModalFadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .msg-modal-header {
+            display: flex;
+            align-items: flex-start;
+            padding: 16px 20px 12px;
+            gap: 12px;
+        }
+        .msg-modal-icon {
+            flex-shrink: 0;
+            font-size: 32px;
+            line-height: 1;
+        }
+        .msg-modal-icon.success { color: #4caf50; }
+        .msg-modal-icon.error { color: #f44336; }
+        .msg-modal-icon.warning { color: #ff9800; }
+        .msg-modal-icon.info { color: #2196f3; }
+        .msg-modal-content {
+            color: white;
+            font-size: 15px;
+            line-height: 1.5;
+            margin: 0;
+            flex: 1;
+        }
+        .msg-modal-footer {
+            padding: 12px 20px 16px;
+            text-align: right;
+        }
+        .msg-modal-ok-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .msg-modal-ok-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .admin-screenshot-font-scale {
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .admin-screenshot-font-scale select {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #2a2a2a;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        @media (min-width: 601px) {
+            .container {
+                max-width: 960px;
+                padding-left: 1rem;
+                padding-right: 1rem;
+                padding-bottom: 1.5rem;
+            }
+
+            .board-block {
+                margin-top: 2rem;
+            }
+        }
+
+        /* Десктоп: слева доска и инфо, справа управление и таблица */
+        @media (min-width: 1025px) {
+            .container {
+                max-width: 1400px;
+                padding: 1rem 1.5rem 1.5rem;
+            }
+
+            .board-layout {
+                flex-direction: row;
+                align-items: flex-start;
+                justify-content: center;
+                gap: 28px;
+            }
+
+            .board-block {
+                flex: 1 1 0;
+                min-width: 0;
+                width: auto;
+                max-width: min(656px, calc(52% - 14px));
+                margin: 1.5rem 0 20px;
+            }
+
+            .board-panel {
+                flex: 1 1 0;
+                min-width: 340px;
+                width: auto;
+                max-width: min(640px, calc(48% - 14px));
+                margin: 1.5rem 0 20px;
+                padding-top: 0;
+                align-self: stretch;
+            }
+
+            #top-row {
+                margin-top: 0;
+            }
+
+            .hints-table {
+                margin-top: 0;
+            }
+
+            .viewer-below-board {
+                margin-top: 8px;
+            }
+
+            .support-container {
+                margin-bottom: 8px;
+            }
+
+            #adminButtonContainer {
+                margin-top: 8px !important;
+                margin-bottom: 0 !important;
+            }
+        }
+
+        /* Мобильные и планшеты: доска и все блоки на всю доступную ширину */
+        @media (max-width: 1024px) {
+            .container {
+                --viewer-col-width: 100%;
+                padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
+                padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
+                padding-bottom: max(32px, env(safe-area-inset-bottom, 0px));
+            }
+
+            body {
+                padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+            }
+
+            .board-panel {
+                padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
+            }
+
+            .board-block,
+            .board-panel {
+                margin-left: 0;
+                margin-right: 0;
+            }
+
+            #boardCanvas {
+                width: 100%;
+                max-width: 100%;
+                height: auto;
+                aspect-ratio: 1 / 1;
+            }
+
+            /* Матч: выбор игры по центру, слева/справа лейблы, пипсы справа */
+            .match-info-row {
+                margin: 0.25rem 0 0;
+                column-gap: 0.5rem;
+            }
+
+            .match-info-row .match-length,
+            .match-info-row .match-score {
+                font-size: 0.95rem;
+            }
+
+            .match-game-label {
+                font-size: 0.95rem;
+            }
+
+            .match-info-row .game-select {
+                font-size: 0.95rem;
+                padding: 4px 6px;
+                width: 5em;
+                max-width: 5em;
+                min-width: 0;
+                box-sizing: border-box;
+            }
+        }
+
+        body.web-standalone .support-container,
+        body.web-standalone #adminButtonContainer {
+            display: none !important;
+        }
+        .web-standalone-back {
+            display: inline-block;
+            margin: 12px 16px 0;
+            color: #9cdcfe;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .web-standalone-back:hover { text-decoration: underline; }
