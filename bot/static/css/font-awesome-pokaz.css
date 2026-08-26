@@ -16,8 +16,23 @@
 }
 
 .fa-home:before { content: "\f015"; }
+.fa-download:before { content: "\f019"; }
+.fa-headphones:before { content: "\f025"; }
 .fa-check:before { content: "\f00c"; }
 .fa-times:before { content: "\f00d"; }
+.fa-picture-o:before { content: "\f03e"; }
+.fa-pencil:before { content: "\f040"; }
+.fa-play:before { content: "\f04b"; }
+.fa-pause:before { content: "\f04c"; }
+.fa-stop:before { content: "\f04d"; }
+.fa-chevron-right:before { content: "\f054"; }
+.fa-arrow-right:before { content: "\f061"; }
+.fa-arrow-down:before { content: "\f063"; }
+.fa-calendar:before { content: "\f073"; }
+.fa-external-link:before { content: "\f08e"; }
+.fa-link:before { content: "\f0c1"; }
+.fa-paperclip:before { content: "\f0c6"; }
+.fa-microphone:before { content: "\f130"; }
 .fa-times-circle:before { content: "\f057"; }
 .fa-check-circle:before { content: "\f058"; }
 .fa-info-circle:before { content: "\f05a"; }
