@@ -314,9 +314,8 @@
 
         function openMatchButtons(links) {
             if (!links || !links.length) return '';
-            return `<div class="actions open-modes">${links.map((link, idx) => {
-                const cls = idx === 0 ? 'btn primary' : 'btn ghost';
-                return `<a class="${cls}" href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a>`;
+            return `<div class="actions open-modes">${links.map((link) => {
+                return `<a class="btn ghost" href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a>`;
             }).join('')}</div>`;
         }
 
