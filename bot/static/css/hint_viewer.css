@@ -415,6 +415,7 @@ html {
             height: auto;
             min-height: 42px;
             justify-content: center;
+            margin-left: -20px;
         }
 
         .turn-display {
