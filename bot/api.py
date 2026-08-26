@@ -273,30 +273,32 @@ _WEB_GRANT_SKIP_PREFIXES = ("/static", "/admin", "/favicon")
 async def web_grant_user_middleware(request: Request, call_next):
     """Cookie-сессия веб-кабинета → ContextVar с id теневого User (отрицательный)."""
     path = request.url.path or ""
-    token = None
+    uid_token = None
+    admin_token = None
     if not path.startswith(_WEB_GRANT_SKIP_PREFIXES):
         try:
             from bot.common.service.hint_viewer_web_service import COOKIE_NAME, get_session
-            from bot.common.service.web_grant_user import (
-                ensure_web_grant_user_async,
-                set_web_grant_uid,
-            )
+            from bot.common.service.web_grant_user import set_web_grant_context
 
             cookie = request.cookies.get(COOKIE_NAME)
             session = await get_session(cookie) if cookie else None
             web_user_id = int((session or {}).get("user_id") or 0)
             if web_user_id > 0:
+                from bot.common.service.hint_viewer_web_service import web_user_is_admin
+                from bot.common.service.web_grant_user import ensure_web_grant_user_async
+
                 uid = await ensure_web_grant_user_async(web_user_id)
-                token = set_web_grant_uid(uid)
+                is_admin = await web_user_is_admin(web_user_id)
+                uid_token, admin_token = set_web_grant_context(uid, is_admin)
         except Exception:
             logger.exception("web grant middleware failed path={}", path)
     try:
         return await call_next(request)
     finally:
-        if token is not None:
-            from bot.common.service.web_grant_user import reset_web_grant_uid
+        if uid_token is not None and admin_token is not None:
+            from bot.common.service.web_grant_user import reset_web_grant_context
 
-            reset_web_grant_uid(token)
+            reset_web_grant_context(uid_token, admin_token)
 
 
 app.mount("/static", CachedStaticFiles(directory=str(static_dir)), name="static")
@@ -849,12 +851,10 @@ def _guess_content_upload_extension(filename: str | None, content_type: str | No
 
 
 def _require_content_card_admin(user_id: int) -> None:
-    """Карточки контента и медиа к ним — только для ROOT_ADMIN_IDS."""
-    if user_id not in settings.ROOT_ADMIN_IDS:
-        raise HTTPException(
-            status_code=403,
-            detail="Загрузка карточек доступна только администраторам",
-        )
+    """Карточки контента и медиа к ним — ROOT_ADMIN_IDS и веб-админы кабинета."""
+    from bot.common.service.cabinet_admin import require_cabinet_admin
+
+    require_cabinet_admin(user_id)
 
 
 def _build_empty_content_card_frames() -> dict[str, Any]:
@@ -1200,9 +1200,10 @@ async def _resolve_hint_mat_location(content_card_id: int) -> tuple[str, str]:
 
 
 class ContentCardUpdateBody(BaseModel):
-    """Обновление JSON кадров существующей карточки (только ROOT_ADMIN_IDS)."""
+    """Обновление JSON кадров существующей карточки (только админы кабинета)."""
 
-    init_data: str = Field(..., min_length=1)
+    init_data: str | None = None
+    fab_token: str | None = None
     content_card_id: int = Field(..., ge=1)
     frames: dict[str, Any]
 
@@ -1364,7 +1365,9 @@ async def _user_can_access_content_card(
     link = await ucc_dao.find_one_by_user_and_card(user_id, content_card_id)
     if link:
         return True
-    if user_id in settings.ROOT_ADMIN_IDS:
+    from bot.common.service.cabinet_admin import is_cabinet_admin
+
+    if is_cabinet_admin(user_id):
         card_dao = ContentCardDAO(session)
         card = await card_dao.find_one_or_none_by_id(content_card_id)
         return card is not None
@@ -1602,7 +1605,6 @@ async def save_content_card(body: ContentCardSaveBody):
             )
 
         card_dao = ContentCardDAO(session)
-        ucc_dao = UserContentCardDAO(session)
 
         new_card = await card_dao.add(
             SContentCardCreate(
@@ -1614,12 +1616,9 @@ async def save_content_card(body: ContentCardSaveBody):
             )
         )
         saved_id = new_card.id
-        await ucc_dao.add(
-            SUserContentCardCreate(
-                user_id=user_id,
-                content_card_id=saved_id,
-            )
-        )
+        from bot.common.service.cabinet_admin import grant_card_to_cabinet_admins
+
+        await grant_card_to_cabinet_admins(session, saved_id)
         await session.commit()
         return {
             "ok": True,
@@ -1630,16 +1629,9 @@ async def save_content_card(body: ContentCardSaveBody):
 @app.post("/api/content_cards/update")
 async def update_content_card(body: ContentCardUpdateBody):
     """
-    Обновляет frames у существующей карточки. Только пользователи из ROOT_ADMIN_IDS.
+    Обновляет frames у существующей карточки. Только администраторы кабинета.
     """
-    user_data = verify_telegram_webapp_data(body.init_data)
-    if not user_data:
-        raise HTTPException(status_code=401, detail="Недействительные данные Telegram")
-    tg_user = user_data.get("user") or {}
-    user_id = tg_user.get("id")
-    if user_id is None:
-        raise HTTPException(status_code=401, detail="В init_data нет user")
-    user_id = int(user_id)
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
 
     frames_inner = body.frames.get("frames")
@@ -1710,7 +1702,14 @@ async def content_cards_my_list(body: ContentCardMyListBody):
     в стабильном порядке (по id связи).
     """
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
-    is_root_admin = user_id in settings.ROOT_ADMIN_IDS
+    from bot.common.service.cabinet_admin import (
+        grant_all_cabinet_content_async,
+        is_cabinet_admin,
+    )
+
+    is_root_admin = is_cabinet_admin(user_id)
+    if is_root_admin:
+        await grant_all_cabinet_content_async(user_id)
     recent_cutoff = datetime.utcnow() - timedelta(days=1)
     card_pool = _parse_content_card_pool(body.pool)
 
@@ -1840,7 +1839,6 @@ async def content_cards_create_empty(body: ContentCardMyListBody):
             )
 
         card_dao = ContentCardDAO(session)
-        ucc_dao = UserContentCardDAO(session)
 
         new_card = await card_dao.add(
             SContentCardCreate(
@@ -1852,12 +1850,9 @@ async def content_cards_create_empty(body: ContentCardMyListBody):
             )
         )
         saved_id = new_card.id
-        await ucc_dao.add(
-            SUserContentCardCreate(
-                user_id=user_id,
-                content_card_id=saved_id,
-            )
-        )
+        from bot.common.service.cabinet_admin import grant_card_to_cabinet_admins
+
+        await grant_card_to_cabinet_admins(session, saved_id)
         await session.commit()
 
     logger.info(
@@ -2560,7 +2555,9 @@ async def fetch_content_card(body: ContentCardFetchBody):
         if not card:
             raise HTTPException(status_code=404, detail="Карточка не найдена")
 
-        is_root_admin = user_id in settings.ROOT_ADMIN_IDS
+        from bot.common.service.cabinet_admin import is_cabinet_admin
+
+        is_root_admin = is_cabinet_admin(user_id)
         card_pool_val = card.card_pool.value if hasattr(card.card_pool, "value") else str(card.card_pool)
         out: dict[str, Any] = {
             "frames": card.frames,
@@ -2676,9 +2673,12 @@ async def content_card_media_upload(
 ):
     """Загрузка медиа карточки в S3; только пользователи из ROOT_ADMIN_IDS."""
     if not (init_data and init_data.strip()) and not (fab_token and fab_token.strip()):
-        raise HTTPException(
-            status_code=400, detail="Нужен init_data или fab_token",
-        )
+        from bot.common.service.web_grant_user import get_web_grant_uid
+
+        if not get_web_grant_uid():
+            raise HTTPException(
+                status_code=400, detail="Нужен init_data или fab_token",
+            )
     uid = await _resolve_content_cards_user_id(
         init_data.strip() if init_data else None,
         fab_token.strip() if fab_token else None,
@@ -2840,6 +2840,8 @@ async def content_card_media_list(body: ContentCardMediaListBody):
 
 @app.post("/api/content_cards/cabinet_gallery/list")
 async def cabinet_gallery_list(body: CabinetGalleryListBody):
+    from bot.common.service.cabinet_admin import is_cabinet_admin
+
     uid = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     s3 = HintS3Storage.from_settings()
     items, next_tok = s3.list_cabinet_gallery(
@@ -2850,7 +2852,7 @@ async def cabinet_gallery_list(body: CabinetGalleryListBody):
     return {
         "items": items,
         "continuation_token": next_tok,
-        "can_manage": uid in settings.ROOT_ADMIN_IDS,
+        "can_manage": is_cabinet_admin(uid),
     }
 
 
@@ -2862,9 +2864,12 @@ async def cabinet_gallery_upload(
 ):
     """Загрузка изображения в общую галерею кабинета (S3); только ROOT_ADMIN_IDS."""
     if not (init_data and init_data.strip()) and not (fab_token and fab_token.strip()):
-        raise HTTPException(
-            status_code=400, detail="Нужен init_data или fab_token",
-        )
+        from bot.common.service.web_grant_user import get_web_grant_uid
+
+        if not get_web_grant_uid():
+            raise HTTPException(
+                status_code=400, detail="Нужен init_data или fab_token",
+            )
     uid = await _resolve_content_cards_user_id(
         init_data.strip() if init_data else None,
         fab_token.strip() if fab_token else None,
@@ -3061,8 +3066,9 @@ def _parse_content_card_pool(raw: str | None) -> ContentCardPool:
 
 
 def _require_content_card_folder_admin(user_id: int) -> None:
-    if user_id not in settings.ROOT_ADMIN_IDS:
-        raise HTTPException(status_code=403, detail="Только администратор")
+    from bot.common.service.cabinet_admin import require_cabinet_admin
+
+    require_cabinet_admin(user_id)
 
 
 def _serialize_folder(f: ContentCardFolder) -> dict:
@@ -3569,6 +3575,8 @@ async def folder_link_resolve(body: FolderLinkResolveBody):
     По folder_token вернуть папку и список карточек (read-only, без записи в user_content_cards).
     direct_only=True — только карточки этой папки, без подпапок.
     """
+    from bot.common.service.cabinet_admin import is_cabinet_admin
+
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
 
     token = str(body.folder_token or "").strip()
@@ -3639,7 +3647,7 @@ async def folder_link_resolve(body: FolderLinkResolveBody):
                         "is_ready": bool(getattr(c, "is_ready", False)),
                     })
 
-        is_root_admin = user_id in settings.ROOT_ADMIN_IDS
+        is_root_admin = is_cabinet_admin(user_id)
         ready_for_issue_count = 0
         if is_root_admin:
             ready_for_issue_count = int(

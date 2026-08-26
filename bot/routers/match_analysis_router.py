@@ -169,11 +169,9 @@ class MatchAnalysisMarkViewedBody(BaseModel):
 
 
 def _require_match_analysis_admin(user_id: int) -> None:
-    if user_id not in settings.ROOT_ADMIN_IDS:
-        raise HTTPException(
-            status_code=403,
-            detail="Доступ к «Анализ матча» только для администраторов",
-        )
+    from bot.common.service.cabinet_admin import require_cabinet_admin
+
+    require_cabinet_admin(user_id)
 
 
 def _resolve_user_id(init_data: str) -> int:
@@ -224,7 +222,9 @@ async def _resolve_ma_admin_user_id(
 
 
 def _is_ma_admin(user_id: int) -> bool:
-    return user_id in settings.ROOT_ADMIN_IDS
+    from bot.common.service.cabinet_admin import is_cabinet_admin
+
+    return is_cabinet_admin(user_id)
 
 
 def _ma_cabinet_webapp_markup() -> InlineKeyboardMarkup:
@@ -350,8 +350,9 @@ async def save_match_analysis_from_game_id(
             )
         )
         row_id = row.id
-        # Как у content cards: создатель сразу получает выдачу, иначе анализ
-        # не появится в кабинете (list только по UserMatchAnalysis).
+        from bot.common.service.cabinet_admin import grant_match_analysis_to_cabinet_admins
+
+        await grant_match_analysis_to_cabinet_admins(session, row_id)
         existing_grant = await session.scalar(
             select(UserMatchAnalysis.id)
             .where(
@@ -604,6 +605,10 @@ async def match_analysis_list(body: MatchAnalysisInitBody):
     """Список анализов кабинета: только выданные текущему пользователю (как content cards)."""
     uid = await _resolve_ma_user_id(body.init_data, body.fab_token)
     is_admin = _is_ma_admin(uid)
+    if is_admin:
+        from bot.common.service.cabinet_admin import grant_all_cabinet_content_async
+
+        await grant_all_cabinet_content_async(uid)
     recent_cutoff = datetime.utcnow() - timedelta(days=1)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)

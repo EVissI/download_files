@@ -124,6 +124,11 @@ async def create_session(user) -> dict[str, Any]:
         await ensure_web_grant_user_async(
             int(user.id), login=getattr(user, "login", None)
         )
+        if bool(getattr(user, "is_admin", False)):
+            from bot.common.service.cabinet_admin import grant_all_cabinet_content_async
+            from bot.common.service.web_grant_user import web_grant_user_id
+
+            await grant_all_cabinet_content_async(web_grant_user_id(int(user.id)))
     except Exception:
         logger.exception("web grant user ensure failed for web_user_id={}", user.id)
     return {"token": token, **payload}

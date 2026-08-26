@@ -194,7 +194,15 @@ class WebUserModelView(ModelView):
 
     def post_add(self, item: WebUser) -> None:
         try:
-            ensure_web_grant_user_sync(self.datamodel.session, int(item.id), item.login)
+            from bot.common.service.cabinet_admin import grant_all_cabinet_content_sync
+
+            grant_id = ensure_web_grant_user_sync(
+                self.datamodel.session, int(item.id), item.login
+            )
+            if item.is_admin:
+                grant_all_cabinet_content_sync(
+                    self.datamodel.session, grant_id, commit=False
+                )
             self.datamodel.session.commit()
         except Exception:
             self.datamodel.session.rollback()
@@ -205,7 +213,15 @@ class WebUserModelView(ModelView):
 
     def post_update(self, item: WebUser) -> None:
         try:
-            ensure_web_grant_user_sync(self.datamodel.session, int(item.id), item.login)
+            from bot.common.service.cabinet_admin import grant_all_cabinet_content_sync
+
+            grant_id = ensure_web_grant_user_sync(
+                self.datamodel.session, int(item.id), item.login
+            )
+            if item.is_admin:
+                grant_all_cabinet_content_sync(
+                    self.datamodel.session, grant_id, commit=False
+                )
             self.datamodel.session.commit()
         except Exception:
             self.datamodel.session.rollback()

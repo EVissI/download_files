@@ -2264,6 +2264,10 @@ class MatchAnalysisDAO(BaseDAO[MatchAnalysis]):
     async def user_has_access(self, user_id: int, match_analysis_id: int) -> bool:
         if user_id in settings.ROOT_ADMIN_IDS:
             return True
+        from bot.common.service.cabinet_admin import is_cabinet_admin
+
+        if is_cabinet_admin(user_id):
+            return True
         result = await self._session.execute(
             select(UserMatchAnalysis.id)
             .where(

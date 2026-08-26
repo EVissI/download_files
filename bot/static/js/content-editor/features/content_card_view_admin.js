@@ -1,12 +1,27 @@
+function contentCardViewUpdateAuth() {
+    const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+    if (initData) return { init_data: initData };
+    try {
+        const params = new URLSearchParams(window.location.search || '');
+        const fabToken = String(params.get('fab_token') || '');
+        if (fabToken) return { fab_token: fabToken };
+        const meta = document.querySelector('meta[name="web-standalone-mode"]');
+        if (meta && meta.getAttribute('content') === '1') {
+            return {};
+        }
+    } catch (_e) {}
+    return null;
+}
+
 export async function deleteCurrentContentCardFrameImpl(editor) {
     if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ !== true) return;
     if (!editor._contentCardAdminMeta || editor._contentCardViewCardId == null) return;
     if (editor.cardPreviewRefs.length <= 1) return;
     if (!confirm('Удалить текущий кадр? Действие нельзя отменить.')) return;
 
-    const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
-    if (!initData) {
-        editor.showNotification('Нет init_data для сохранения', 'warning');
+    const auth = contentCardViewUpdateAuth();
+    if (!auth) {
+        editor.showNotification('Нет авторизации для сохранения', 'warning');
         return;
     }
 
@@ -29,7 +44,7 @@ export async function deleteCurrentContentCardFrameImpl(editor) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                init_data: initData,
+                ...auth,
                 content_card_id: editor._contentCardViewCardId,
                 frames: framesWrapper,
             }),
@@ -124,9 +139,9 @@ export async function confirmContentCardAddFrameImpl(editor) {
     if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ !== true) return;
     if (!editor._contentCardAdminMeta || editor._contentCardViewCardId == null) return;
 
-    const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
-    if (!initData) {
-        editor.showNotification('Нет init_data для сохранения', 'warning');
+    const auth = contentCardViewUpdateAuth();
+    if (!auth) {
+        editor.showNotification('Нет авторизации для сохранения', 'warning');
         return;
     }
 
@@ -173,7 +188,7 @@ export async function confirmContentCardAddFrameImpl(editor) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                init_data: initData,
+                ...auth,
                 content_card_id: editor._contentCardViewCardId,
                 frames: framesWrapper,
             }),

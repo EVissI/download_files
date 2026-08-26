@@ -7802,6 +7802,12 @@ export class ContentEditor {
         if (initData) return { init_data: initData, ...extra };
         const fabToken = String(params.get('fab_token') || '');
         if (fabToken) return { fab_token: fabToken, ...extra };
+        try {
+            const meta = document.querySelector('meta[name="web-standalone-mode"]');
+            if (meta && meta.getAttribute('content') === '1') {
+                return extra;
+            }
+        } catch (_e) {}
         return null;
     }
 
@@ -8525,9 +8531,9 @@ export class ContentEditor {
                 this.showNotification('Нет привязки к кадру', 'warning');
                 return;
             }
-            const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
-            if (!initData) {
-                this.showNotification('Нет init_data для сохранения', 'warning');
+            const auth = this.getContentCardApiAuthPayload();
+            if (!auth) {
+                this.showNotification('Нет авторизации для сохранения', 'warning');
                 return;
             }
             try {
@@ -8565,7 +8571,7 @@ export class ContentEditor {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        init_data: initData,
+                        ...auth,
                         content_card_id: this._contentCardViewCardId,
                         frames: framesWrapper,
                     }),

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from bot.db.models import User, WebUser
 
 web_grant_uid_ctx: ContextVar[int | None] = ContextVar("web_grant_uid", default=None)
+web_grant_is_admin_ctx: ContextVar[bool] = ContextVar("web_grant_is_admin", default=False)
 
 
 def web_grant_user_id(web_user_id: int) -> int:
@@ -21,12 +22,25 @@ def get_web_grant_uid() -> int | None:
     return web_grant_uid_ctx.get()
 
 
+def get_web_grant_is_admin() -> bool:
+    return bool(web_grant_is_admin_ctx.get())
+
+
 def set_web_grant_uid(uid: int | None) -> Token:
     return web_grant_uid_ctx.set(uid)
 
 
+def set_web_grant_context(uid: int, is_admin: bool) -> tuple[Token, Token]:
+    return web_grant_uid_ctx.set(int(uid)), web_grant_is_admin_ctx.set(bool(is_admin))
+
+
 def reset_web_grant_uid(token: Token) -> None:
     web_grant_uid_ctx.reset(token)
+
+
+def reset_web_grant_context(uid_token: Token, admin_token: Token) -> None:
+    web_grant_uid_ctx.reset(uid_token)
+    web_grant_is_admin_ctx.reset(admin_token)
 
 
 def _shadow_username(login: str | None, web_user_id: int) -> str:
