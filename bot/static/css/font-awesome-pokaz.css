@@ -26,6 +26,10 @@
 .fa-picture-o:before { content: "\f03e"; }
 .fa-pencil:before { content: "\f040"; }
 .fa-play:before { content: "\f04b"; }
+.fa-camera:before { content: "\f030"; }
+.fa-file-text-o:before { content: "\f0f6"; }
+.fa-tachometer:before { content: "\f0e4"; }
+.fa-sort-numeric-asc:before { content: "\f162"; }
 .fa-pause:before { content: "\f04c"; }
 .fa-stop:before { content: "\f04d"; }
 .fa-chevron-right:before { content: "\f054"; }

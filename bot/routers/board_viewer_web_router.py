@@ -224,6 +224,7 @@ async def web_board_view(request: Request, game_id: str | None = None):
             "cache_timestamp": get_static_asset_version(),
             "board_viewer_screenshot_font_scale_percent": font_scale,
             "web_standalone_mode": True,
+            "is_admin": bool(session.get("is_admin")),
         },
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
