@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Сохранённая карточка</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
@@ -14,46 +14,62 @@
     <style>
         html {
             margin: 0;
-            min-height: 100%;
+            height: 100%;
             background: #1a1a1a;
+            overflow: hidden;
         }
         body {
             margin: 0;
-            min-height: 100vh;
+            height: 100%;
             background: #1a1a1a;
             box-sizing: border-box;
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-            padding-top: 5px;
+            overflow: hidden;
         }
         *, *::before, *::after {
             box-sizing: inherit;
         }
+        /* 100vh на планшете (iPad/Telegram) выше видимой области — футер уезжает вниз. */
         #contentCardViewRoot {
-            height: calc(100vh - 5px);
+            position: fixed;
+            top: var(--app-offset-top, 0px);
+            left: 0;
+            right: 0;
+            bottom: auto;
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            height: var(--app-height, 100dvh);
+            min-height: 0 !important;
+            max-height: none;
+            overflow: hidden;
         }
         #contentCardViewRoot .card-preview-box {
             width: 100%;
             max-width: none;
-            min-height: 100%;
+            min-height: 0;
+            height: 100%;
+            max-height: 100%;
             margin: 0;
             border: none;
             border-radius: 0;
             padding: 0;
+            padding-top: max(0px, env(safe-area-inset-top, 0px), var(--tg-safe-top, 0px));
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        /* Смартфоны: ~10vh; планшеты: ~5vh */
+        /* Смартфоны: ~10vh; планшеты: ~5vh — внутри уже ограниченной высоты, футер не вытесняется. */
         @media (max-width: 600px) {
             #contentCardViewRoot .card-preview-box {
-                padding-top: max(10vh, 24px);
+                padding-top: max(10vh, 24px, env(safe-area-inset-top, 0px), var(--tg-safe-top, 0px));
             }
         }
 
         @media (min-width: 601px) and (max-width: 1024px) {
             #contentCardViewRoot .card-preview-box {
-                padding-top: max(5vh, 24px);
+                padding-top: max(5vh, 24px, env(safe-area-inset-top, 0px), var(--tg-safe-top, 0px));
             }
         }
         #contentCardViewRoot .card-preview-header {
@@ -62,12 +78,14 @@
         #contentCardViewRoot .card-preview-meta {
             margin: 0;
             padding: 6px 12px;
+            flex: 0 0 auto;
         }
         #contentCardViewRoot .card-preview-frame-host {
             flex: 1 1 auto;
             min-height: 0;
             margin: 0;
             border-radius: 0;
+            overflow: auto;
         }
         #contentCardViewRoot .card-preview-surface-wrap,
         #contentCardViewRoot .card-preview-surface-inner {
@@ -80,11 +98,14 @@
         }
         #contentCardViewRoot .card-preview-nav {
             margin: 0;
-            padding: 8px 12px max(8px, env(safe-area-inset-bottom));
+            padding: 8px 12px max(8px, env(safe-area-inset-bottom, 0px), var(--tg-safe-bottom, 0px));
             border-top: 1px solid #404040;
             border-bottom: 0;
             background: #22272e;
-            flex-shrink: 0;
+            flex: 0 0 auto;
+            order: 99;
+            position: relative;
+            z-index: 20;
             gap: 8px 10px;
         }
         #contentCardViewRoot .card-preview-nav .card-preview-nav-btn {
@@ -275,6 +296,39 @@
                 console.warn('requestFullscreen(content_card_view) failed:', e);
             }
         }
+
+        (function bindCardViewViewport() {
+            function measure() {
+                var vv = window.visualViewport;
+                var h = Math.round((vv && vv.height) ? vv.height : (window.innerHeight || 0));
+                var top = Math.round((vv && vv.offsetTop) ? vv.offsetTop : 0);
+                if (h > 0) {
+                    document.documentElement.style.setProperty('--app-height', h + 'px');
+                }
+                document.documentElement.style.setProperty('--app-offset-top', top + 'px');
+                var tgApp = window.Telegram && window.Telegram.WebApp;
+                if (tgApp) {
+                    var sa = tgApp.safeAreaInset || {};
+                    var csa = tgApp.contentSafeAreaInset || {};
+                    var safeTop = Number(sa.top || 0) + Number(csa.top || 0);
+                    var safeBottom = Number(sa.bottom || 0) + Number(csa.bottom || 0);
+                    document.documentElement.style.setProperty('--tg-safe-top', safeTop + 'px');
+                    document.documentElement.style.setProperty('--tg-safe-bottom', safeBottom + 'px');
+                }
+            }
+            measure();
+            window.addEventListener('resize', measure);
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', measure);
+                window.visualViewport.addEventListener('scroll', measure);
+            }
+            var tgApp = window.Telegram && window.Telegram.WebApp;
+            if (tgApp && typeof tgApp.onEvent === 'function') {
+                ['viewportChanged', 'safeAreaChanged', 'contentSafeAreaChanged', 'fullscreenChanged'].forEach(function (evt) {
+                    try { tgApp.onEvent(evt, measure); } catch (_e) {}
+                });
+            }
+        })();
 
         (function () {
             var statusMap = [

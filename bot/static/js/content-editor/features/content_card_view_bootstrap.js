@@ -7,7 +7,7 @@ export function initContentCardViewOnlyImpl(editor) {
     editor._contentCardSharedContext = null;
     if (!document.getElementById('contentCardViewRoot')) {
         document.body.insertAdjacentHTML('beforeend', `
-                <div id="contentCardViewRoot" class="card-preview-modal card-preview-modal--fullscreen" style="display: none; min-height: 100vh;" aria-hidden="true">
+                <div id="contentCardViewRoot" class="card-preview-modal card-preview-modal--fullscreen" style="display: none; min-height: 0;" aria-hidden="true">
                     <div class="card-preview-box" style="width: 100%; max-width: 100%; box-sizing: border-box;">
                         <div class="card-preview-header">
                                 <button type="button" id="contentCardViewEditFrameBtn" class="content-card-view-edit-btn" style="display: none;" onclick="contentEditor.openEditorFromContentCardView()" title="Редактировать текущий кадр">
