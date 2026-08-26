@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="pokaz-screenshot-font-scale" content="{{ pokaz_screenshot_font_scale_percent | default(100) }}">
+    <meta name="web-standalone-mode" content="{% if web_standalone_mode|default(false) %}1{% else %}0{% endif %}">
     <title>{{ i18n.title }}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
@@ -4324,14 +4325,83 @@
                 min-height: 36px;
             }
         }
+
+        .web-cabinet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            border-bottom: 1px solid #2a2a2a;
+            background: #1a1a1a;
+            gap: 12px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+        .web-cabinet-header .service-nav {
+            display: flex;
+            gap: 4px;
+            background: #111;
+            padding: 4px;
+            border-radius: 10px;
+        }
+        .web-cabinet-header .service-nav a {
+            color: #bbb;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .web-cabinet-header .service-nav a.active {
+            background: #2e7d32;
+            color: #fff;
+        }
+        .web-cabinet-header .service-nav a:hover:not(.active) {
+            background: #2a2a2a;
+            color: #fff;
+        }
+        .web-cabinet-header .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .web-cabinet-header .header-actions form { margin: 0; }
+        .web-cabinet-header button,
+        .web-cabinet-header .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            background: #2a2a2a;
+            color: #ddd;
+        }
+        body.web-standalone .container {
+            flex: 1;
+        }
+        body.screenshot-mode .web-cabinet-header {
+            display: none !important;
+        }
+        body.web-standalone #adminCommentBtn {
+            display: none !important;
+        }
     </style>
     <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
     <meta name="static-asset-v" content="{{ cache_timestamp }}">
     <script>window.__STATIC_ASSET_V = "{{ cache_timestamp }}";</script>
+    {% if not web_standalone_mode|default(false) %}
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    {% endif %}
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script type="module" src="/static/js/content-editor/bootstrap/index.js?t={{ cache_timestamp }}"></script>
     <script>
+        function isWebStandalonePokaz() {
+            const meta = document.querySelector('meta[name="web-standalone-mode"]');
+            return !!(meta && meta.getAttribute('content') === '1');
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             // Применяем переводы из Fluent (pokaz-i18n)
             const i18nEl = document.getElementById('pokaz-i18n');
@@ -4395,6 +4465,11 @@
             if (screenUploadBtn) {
                 screenUploadBtn.style.backgroundImage = "url('/static/ScreenUpload.webp?t={{ cache_timestamp }}')";
             }
+            if (isWebStandalonePokaz()) {
+                if (screenshotBtn) screenshotBtn.title = 'Скачать скриншот';
+                if (screenSaveBtn) screenSaveBtn.title = 'Добавить скриншот в архив';
+                if (screenUploadBtn) screenUploadBtn.title = 'Скачать архив со скриншотами';
+            }
 
             // Кнопка сворачивания таблицы hints-table
             const hintsTableToggle = document.getElementById('hintsTableToggle');
@@ -4430,7 +4505,24 @@
     </script>
 </head>
 
-<body>
+<body class="{% if web_standalone_mode|default(false) %}web-standalone{% endif %}">
+    {% if web_standalone_mode|default(false) %}
+    <header class="web-cabinet-header">
+        <nav class="service-nav" aria-label="Сервисы">
+            <a href="/web/hints">Ошибки</a>
+            <a href="/web/board">Плеер</a>
+            <a href="/web/pokaz" class="active">Позиции</a>
+        </nav>
+        <div class="header-actions">
+            {% if is_admin %}
+            <a class="btn" href="/admin/">Админка</a>
+            {% endif %}
+            <form method="post" action="/web/hints/logout">
+                <button type="submit">Выйти</button>
+            </form>
+        </div>
+    </header>
+    {% endif %}
     {% if xgid %}
     <script type="application/json" id="initial-xgid-data">{{ xgid|tojson }}</script>
     {% endif %}
@@ -8218,7 +8310,7 @@
             }
 
             // Проверяем наличие chat_id (для отладки можно использовать тестовый ID)
-            if (!chatId) {
+            if (!chatId && !isWebStandalonePokaz()) {
                 // Попробуем получить из URL параметра (для тестирования)
                 const urlParams = new URLSearchParams(window.location.search);
                 chatId = urlParams.get('chat_id');
@@ -8232,12 +8324,19 @@
             hintsTable.innerHTML = '<div class="loading">' + ((window.POKAZ_I18N || {}).loading_hints || 'Поиск лучших ходов') + '</div>';
             hintsTable.classList.add('active');
             hintsTableContainer.classList.add('active');
+            const hintsUrl = isWebStandalonePokaz()
+                ? `/web/pokaz/api/hints?xgid=${encodeURIComponent(xgid)}`
+                : `/pokaz/hints?xgid=${encodeURIComponent(xgid)}&chat_id=${chatId}`;
             console.log('Requesting hints with chat_id:', chatId, 'xgid:', xgid);
-            fetch(`/pokaz/hints?xgid=${encodeURIComponent(xgid)}&chat_id=${chatId}`, { signal: AbortSignal.timeout(30000) }) // 30 second timeout
+            fetch(hintsUrl, { signal: AbortSignal.timeout(30000) }) // 30 second timeout
                 .then(response => {
                     console.log('Response status:', response.status);
                     if (!response.ok) {
                         const i18n = window.POKAZ_I18N || {};
+                        if (response.status === 401) {
+                            window.location.href = '/web/hints/login?next=/web/pokaz';
+                            throw new Error('Нужна авторизация');
+                        }
                         if (response.status === 402) {
                             throw new Error(i18n.error_insufficient_balance || 'Недостаточно баланса для получения подсказок');
                         }
@@ -9477,6 +9576,28 @@
             removePokazScreenshotFontScale();
             document.body.classList.remove('screenshot-mode');
             canvas.toBlob(blob => {
+                if (isWebStandalonePokaz()) {
+                    const formData = new FormData();
+                    formData.append('photo', blob);
+                    fetch('/web/hints/api/save_screenshot', {
+                        method: 'POST',
+                        body: formData
+                    }).then(response => {
+                        if (response.ok) {
+                            showMessageModal('Скриншот сохранён в буфер', 'success');
+                        } else if (response.status === 401) {
+                            showMessageModal('Нужна авторизация', 'error');
+                        } else {
+                            showMessageModal('Ошибка при сохранении скриншота', 'error');
+                        }
+                        restoreControls();
+                    }).catch(error => {
+                        console.error('Error saving screenshot:', error);
+                        showMessageModal('Ошибка при сохранении скриншота', 'error');
+                        restoreControls();
+                    });
+                    return;
+                }
                 const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
                 const chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
 
@@ -9511,6 +9632,36 @@
     }
 
     function uploadScreenshots() {
+        if (isWebStandalonePokaz()) {
+            fetch('/web/hints/api/download_screenshots', { method: 'POST' }).then(async response => {
+                if (response.status === 401) {
+                    showMessageModal('Нужна авторизация', 'error');
+                    return;
+                }
+                if (response.status === 404) {
+                    showMessageModal('В архиве нет скриншотов', 'warning');
+                    return;
+                }
+                if (!response.ok) {
+                    showMessageModal('Ошибка при скачивании архива', 'error');
+                    return;
+                }
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'screenshots.zip';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                showMessageModal('Архив скачан', 'success');
+            }).catch(error => {
+                console.error('Error downloading screenshots:', error);
+                showMessageModal('Ошибка при скачивании архива', 'error');
+            });
+            return;
+        }
         const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
         const chatId = initDataUnsafe && initDataUnsafe.user ? initDataUnsafe.user.id : null;
 

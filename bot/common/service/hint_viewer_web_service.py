@@ -19,7 +19,7 @@ SESSION_KEY = "hint_web:session:{token}"
 JOBS_KEY = "hint_web:jobs:{token}"
 WEB_SERVICE_HINTS = "hints"
 WEB_SERVICE_BOARD = "board"
-WEB_ALLOWED_NEXT = ("/web/hints", "/web/board")
+WEB_ALLOWED_NEXT = ("/web/hints", "/web/board", "/web/pokaz")
 
 
 def safe_web_next(value: str | None) -> str:

@@ -156,6 +156,7 @@
         <nav class="service-nav" aria-label="Сервисы">
             <a href="/web/hints" class="{% if web_service|default('hints') == 'hints' %}active{% endif %}">Ошибки</a>
             <a href="/web/board" class="{% if web_service|default('hints') == 'board' %}active{% endif %}">Плеер</a>
+            <a href="/web/pokaz" class="{% if web_service|default('hints') == 'pokaz' %}active{% endif %}">Позиции</a>
         </nav>
         <div class="header-actions">
             {% if is_admin %}
