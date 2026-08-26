@@ -52,7 +52,7 @@ html {
             position: relative;
             width: calc(99% * 0.4);
             max-width: calc(99% * 0.4);
-            margin: 1.5rem auto 20px;
+            margin: 1.5rem auto 0;
             box-sizing: border-box;
             --board-ui-scale: 1;
             --board-point-font-size: calc(30px * var(--board-ui-scale));
@@ -941,7 +941,7 @@ html {
                 min-width: 0;
                 width: auto;
                 max-width: min(656px, calc(100% - 300px));
-                margin: 2rem 0 20px;
+                margin: 2rem 0 0;
             }
 
             .board-panel {
