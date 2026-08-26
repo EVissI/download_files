@@ -63,7 +63,7 @@ html {
         .board-block {
             position: relative;
             margin-top: 1.5rem;
-            margin-bottom: 20px;
+            margin-bottom: 0;
             --board-ui-scale: 1;
             --board-point-font-size: calc(30px * var(--board-ui-scale));
             --board-pip-padding-y: calc(3px * var(--board-ui-scale));
@@ -1571,7 +1571,7 @@ html {
                 min-width: 0;
                 width: auto;
                 max-width: min(656px, calc(52% - 14px));
-                margin: 1.5rem 0 20px;
+                margin: 1.5rem 0 0;
             }
 
             .board-panel {
