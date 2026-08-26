@@ -262,6 +262,7 @@ html {
             align-items: center;
             gap: 6px;
             justify-content: center;
+            transform: translateX(-15%);
         }
 
         .screenshot-controls > div {
