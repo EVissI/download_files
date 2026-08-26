@@ -13,8 +13,7 @@ from loguru import logger
 from bot.common.func.pokaz_func import get_hints_for_xgid
 from bot.common.service.hint_viewer_web_service import (
     COOKIE_NAME,
-    get_session,
-    web_user_is_admin,
+    resolve_web_session,
 )
 from bot.common.service.webapp_settings_service import (
     get_pokaz_screenshot_font_scale_percent,
@@ -32,7 +31,7 @@ def _login_redirect() -> RedirectResponse:
 
 async def _require_session(request: Request) -> tuple[str, dict[str, Any]]:
     token = request.cookies.get(COOKIE_NAME)
-    session = await get_session(token)
+    session = await resolve_web_session(request)
     if not token or not session:
         raise HTTPException(status_code=401, detail="Нужна авторизация")
     return token, session
@@ -40,15 +39,14 @@ async def _require_session(request: Request) -> tuple[str, dict[str, Any]]:
 
 @pokaz_web_api_router.get("/web/pokaz", response_class=HTMLResponse)
 async def web_pokaz_editor(request: Request, xgid: str | None = None, lang: str | None = None):
-    token = request.cookies.get(COOKIE_NAME)
-    session = await get_session(token)
+    session = await resolve_web_session(request)
     if not session:
         return _login_redirect()
 
     from bot.api import _get_pokaz_translations
 
     lang = lang if lang in ("ru", "en") else "ru"
-    is_admin = await web_user_is_admin(session.get("user_id"))
+    is_admin = bool(session.get("is_admin"))
     font_scale = await get_pokaz_screenshot_font_scale_percent()
     response = templates.TemplateResponse(
         "pokaz.html",

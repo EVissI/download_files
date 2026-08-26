@@ -44,15 +44,14 @@ from bot.common.service.hint_viewer_web_service import (
     authenticate_web_user,
     create_session,
     destroy_session,
-    get_session,
     list_history_for_user,
     list_session_jobs,
     record_history,
     replace_session_jobs,
+    resolve_web_session,
     sync_history_from_job,
     web_cabinet_page_vars,
     web_hint_open_links,
-    web_user_is_admin,
     safe_web_next,
 )
 from bot.common.service.webapp_settings_service import (
@@ -86,7 +85,7 @@ def _login_redirect() -> RedirectResponse:
 
 async def _require_session(request: Request) -> tuple[str, dict[str, Any]]:
     token = request.cookies.get(COOKIE_NAME)
-    session = await get_session(token)
+    session = await resolve_web_session(request)
     if not token or not session:
         raise HTTPException(status_code=401, detail="Нужна авторизация")
     return token, session
@@ -507,9 +506,8 @@ def _enrich_batch_job(stored: dict[str, Any]) -> dict[str, Any]:
 
 @hint_viewer_web_api_router.get("/web/hints/login", response_class=HTMLResponse)
 async def web_hints_login_page(request: Request, next: str = "/web/hints"):
-    token = request.cookies.get(COOKIE_NAME)
     next_path = safe_web_next(next)
-    if await get_session(token):
+    if await resolve_web_session(request):
         return RedirectResponse(url=next_path, status_code=303)
     return templates.TemplateResponse(
         "hint_viewer_web_login.html",
@@ -573,11 +571,10 @@ async def web_hints_logout(request: Request):
 
 @hint_viewer_web_api_router.get("/web/hints", response_class=HTMLResponse)
 async def web_hints_upload_page(request: Request):
-    token = request.cookies.get(COOKIE_NAME)
-    session = await get_session(token)
+    session = await resolve_web_session(request)
     if not session:
         return _login_redirect()
-    is_admin = await web_user_is_admin(session.get("user_id"))
+    is_admin = bool(session.get("is_admin"))
     return templates.TemplateResponse(
         "hint_viewer_web_upload.html",
         {
@@ -726,8 +723,7 @@ async def web_download_screenshots(request: Request):
 
 @hint_viewer_web_api_router.get("/web/hints/view", response_class=HTMLResponse)
 async def web_hints_view(request: Request, game_id: str | None = None):
-    token = request.cookies.get(COOKIE_NAME)
-    session = await get_session(token)
+    session = await resolve_web_session(request)
     if not session:
         return _login_redirect()
     if not game_id:

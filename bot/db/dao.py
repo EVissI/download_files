@@ -44,10 +44,10 @@ from bot.db.models import (
     HintViewerWebUploadStatus,
     WebUser,
 )
-from sqlalchemy import delete, func, insert, literal, not_, or_, select
+from sqlalchemy import delete, func, insert, literal, not_, or_, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import load_only, selectinload
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
@@ -1299,7 +1299,15 @@ class UserContentCardDAO(BaseDAO[UserContentCard]):
             query = (
                 select(self.model)
                 .where(self.model.user_id == user_id)
-                .options(selectinload(self.model.content_card))
+                .options(
+                    selectinload(self.model.content_card).load_only(
+                        ContentCard.id,
+                        ContentCard.card_pool,
+                        ContentCard.labels,
+                        ContentCard.notes,
+                        ContentCard.is_ready,
+                    )
+                )
             )
             result = await self._session.execute(query)
             return list(result.scalars().all())
@@ -2244,10 +2252,13 @@ class MatchAnalysisDAO(BaseDAO[MatchAnalysis]):
             raise
 
     async def list_for_user_ordered(self, user_id: int) -> list[MatchAnalysis]:
-        """Анализы, выданные пользователю (UserMatchAnalysis)."""
+        """Анализы, выданные пользователю (UserMatchAnalysis). Тяжёлый JSON analysis не грузится."""
         try:
+            from sqlalchemy.orm import defer
+
             query = (
                 select(self.model)
+                .options(defer(self.model.analysis))
                 .join(
                     UserMatchAnalysis,
                     UserMatchAnalysis.match_analysis_id == self.model.id,
@@ -2259,6 +2270,87 @@ class MatchAnalysisDAO(BaseDAO[MatchAnalysis]):
             return list(result.scalars().all())
         except SQLAlchemyError as e:
             logger.error(f"Ошибка при списке MatchAnalysis для user={user_id}: {e}")
+            raise
+
+    async def list_for_user_summaries(self, user_id: int) -> list:
+        """Список кабинета без полного JSON analysis (только сводка для тайлов)."""
+        try:
+            query = text(
+                """
+                SELECT
+                    m.id,
+                    m.title,
+                    m.source_game_id,
+                    m.notes,
+                    m.is_ready,
+                    m.created_by_user_id,
+                    m.created_at,
+                    m.updated_at,
+                    m.analysis -> 'game_info' AS game_info,
+                    COALESCE(
+                        CASE
+                            WHEN jsonb_typeof(COALESCE(m.analysis -> 'games', '[]'::jsonb)) = 'array'
+                            THEN jsonb_array_length(COALESCE(m.analysis -> 'games', '[]'::jsonb))
+                            ELSE 0
+                        END,
+                        0
+                    ) AS games_count,
+                    (
+                        SELECT COUNT(*)::int
+                        FROM jsonb_array_elements(
+                            CASE
+                                WHEN jsonb_typeof(COALESCE(m.analysis -> 'games', '[]'::jsonb)) = 'array'
+                                THEN COALESCE(m.analysis -> 'games', '[]'::jsonb)
+                                ELSE '[]'::jsonb
+                            END
+                        ) AS g
+                        CROSS JOIN LATERAL jsonb_array_elements(
+                            CASE
+                                WHEN jsonb_typeof(COALESCE(g -> 'moves', '[]'::jsonb)) = 'array'
+                                THEN COALESCE(g -> 'moves', '[]'::jsonb)
+                                ELSE '[]'::jsonb
+                            END
+                        ) AS mv
+                        WHERE COALESCE(mv ->> 'audioS3Key', '') <> ''
+                    ) AS audio_count,
+                    (
+                        SELECT COALESCE(SUM(
+                            CASE
+                                WHEN COALESCE(mv ->> 'audioS3Key', '') = '' THEN 0
+                                ELSE COALESCE(
+                                    NULLIF(mv ->> 'audioDurationSec', '')::double precision,
+                                    0
+                                )
+                            END
+                        ), 0)
+                        FROM jsonb_array_elements(
+                            CASE
+                                WHEN jsonb_typeof(COALESCE(m.analysis -> 'games', '[]'::jsonb)) = 'array'
+                                THEN COALESCE(m.analysis -> 'games', '[]'::jsonb)
+                                ELSE '[]'::jsonb
+                            END
+                        ) AS g
+                        CROSS JOIN LATERAL jsonb_array_elements(
+                            CASE
+                                WHEN jsonb_typeof(COALESCE(g -> 'moves', '[]'::jsonb)) = 'array'
+                                THEN COALESCE(g -> 'moves', '[]'::jsonb)
+                                ELSE '[]'::jsonb
+                            END
+                        ) AS mv
+                    ) AS audio_seconds
+                FROM match_analyses m
+                INNER JOIN user_match_analyses uma
+                    ON uma.match_analysis_id = m.id
+                WHERE uma.user_id = :uid
+                ORDER BY m.id DESC
+                """
+            )
+            result = await self._session.execute(query, {"uid": int(user_id)})
+            return list(result.mappings().all())
+        except SQLAlchemyError as e:
+            logger.error(
+                f"Ошибка при сводке MatchAnalysis для user={user_id}: {e}"
+            )
             raise
 
     async def user_has_access(self, user_id: int, match_analysis_id: int) -> bool:

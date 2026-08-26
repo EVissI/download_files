@@ -204,6 +204,11 @@ class WebUserModelView(ModelView):
                     self.datamodel.session, grant_id, commit=False
                 )
             self.datamodel.session.commit()
+            from bot.common.service.hint_viewer_web_service import (
+                invalidate_web_account_cache_sync,
+            )
+
+            invalidate_web_account_cache_sync(item.id)
         except Exception:
             self.datamodel.session.rollback()
             flash(
@@ -225,6 +230,14 @@ class WebUserModelView(ModelView):
             self.datamodel.session.commit()
         except Exception:
             self.datamodel.session.rollback()
+        try:
+            from bot.common.service.hint_viewer_web_service import (
+                invalidate_web_account_cache_sync,
+            )
+
+            invalidate_web_account_cache_sync(item.id)
+        except Exception:
+            pass
 
     def render_template(self, template, **kwargs):
         kwargs.setdefault(

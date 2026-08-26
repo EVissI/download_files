@@ -8,9 +8,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from bot.common.service.hint_viewer_web_service import (
-    COOKIE_NAME,
-    get_session,
-    web_user_is_admin,
+    resolve_web_session,
 )
 from bot.db.models import ContentCardPool
 
@@ -25,8 +23,7 @@ def _login_redirect(next_path: str) -> RedirectResponse:
 
 
 async def _require_web_page(request: Request, next_path: str) -> dict[str, Any] | RedirectResponse:
-    token = request.cookies.get(COOKIE_NAME)
-    session = await get_session(token)
+    session = await resolve_web_session(request)
     if not session:
         return _login_redirect(next_path)
     return session
@@ -39,7 +36,7 @@ async def web_cards_cabinet(request: Request):
         return session
     from bot.api import _render_content_cards_cabinet_page
 
-    is_admin = await web_user_is_admin(session.get("user_id"))
+    is_admin = bool(session.get("is_admin"))
     return await _render_content_cards_cabinet_page(
         request,
         ContentCardPool.CARDS,
@@ -56,7 +53,7 @@ async def web_pip_count_cabinet(request: Request):
         return session
     from bot.api import _render_content_cards_cabinet_page
 
-    is_admin = await web_user_is_admin(session.get("user_id"))
+    is_admin = bool(session.get("is_admin"))
     return await _render_content_cards_cabinet_page(
         request,
         ContentCardPool.PIP_COUNT,
@@ -73,7 +70,7 @@ async def web_match_analysis_cabinet(request: Request):
         return session
     from bot.routers.match_analysis_router import render_match_analysis_cabinet_page
 
-    is_admin = await web_user_is_admin(session.get("user_id"))
+    is_admin = bool(session.get("is_admin"))
     return await render_match_analysis_cabinet_page(
         request,
         web_standalone=True,

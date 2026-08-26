@@ -20,12 +20,11 @@ from bot.common.service.hint_viewer_web_service import (
     COOKIE_NAME,
     HISTORY_PAGE_SIZE,
     WEB_SERVICE_BOARD,
-    get_session,
     list_history_for_user,
     record_history,
+    resolve_web_session,
     web_board_open_links,
     web_cabinet_page_vars,
-    web_user_is_admin,
 )
 from bot.common.service.webapp_settings_service import (
     get_board_viewer_screenshot_font_scale_percent,
@@ -46,7 +45,7 @@ def _login_redirect() -> RedirectResponse:
 
 async def _require_session(request: Request) -> tuple[str, dict[str, Any]]:
     token = request.cookies.get(COOKIE_NAME)
-    session = await get_session(token)
+    session = await resolve_web_session(request)
     if not token or not session:
         raise HTTPException(status_code=401, detail="Нужна авторизация")
     return token, session
@@ -128,11 +127,10 @@ async def _process_mat(
 
 @board_viewer_web_api_router.get("/web/board", response_class=HTMLResponse)
 async def web_board_upload_page(request: Request):
-    token = request.cookies.get(COOKIE_NAME)
-    session = await get_session(token)
+    session = await resolve_web_session(request)
     if not session:
         return _login_redirect()
-    is_admin = await web_user_is_admin(session.get("user_id"))
+    is_admin = bool(session.get("is_admin"))
     return templates.TemplateResponse(
         "hint_viewer_web_upload.html",
         {
@@ -208,8 +206,7 @@ async def web_board_history(request: Request, page: int = 1):
 
 @board_viewer_web_api_router.get("/web/board/view", response_class=HTMLResponse)
 async def web_board_view(request: Request, game_id: str | None = None):
-    token = request.cookies.get(COOKIE_NAME)
-    session = await get_session(token)
+    session = await resolve_web_session(request)
     if not session:
         return _login_redirect()
     if not game_id:

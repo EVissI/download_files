@@ -477,6 +477,39 @@ def _serialize_list_item(
     return out
 
 
+def _serialize_list_summary(
+    row,
+    *,
+    status: str | None = None,
+) -> dict[str, Any]:
+    gi = row.get("game_info") if hasattr(row, "get") else None
+    if not isinstance(gi, dict):
+        gi = {}
+    audio_seconds = float(row.get("audio_seconds") or 0)
+    created_at = row.get("created_at")
+    updated_at = row.get("updated_at")
+    row_id = row.get("id")
+    return {
+        "id": row_id,
+        "content_card_id": row_id,
+        "title": row.get("title"),
+        "source_game_id": row.get("source_game_id"),
+        "notes": row.get("notes"),
+        "is_ready": bool(row.get("is_ready")),
+        "created_by_user_id": row.get("created_by_user_id"),
+        "created_at": created_at.isoformat() if created_at else None,
+        "updated_at": updated_at.isoformat() if updated_at else None,
+        "red_player": gi.get("red_player"),
+        "black_player": gi.get("black_player"),
+        "match_length": gi.get("match_length"),
+        "games_count": int(row.get("games_count") or 0),
+        "audio_count": int(row.get("audio_count") or 0),
+        "audio_seconds": audio_seconds,
+        "audio_minutes": int(audio_seconds // 60),
+        "status": status or UserContentCardStatus.UNVIEWED.value,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Pages
 # ---------------------------------------------------------------------------
@@ -538,7 +571,7 @@ async def match_analysis_cabinet_page(request: Request):
 @match_analysis_api_router.get("/match-analysis-view")
 async def match_analysis_view_page(request: Request, id: int | None = None):
     """Просмотр сохранённого анализа — тот же UI, что hint-viewer, в режиме match_analysis."""
-    from bot.common.service.hint_viewer_web_service import COOKIE_NAME, get_session
+    from bot.common.service.hint_viewer_web_service import resolve_web_session
     from bot.common.service.webapp_settings_service import (
         get_hint_viewer_screenshot_font_scale_percent,
     )
@@ -551,7 +584,7 @@ async def match_analysis_view_page(request: Request, id: int | None = None):
     cache_timestamp = get_static_asset_version()
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("hints")
     font_scale = await get_hint_viewer_screenshot_font_scale_percent()
-    web_session = await get_session(request.cookies.get(COOKIE_NAME))
+    web_session = await resolve_web_session(request)
     web_standalone = bool(web_session)
     response = templates.TemplateResponse(
         "hint_viewer.html",
@@ -612,29 +645,15 @@ async def match_analysis_list(body: MatchAnalysisInitBody):
     recent_cutoff = datetime.utcnow() - timedelta(days=1)
     async with async_session_maker() as session:
         dao = MatchAnalysisDAO(session)
-        rows = await dao.list_for_user_ordered(uid)
+        rows = await dao.list_for_user_summaries(uid)
         ready_count = await dao.count_ready_for_issue() if is_admin else 0
-        # Дозаполняем длительности сразу при загрузке кабинета (админ).
-        if is_admin and rows:
-            changed = False
-            for row in rows:
-                analysis = copy.deepcopy(row.analysis or {})
-                filled = await asyncio.to_thread(_fill_missing_audio_durations, analysis)
-                if filled:
-                    row.analysis = analysis
-                    flag_modified(row, "analysis")
-                    changed = True
-            if changed:
-                await session.commit()
-                for row in rows:
-                    await session.refresh(row)
         links_by_id = await _user_ma_links_by_id(
-            session, uid, [r.id for r in rows]
+            session, uid, [r["id"] for r in rows]
         )
         items = [
-            _serialize_list_item(
+            _serialize_list_summary(
                 r,
-                status=_list_status_for_link(links_by_id.get(r.id), recent_cutoff),
+                status=_list_status_for_link(links_by_id.get(r["id"]), recent_cutoff),
             )
             for r in rows
         ]

@@ -17,6 +17,8 @@ SESSION_TTL_SEC = 7 * 24 * 3600
 JOBS_TTL_SEC = 7 * 24 * 3600
 SESSION_KEY = "hint_web:session:{token}"
 JOBS_KEY = "hint_web:jobs:{token}"
+ACCT_CACHE_KEY = "hint_web:acct:{user_id}"
+ACCT_CACHE_TTL_SEC = 60
 WEB_SERVICE_HINTS = "hints"
 WEB_SERVICE_BOARD = "board"
 WEB_ALLOWED_NEXT = (
@@ -175,6 +177,14 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
     }
 
 
+async def resolve_web_session(request) -> dict[str, Any] | None:
+    """Сессия из middleware (request.state), иначе чтение cookie."""
+    state = getattr(request, "state", None)
+    if state is not None and hasattr(state, "web_session"):
+        return state.web_session
+    return await get_session(request.cookies.get(COOKIE_NAME))
+
+
 async def get_session(token: str | None) -> dict[str, Any] | None:
     if not token:
         return None
@@ -187,15 +197,31 @@ async def get_session(token: str | None) -> dict[str, Any] | None:
         return None
     if not data.get("ok") or not data.get("user_id"):
         return None
-    if not await web_user_account_active(data.get("user_id")):
+    snapshot = await web_account_snapshot(data.get("user_id"))
+    if not snapshot or not snapshot.get("active"):
         await destroy_session(token)
         return None
+    data["is_admin"] = bool(snapshot.get("is_admin"))
+    if "web_uid" not in data:
+        data["web_uid"] = -int(data["user_id"])
     return data
 
 
-async def web_user_account_active(user_id: int | None) -> bool:
+async def web_account_snapshot(user_id: int | None) -> dict[str, Any] | None:
+    """active + is_admin; кэш в Redis, чтобы не ходить в БД на каждый запрос."""
     if not user_id:
-        return False
+        return None
+    uid = int(user_id)
+    cache_key = ACCT_CACHE_KEY.format(user_id=uid)
+    cached = await redis_client.get(cache_key)
+    if cached:
+        try:
+            data = json.loads(cached)
+            if isinstance(data, dict) and "active" in data:
+                return data
+        except json.JSONDecodeError:
+            pass
+
     from sqlalchemy import select
 
     from bot.db.database import async_session_maker
@@ -203,27 +229,46 @@ async def web_user_account_active(user_id: int | None) -> bool:
 
     async with async_session_maker() as session:
         result = await session.execute(
-            select(WebUser.id, WebUser.expires_at).where(WebUser.id == int(user_id))
+            select(WebUser.id, WebUser.is_admin, WebUser.expires_at).where(
+                WebUser.id == uid
+            )
         )
         row = result.one_or_none()
-        if row is None:
-            return False
-        return not web_user_expires_at_passed(row.expires_at)
+    if row is None:
+        payload = {"active": False, "is_admin": False}
+    else:
+        payload = {
+            "active": not web_user_expires_at_passed(row.expires_at),
+            "is_admin": bool(row.is_admin),
+        }
+    await redis_client.set(
+        cache_key, json.dumps(payload), expire=ACCT_CACHE_TTL_SEC
+    )
+    return payload
+
+
+async def invalidate_web_account_cache(user_id: int | None) -> None:
+    if not user_id:
+        return
+    await redis_client.delete(ACCT_CACHE_KEY.format(user_id=int(user_id)))
+
+
+def invalidate_web_account_cache_sync(user_id: int | None) -> None:
+    if not user_id:
+        return
+    from bot.db.redis import sync_redis_client
+
+    sync_redis_client.delete(ACCT_CACHE_KEY.format(user_id=int(user_id)))
+
+
+async def web_user_account_active(user_id: int | None) -> bool:
+    snapshot = await web_account_snapshot(user_id)
+    return bool(snapshot and snapshot.get("active"))
 
 
 async def web_user_is_admin(user_id: int | None) -> bool:
-    if not user_id:
-        return False
-    from sqlalchemy import select
-
-    from bot.db.database import async_session_maker
-    from bot.db.models import WebUser
-
-    async with async_session_maker() as session:
-        result = await session.execute(
-            select(WebUser.is_admin).where(WebUser.id == int(user_id))
-        )
-        return bool(result.scalar_one_or_none())
+    snapshot = await web_account_snapshot(user_id)
+    return bool(snapshot and snapshot.get("active") and snapshot.get("is_admin"))
 
 
 async def destroy_session(token: str | None) -> None:

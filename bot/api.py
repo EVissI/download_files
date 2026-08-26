@@ -275,6 +275,7 @@ async def web_grant_user_middleware(request: Request, call_next):
     path = request.url.path or ""
     uid_token = None
     admin_token = None
+    request.state.web_session = None
     if not path.startswith(_WEB_GRANT_SKIP_PREFIXES):
         try:
             from bot.common.service.hint_viewer_web_service import COOKIE_NAME, get_session
@@ -282,13 +283,11 @@ async def web_grant_user_middleware(request: Request, call_next):
 
             cookie = request.cookies.get(COOKIE_NAME)
             session = await get_session(cookie) if cookie else None
+            request.state.web_session = session
             web_user_id = int((session or {}).get("user_id") or 0)
             if web_user_id > 0:
-                from bot.common.service.hint_viewer_web_service import web_user_is_admin
-                from bot.common.service.web_grant_user import ensure_web_grant_user_async
-
-                uid = await ensure_web_grant_user_async(web_user_id)
-                is_admin = await web_user_is_admin(web_user_id)
+                uid = int((session or {}).get("web_uid") or -web_user_id)
+                is_admin = bool((session or {}).get("is_admin"))
                 uid_token, admin_token = set_web_grant_context(uid, is_admin)
         except Exception:
             logger.exception("web grant middleware failed path={}", path)
@@ -521,11 +520,11 @@ async def update_board_viewer_screenshot_font_scale(request: Request):
 @app.get("/content-card-view")
 async def content_card_view_page(request: Request):
     """Просмотр сохранённой карточки контента (кадры, только переключение)."""
-    from bot.common.service.hint_viewer_web_service import COOKIE_NAME, get_session
+    from bot.common.service.hint_viewer_web_service import resolve_web_session
 
     cache_timestamp = get_static_asset_version()
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("cards")
-    web_session = await get_session(request.cookies.get(COOKIE_NAME))
+    web_session = await resolve_web_session(request)
     web_standalone = bool(web_session)
     pool = str(request.query_params.get("pool") or "cards").strip()
     if web_standalone:
