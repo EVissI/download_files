@@ -61,12 +61,20 @@
                 <div class="left-controls">
                     <div class="screenshot-controls">
                         <div>
-                            <button onclick="toggleInvert()" id="invertBtn"></button>
-                            <button onclick="takeScreenshot()" id="screenshotBtn"></button>
+                            <button type="button" onclick="toggleInvert()" id="invertBtn" class="viewer-icon-btn" title="Перевернуть доску" aria-label="Перевернуть доску">
+                                <i class="fa fa-refresh" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" onclick="takeScreenshot()" id="screenshotBtn" class="viewer-icon-btn" title="Скриншот" aria-label="Скриншот">
+                                <i class="fa fa-camera" aria-hidden="true"></i>
+                            </button>
                         </div>
                         <div>
-                            <button onclick="saveScreenshot()" id="screenSaveBtn"></button>
-                            <button onclick="uploadScreenshots()" id="screenUploadBtn"></button>
+                            <button type="button" onclick="saveScreenshot()" id="screenSaveBtn" class="viewer-icon-btn" title="Добавить скриншот в архив" aria-label="Добавить скриншот в архив">
+                                <i class="fa fa-plus" aria-hidden="true"></i>
+                            </button>
+                            <button type="button" onclick="uploadScreenshots()" id="screenUploadBtn" class="viewer-icon-btn" title="Скачать архив со скриншотами" aria-label="Скачать архив со скриншотами">
+                                <i class="fa fa-download" aria-hidden="true"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -92,9 +100,13 @@
                         <input type="file" id="matchAnalysisAudioFileInput" accept="audio/*" style="display:none" onchange="matchAnalysisOnAudioFileSelected(event)">
                     </div>
                     <div class="navigation-controls">
-                        <button onclick="prevTurn()" id="prevBtn"></button>
+                        <button type="button" onclick="prevTurn()" id="prevBtn" class="viewer-icon-btn" title="Предыдущий ход" aria-label="Предыдущий ход">
+                            <i class="fa fa-chevron-left" aria-hidden="true"></i>
+                        </button>
                         <span id="turnLabel">0</span>
-                        <button onclick="nextTurn()" id="nextBtn"></button>
+                        <button type="button" onclick="nextTurn()" id="nextBtn" class="viewer-icon-btn" title="Следующий ход" aria-label="Следующий ход">
+                            <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -113,26 +125,19 @@
 
         <div class="viewer-below-board">
             <div class="settings-container">
-                <button id="settingsBtn" onclick="openSettingsModal()" title="Настройки">⚙️</button>
+                <button type="button" id="settingsBtn" class="viewer-icon-btn" onclick="openSettingsModal()" title="Настройки" aria-label="Настройки">
+                    <i class="fa fa-cog" aria-hidden="true"></i>
+                </button>
                 <span>Настройки</span>
             </div>
-            <button id="openEditorBtn" onclick="openPokazEditor()" style="
-                padding: 10px 20px;
-                background-color: #007bff;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                font-size: 14px;
-                font-weight: bold;
-                cursor: pointer;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                transition: background-color 0.3s;
-            " onmouseover="this.style.backgroundColor='#0056b3'" onmouseout="this.style.backgroundColor='#007bff'">
+            <button type="button" id="openEditorBtn" class="viewer-primary-btn" onclick="openPokazEditor()">
                 Открыть редактор
             </button>
         </div>
         <div class="support-container">
-            <button id="supportBtn" onclick="openSupportModal()" title="Техподержка"></button>
+            <button type="button" id="supportBtn" class="viewer-icon-btn" onclick="openSupportModal()" title="Техподержка" aria-label="Отправить скрин в техподдержку">
+                <i class="fa fa-camera" aria-hidden="true"></i>
+            </button>
             <span>Отправить скрин в тех поддержку</span>
         </div>
 

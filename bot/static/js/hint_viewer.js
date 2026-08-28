@@ -195,37 +195,11 @@ async function ensureContentEditor() {
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            const prevBtn = document.getElementById('prevBtn');
-            const nextBtn = document.getElementById('nextBtn');
-            const invertBtn = document.getElementById('invertBtn');
-            const screenshotBtn = document.getElementById('screenshotBtn');
             const screenSaveBtn = document.getElementById('screenSaveBtn');
             const screenUploadBtn = document.getElementById('screenUploadBtn');
-            if (prevBtn) {
-                prevBtn.style.backgroundImage = "url('" + staticAsset('/static/left.webp') + "')";
-            }
-            if (nextBtn) {
-                nextBtn.style.backgroundImage = "url('" + staticAsset('/static/right.webp') + "')";
-            }
-            if (invertBtn) {
-                invertBtn.style.backgroundImage = "url('" + staticAsset('/static/change_color.webp') + "')";
-            }
-            if (screenshotBtn) {
-                screenshotBtn.style.backgroundImage = "url('" + staticAsset('/static/Screen.webp') + "')";
-            }
-            if (screenSaveBtn) {
-                screenSaveBtn.style.backgroundImage = "url('" + staticAsset('/static/ScreenSave.webp') + "')";
-            }
-            if (screenUploadBtn) {
-                screenUploadBtn.style.backgroundImage = "url('" + staticAsset('/static/ScreenUpload.webp') + "')";
-            }
             if (isWebStandaloneHintViewer()) {
                 if (screenSaveBtn) screenSaveBtn.title = 'Добавить скриншот в архив';
                 if (screenUploadBtn) screenUploadBtn.title = 'Скачать архив со скриншотами';
-            }
-            const supportBtn = document.getElementById('supportBtn');
-            if (supportBtn) {
-                supportBtn.style.backgroundImage = "url('" + staticAsset('/static/Screen.webp') + "')";
             }
         });
     

@@ -7,8 +7,8 @@ html {
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            color: white;
-            background-color: #1a1a1a;
+            color: var(--web-text, #eee);
+            background-color: var(--web-bg, #1a1a1a);
             margin: 0;
             padding: 20px;
             padding-top: max(20px, env(safe-area-inset-top, 0px));
@@ -35,7 +35,7 @@ html {
         }
 
         canvas {
-            border: 2px solid #333;
+            border: 2px solid var(--web-border, #333);
             border-radius: 8px;
             background-color: #2a2a2a;
             width: 100%;
@@ -111,52 +111,69 @@ html {
         }
 
         .game-info {
-            background-color: #2d2d2d;
+            background-color: var(--web-bg-card, #2d2d2d);
             border-radius: 8px;
             padding: 10px;
             margin: 0;
-            border: 1px solid #444;
+            border: 1px solid var(--web-border, #444);
             width: 30%;
             display: block;
         }
 
         .hints-table {
-            background-color: #2d2d2d;
+            background-color: var(--web-bg-card, #2d2d2d);
             border-radius: 8px;
-            border: 1px solid #444;
+            border: 1px solid var(--web-border, #444);
             overflow-x: auto;
         }
 
         .hints-buttons {
             display: flex;
             justify-content: space-between;
+            gap: 8px;
             margin-bottom: 5px;
+            padding: 8px;
         }
 
         .hint-toggle-btn {
             width: 49%;
-            background-color: #007bff;
-            color: white;
-            padding: 10px 20px;
+            flex: 1;
+            height: 40px;
+            padding: 0 16px;
             cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
+            font-size: 0.85rem;
+            font-weight: 600;
+            line-height: 1;
+            background-color: var(--web-ghost-bg, #2a2a2a);
+            color: var(--web-ghost-fg, #ddd);
+            border: none;
+            border-radius: 8px;
+            transition: background-color 0.2s, color 0.2s;
         }
 
         .hint-toggle-btn:hover {
-            background-color: #0056b3;
+            background-color: var(--web-nav-hover, #3a3a3a);
+            color: var(--web-text, #fff);
         }
 
         .hint-toggle-btn.active {
-            background-color: #0056b3;
+            background-color: var(--web-accent, #2e7d32);
+            color: #fff;
         }
 
         .hints-buttons button:hover {
-            background-color: #0056b3;
+            background-color: var(--web-nav-hover, #3a3a3a);
         }
 
         .hints-buttons button.active {
-            background-color: #0056b3;
+            background-color: var(--web-accent, #2e7d32);
+            color: #fff;
+        }
+
+        .hint-toggle-btn.active:hover,
+        .hints-buttons button.active:hover {
+            background-color: var(--web-accent, #2e7d32);
+            color: #fff;
         }
 
         .hints-content {
@@ -173,17 +190,17 @@ html {
             border-collapse: collapse;
             width: 100%;
             max-width: 100%;
-            background-color: #333;
+            background-color: var(--web-bg-sunken, #333);
             border-radius: 6px;
             overflow: hidden;
         }
 
         th,
         td {
-            border: 1px solid #555;
+            border: 1px solid var(--web-table-border, #555);
             padding: 20px 30px;
             text-align: left;
-            color: white;
+            color: var(--web-text, #eee);
             word-spacing: 16px;
         }
 
@@ -194,7 +211,7 @@ html {
         }
 
         th {
-            background-color: #444;
+            background-color: var(--web-table-th, #444);
             font-weight: bold;
             text-align: center;
             font-size: 18px;
@@ -203,11 +220,11 @@ html {
         }
 
         tr:nth-child(even) {
-            background-color: #2a2a2a;
+            background-color: var(--web-bg-card, #2a2a2a);
         }
 
         tr:hover {
-            background-color: #3a3a3a;
+            background-color: var(--web-nav-hover, #3a3a3a);
         }
 
         .hint-best {
@@ -428,38 +445,39 @@ html {
         #turnLabel {
             font-size: 24px;
             font-weight: bold;
-            color: #007bff;
+            color: var(--web-link, #81c784);
             margin: 0;
             min-width: 60px;
             text-align: center;
         }
 
         button {
-            background-color: #007bff;
-            color: white;
+            background-color: var(--web-accent, #2e7d32);
+            color: #fff;
             border: none;
             padding: 12px 24px;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 16px;
-            transition: background-color 0.3s;
+            transition: background-color 0.2s, color 0.2s, opacity 0.2s;
         }
 
         button:hover {
-            background-color: #0056b3;
+            filter: brightness(1.08);
         }
 
         button:disabled {
-            background-color: #6c757d;
+            opacity: 0.45;
             cursor: not-allowed;
+            filter: none;
         }
 
         .game-select {
             font-family: Arial, sans-serif;
             font-size: 16px;
-            color: white;
-            background-color: #2d2d2d;
-            border: 1px solid #444;
+            color: var(--web-text, #eee);
+            background-color: var(--web-input-bg, #2d2d2d);
+            border: 1px solid var(--web-input-border, #444);
             border-radius: 6px;
             padding: 5px;
         }
@@ -516,66 +534,113 @@ html {
         .settings-modal select {
             font-family: Arial, sans-serif;
             font-size: 16px;
-            color: white;
-            background-color: #2d2d2d;
-            border: 1px solid #444;
+            color: var(--web-text, #eee);
+            background-color: var(--web-input-bg, #2d2d2d);
+            border: 1px solid var(--web-input-border, #444);
             border-radius: 6px;
             padding: 5px;
             box-sizing: border-box;
             display: block;
         }
 
+        .viewer-icon-btn,
         #prevBtn,
-        #nextBtn {
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            width: 42px;
-            height: 42px;
-            padding: 0;
-            color: transparent;
-            background-color: transparent;
-            border: none;
-        }
-
+        #nextBtn,
         #invertBtn,
         #screenshotBtn,
         #screenSaveBtn,
-        #screenUploadBtn {
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            width: 36px;
-            height: 36px;
-            padding: 0;
-            color: transparent;
-            background-color: transparent;
+        #screenUploadBtn,
+        #supportBtn,
+        #settingsBtn {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: none;
+            background-color: var(--web-ghost-bg, #2a2a2a);
+            background-size: auto;
+            color: var(--web-ghost-fg, #ddd);
             border: none;
+            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            min-height: 40px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            flex-shrink: 0;
+            filter: none;
         }
 
+        .viewer-icon-btn i,
+        #prevBtn i,
+        #nextBtn i,
+        #invertBtn i,
+        #screenshotBtn i,
+        #screenSaveBtn i,
+        #screenUploadBtn i,
+        #supportBtn i,
+        #settingsBtn i {
+            font-size: inherit;
+            line-height: 1;
+            color: inherit;
+        }
 
+        .viewer-icon-btn:hover,
         #prevBtn:hover,
         #nextBtn:hover,
         #invertBtn:hover,
         #screenshotBtn:hover,
         #screenSaveBtn:hover,
-        #screenUploadBtn:hover {
-            background-color: transparent;
+        #screenUploadBtn:hover,
+        #supportBtn:hover,
+        #settingsBtn:hover {
+            background-color: var(--web-nav-hover, #3a3a3a);
+            color: var(--web-text, #fff);
+            filter: none;
         }
 
+        .viewer-icon-btn:disabled,
         #prevBtn:disabled,
         #nextBtn:disabled,
         #invertBtn:disabled,
         #screenshotBtn:disabled,
         #screenSaveBtn:disabled,
         #screenUploadBtn:disabled {
-            opacity: 0.5;
-            background-color: transparent;
+            opacity: 0.4;
+            background-color: var(--web-ghost-bg, #2a2a2a);
+            filter: none;
+        }
+
+        .viewer-primary-btn,
+        #openEditorBtn {
+            height: 40px;
+            min-height: 40px;
+            padding: 0 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            line-height: 1;
+            background-color: var(--web-accent, #2e7d32);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            box-shadow: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viewer-primary-btn:hover,
+        #openEditorBtn:hover {
+            filter: brightness(1.08);
         }
 
 
         .info-text {
-            color: #ccc;
+            color: var(--web-text-muted, #ccc);
             margin: 5px 0;
         }
 
@@ -587,7 +652,7 @@ html {
         .move-info {
             font-size: 18px;
             font-weight: bold;
-            color: #007bff;
+            color: var(--web-link, #81c784);
             text-align: center;
         }
 
@@ -695,9 +760,13 @@ html {
             #screenshotBtn,
             #screenSaveBtn,
             #screenUploadBtn,
-            #supportBtn {
+            #supportBtn,
+            #settingsBtn {
                 width: 36px;
                 height: 36px;
+                min-width: 36px;
+                min-height: 36px;
+                font-size: 16px;
             }
 
             .ma-audio-controls__buttons button {
@@ -762,7 +831,8 @@ html {
             #screenshotBtn,
             #screenSaveBtn,
             #screenUploadBtn,
-            #supportBtn {
+            #supportBtn,
+            #settingsBtn {
                 width: 44px;
                 height: 44px;
             }
@@ -829,9 +899,13 @@ html {
             #screenshotBtn,
             #screenSaveBtn,
             #screenUploadBtn,
-            #supportBtn {
+            #supportBtn,
+            #settingsBtn {
                 width: 28px;
                 height: 28px;
+                min-width: 28px;
+                min-height: 28px;
+                font-size: 14px;
             }
 
             .ma-audio-controls__buttons button {
@@ -869,7 +943,8 @@ html {
             #screenshotBtn,
             #screenSaveBtn,
             #screenUploadBtn,
-            #supportBtn {
+            #supportBtn,
+            #settingsBtn {
                 width: 40px;
                 height: 40px;
             }
@@ -944,7 +1019,8 @@ html {
             #screenshotBtn,
             #screenSaveBtn,
             #screenUploadBtn,
-            #supportBtn {
+            #supportBtn,
+            #settingsBtn {
                 width: 44px;
                 height: 44px;
             }
@@ -968,7 +1044,7 @@ html {
         }
 
         .loading {
-            color: #007bff;
+            color: var(--web-link, #81c784);
             font-style: italic;
         }
 
@@ -1217,8 +1293,9 @@ html {
             align-items: center;
             justify-content: flex-start;
             gap: 10px;
-            color: #ccc;
-            font-size: 16px;
+            color: var(--web-text-muted, #ccc);
+            font-size: 0.85rem;
+            font-weight: 600;
         }
 
         .viewer-below-board {
@@ -1241,26 +1318,9 @@ html {
             gap: 10px;
             margin-top: 0;
             margin-bottom: 20px;
-            color: #ccc;
-            font-size: 16px;
-        }
-
-        #supportBtn {
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            width: 32px;
-            height: 32px;
-            padding: 0;
-            color: transparent;
-            background-color: transparent;
-            border: none;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-
-        #supportBtn:hover {
-            opacity: 0.8;
+            color: var(--web-text-muted, #ccc);
+            font-size: 0.85rem;
+            font-weight: 600;
         }
 
         .modal {
@@ -1276,14 +1336,14 @@ html {
         }
 
         .modal-content {
-            background-color: #2d2d2d;
+            background-color: var(--web-bg-card, #2d2d2d);
             margin: 15% auto;
             padding: 20px;
-            border: 1px solid #444;
+            border: 1px solid var(--web-border, #444);
             border-radius: 8px;
             width: 80%;
             max-width: 500px;
-            color: white;
+            color: var(--web-text, #eee);
             text-align: left;
             display: flex;
             flex-direction: column;
@@ -1292,15 +1352,15 @@ html {
 
         .modal-content h2 {
             margin-top: 0;
-            color: #007bff;
+            color: var(--web-link, #81c784);
         }
 
         .modal-content textarea {
             width: 100%;
             height: 100px;
-            background-color: #1a1a1a;
-            color: white;
-            border: 1px solid #444;
+            background-color: var(--web-input-bg, #1a1a1a);
+            color: var(--web-text, #eee);
+            border: 1px solid var(--web-input-border, #444);
             border-radius: 4px;
             padding: 10px;
             margin: 10px 0;
@@ -1320,27 +1380,27 @@ html {
         }
 
         .confirm-btn {
-            background-color: #007bff;
-            color: white;
+            background-color: var(--web-accent, #2e7d32);
+            color: #fff;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 16px;
-            transition: background-color 0.3s;
+            transition: filter 0.2s;
         }
 
         .confirm-btn:hover {
-            background-color: #0056b3;
+            filter: brightness(1.08);
         }
 
         .modal-body>div select,
         .modal-body>div input[type="number"] {
             width: 40%;
             padding: 8px;
-            border: 1px solid #444;
+            border: 1px solid var(--web-input-border, #444);
             border-radius: 6px;
-            background-color: #1a1a1a;
-            color: white;
+            background-color: var(--web-input-bg, #1a1a1a);
+            color: var(--web-text, #eee);
             font-size: 16px;
             font-family: Arial, sans-serif;
         }
@@ -1403,8 +1463,8 @@ html {
         .modal-body>div select:focus,
         .modal-body>div input[type="number"]:focus {
             outline: none;
-            border-color: #007bff;
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+            border-color: var(--web-accent, #2e7d32);
+            box-shadow: 0 0 5px rgba(46, 125, 50, 0.45);
         }
 
         .cancel-btn {
@@ -1425,21 +1485,22 @@ html {
         .tab-btn {
             padding: 10px 20px;
             cursor: pointer;
-            background-color: #2d2d2d;
-            color: white;
-            border: 1px solid #444;
+            background-color: var(--web-ghost-bg, #2d2d2d);
+            color: var(--web-ghost-fg, #eee);
+            border: 1px solid var(--web-border, #444);
             border-bottom: none;
         }
 
         .tab-btn.active {
-            background-color: #007bff;
+            background-color: var(--web-accent, #2e7d32);
+            color: #fff;
         }
 
         .tab-content {
             display: none;
             padding: 40px 20px;
-            border: 1px solid #444;
-            background-color: #2d2d2d;
+            border: 1px solid var(--web-border, #444);
+            background-color: var(--web-bg-card, #2d2d2d);
         }
 
         .tab-content.active {
@@ -1465,7 +1526,8 @@ html {
             display: flex;
         }
         .msg-modal {
-            background-color: #2d2d2d;
+            background-color: var(--web-bg-card, #2d2d2d);
+            color: var(--web-text, #eee);
             border-radius: 12px;
             padding: 0;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
@@ -1497,7 +1559,7 @@ html {
         .msg-modal-icon.warning { color: #ff9800; }
         .msg-modal-icon.info { color: #2196f3; }
         .msg-modal-content {
-            color: white;
+            color: var(--web-text, #eee);
             font-size: 15px;
             line-height: 1.5;
             margin: 0;
@@ -1508,17 +1570,17 @@ html {
             text-align: right;
         }
         .msg-modal-ok-btn {
-            background-color: #007bff;
-            color: white;
+            background-color: var(--web-accent, #2e7d32);
+            color: #fff;
             border: none;
             padding: 8px 24px;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 14px;
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: filter 0.2s;
         }
         .msg-modal-ok-btn:hover {
-            background-color: #0056b3;
+            filter: brightness(1.08);
         }
 
         .admin-screenshot-font-scale {
@@ -1528,16 +1590,16 @@ html {
             justify-content: center;
             gap: 10px;
             flex-wrap: wrap;
-            color: #ccc;
+            color: var(--web-text-muted, #ccc);
             font-size: 14px;
         }
 
         .admin-screenshot-font-scale select {
             padding: 6px 10px;
             border-radius: 6px;
-            border: 1px solid #555;
-            background: #2a2a2a;
-            color: #fff;
+            border: 1px solid var(--web-input-border, #555);
+            background: var(--web-input-bg, #2a2a2a);
+            color: var(--web-text, #fff);
             font-size: 14px;
         }
 
