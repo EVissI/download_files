@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="board-screenshot-font-scale" content="{{ board_viewer_screenshot_font_scale_percent | default(100) }}">
     <meta name="web-standalone-mode" content="{% if web_standalone_mode|default(false) %}1{% else %}0{% endif %}">
+    {% include "includes/web_theme_boot.html" %}
     <meta name="webapp-fullscreen-enabled" content="{% if webapp_fullscreen_enabled %}1{% else %}0{% endif %}">
     <meta name="board-viewer-is-admin" content="{% if is_admin|default(false) %}1{% else %}0{% endif %}">
     <title>Backgammon Board Viewer</title>
@@ -14,6 +15,7 @@
     <link rel="preload" href="/static/black_checker.webp" as="image">
     <link rel="stylesheet" href="/static/css/font-awesome-pokaz.css?t={{ cache_timestamp }}">
     <link rel="stylesheet" href="/static/css/board_viewer.css?t={{ cache_timestamp }}">
+    <link rel="stylesheet" href="/static/css/web_theme.css?t={{ cache_timestamp }}">
     <meta name="static-asset-v" content="{{ cache_timestamp }}">
     <script>window.__STATIC_ASSET_V = "{{ cache_timestamp }}";</script>
     {% if not web_standalone_mode|default(false) %}

@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ cabinet_title|default('Мои карточки') }}</title>
     <meta name="web-standalone-mode" content="{% if web_standalone_mode|default(false) %}1{% else %}0{% endif %}">
+    {% include "includes/web_theme_boot.html" %}
     <meta name="static-asset-v" content="{{ cache_timestamp }}">
     <script>window.__STATIC_ASSET_V = "{{ cache_timestamp }}";</script>
     <link rel="stylesheet" href="/static/css/font-awesome-pokaz.css?t={{ cache_timestamp }}">
@@ -13,9 +14,11 @@
     {% if cabinet_kind|default('content_cards') == 'match_analysis' %}
     <link rel="stylesheet" href="/static/css/cards_cabinet_match_audio.css?t={{ cache_timestamp }}">
     {% endif %}
+    <link rel="stylesheet" href="/static/css/web_theme.css?t={{ cache_timestamp }}">
     {% if not web_standalone_mode|default(false) %}
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     {% endif %}
+    <script src="/static/js/web_theme.js?t={{ cache_timestamp }}" defer></script>
     <script src="/static/js/cards_cabinet.js?t={{ cache_timestamp }}" defer></script>
     {% if cabinet_kind|default('content_cards') == 'match_analysis' %}
     <script src="/static/js/cards_cabinet_match_audio.js?t={{ cache_timestamp }}" defer></script>
@@ -26,14 +29,7 @@
     {% if web_standalone_mode|default(false) %}
     <header class="web-cabinet-header">
         {% include "includes/web_service_nav.html" %}
-        <div class="header-actions">
-            {% if is_admin %}
-            <a class="btn" href="/admin/">Админка</a>
-            {% endif %}
-            <form method="post" action="/web/hints/logout">
-                <button type="submit">Выйти</button>
-            </form>
-        </div>
+        {% include "includes/web_header_actions.html" %}
     </header>
     {% endif %}
     <div class="wrap">

@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title|default('Загрузка матчей') }}</title>
+    {% include "includes/web_theme_boot.html" %}
+    <link rel="stylesheet" href="/static/css/web_theme.css?t={{ cache_timestamp }}">
     <style>
         * { box-sizing: border-box; }
         body {
             margin: 0;
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-            background: #121212;
-            color: #eee;
+            background: var(--web-bg);
+            color: var(--web-text);
             min-height: 100vh;
         }
         header {
@@ -18,21 +20,21 @@
             justify-content: space-between;
             align-items: center;
             padding: 16px 20px;
-            border-bottom: 1px solid #2a2a2a;
-            background: #1a1a1a;
+            border-bottom: 1px solid var(--web-border-subtle);
+            background: var(--web-bg-header);
             gap: 12px;
             flex-wrap: wrap;
         }
         .service-nav {
             display: flex;
             gap: 4px;
-            background: #111;
+            background: var(--web-bg-nav);
             padding: 4px;
             border-radius: 10px;
             flex-wrap: wrap;
         }
         .service-nav a {
-            color: #bbb;
+            color: var(--web-text-nav);
             text-decoration: none;
             padding: 8px 10px;
             border-radius: 8px;
@@ -40,12 +42,12 @@
             font-size: 0.85rem;
         }
         .service-nav a.active {
-            background: #2e7d32;
+            background: var(--web-accent);
             color: #fff;
         }
         .service-nav a:hover:not(.active) {
-            background: #2a2a2a;
-            color: #fff;
+            background: var(--web-nav-hover);
+            color: var(--web-text);
         }
         .header-actions {
             display: flex;
@@ -56,22 +58,22 @@
         h1 { margin: 0; font-size: 1.15rem; }
         .wrap { max-width: 860px; margin: 0 auto; padding: 20px; }
         .card {
-            background: #1e1e1e;
-            border: 1px solid #333;
+            background: var(--web-bg-card);
+            border: 1px solid var(--web-border);
             border-radius: 12px;
             padding: 18px;
             margin-bottom: 16px;
         }
         h2 { margin: 0 0 12px; font-size: 1rem; }
         .drop {
-            border: 2px dashed #555;
+            border: 2px dashed var(--web-border-dashed);
             border-radius: 10px;
             padding: 28px 16px;
             text-align: center;
-            color: #bbb;
+            color: var(--web-text-soft);
             cursor: pointer;
         }
-        .drop.drag { border-color: #4caf50; background: #17301a; }
+        .drop.drag { border-color: #4caf50; background: var(--web-bg-drop-hover); }
         input[type="file"] { display: none; }
         .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
         button, .btn {
@@ -83,35 +85,35 @@
             text-decoration: none;
             display: inline-block;
         }
-        .primary { background: #2e7d32; color: #fff; }
-        .primary:disabled { background: #444; }
-        .ghost { background: #2a2a2a; color: #ddd; }
-        .file-list { margin: 10px 0 0; padding-left: 18px; color: #ccc; }
+        .primary { background: var(--web-accent); color: #fff; }
+        .primary:disabled { background: var(--web-disabled); }
+        .ghost { background: var(--web-ghost-bg); color: var(--web-ghost-fg); }
+        .file-list { margin: 10px 0 0; padding-left: 18px; color: var(--web-text-soft); }
         .job {
-            border: 1px solid #333;
+            border: 1px solid var(--web-border);
             border-radius: 10px;
             padding: 12px;
             margin-bottom: 10px;
-            background: #181818;
+            background: var(--web-bg-sunken);
         }
-        .job.done { border-color: #2e7d32; }
-        .job.error { border-color: #8d2f2f; }
-        .muted { color: #999; font-size: 0.9rem; }
+        .job.done { border-color: var(--web-accent); }
+        .job.error { border-color: var(--web-danger-border); }
+        .muted { color: var(--web-text-muted); font-size: 0.9rem; }
         .history-item {
-            border: 1px solid #333;
+            border: 1px solid var(--web-border);
             border-radius: 10px;
             padding: 10px 12px;
             margin-bottom: 8px;
-            background: #181818;
+            background: var(--web-bg-sunken);
         }
-        .history-item a { color: #81c784; }
+        .history-item a { color: var(--web-link); }
         .open-modes { margin-top: 8px; }
         .open-modes .btn { font-size: 0.85rem; padding: 8px 10px; }
         .toast {
             position: fixed;
             right: 16px;
             bottom: 16px;
-            background: #1b5e20;
+            background: var(--web-toast-bg);
             color: #fff;
             padding: 12px 14px;
             border-radius: 10px;
@@ -122,7 +124,7 @@
         .sub { margin: 8px 0 0; padding-left: 14px; }
         .progress {
             height: 8px;
-            background: #2a2a2a;
+            background: var(--web-progress-bg);
             border-radius: 999px;
             overflow: hidden;
             margin-top: 10px;
@@ -130,12 +132,12 @@
         .progress-fill {
             height: 100%;
             width: 0;
-            background: linear-gradient(90deg, #2e7d32, #66bb6a);
+            background: linear-gradient(90deg, var(--web-accent), var(--web-accent-2));
             border-radius: 999px;
             transition: width 0.35s linear;
         }
-        .job.error .progress-fill { background: #8d2f2f; }
-        .job.done .progress-fill { background: #2e7d32; }
+        .job.error .progress-fill { background: var(--web-danger-border); }
+        .job.done .progress-fill { background: var(--web-accent); }
         .progress-label { margin-top: 6px; }
         .pager {
             display: flex;
@@ -147,35 +149,31 @@
         .pager button {
             padding: 8px 12px;
             min-width: 40px;
+            background: var(--web-ghost-bg);
+            color: var(--web-ghost-fg);
         }
-        .pager button.active { background: #2e7d32; color: #fff; }
-        .pager .pager-info { color: #999; font-size: 0.85rem; margin-left: 4px; }
+        .pager button.active { background: var(--web-accent); color: #fff; }
+        .pager .pager-info { color: var(--web-text-muted); font-size: 0.85rem; margin-left: 4px; }
         .history-item--expandable { cursor: pointer; }
         .history-item--expandable:hover { border-color: #4caf50; }
-        .history-item--expandable.is-open { border-color: #2e7d32; }
+        .history-item--expandable.is-open { border-color: var(--web-accent); }
         .history-item-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
-        .history-item-head .chevron { color: #888; font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
+        .history-item-head .chevron { color: var(--web-text-muted); font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
         .history-table-wrap { margin-top: 12px; overflow-x: auto; }
         .analyze-vs { margin: 0 0 10px; font-weight: 600; }
         .analyze-block { margin-bottom: 14px; }
-        .analyze-block h3 { margin: 0 0 6px; font-size: 0.9rem; color: #ccc; }
+        .analyze-block h3 { margin: 0 0 6px; font-size: 0.9rem; color: var(--web-analyze-h); }
         .analyze-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        .analyze-table th, .analyze-table td { border: 1px solid #3a3a3a; padding: 6px 8px; text-align: left; }
-        .analyze-table th { background: #252525; }
-        .analyze-table td { background: #181818; }
+        .analyze-table th, .analyze-table td { border: 1px solid var(--web-table-border); padding: 6px 8px; text-align: left; }
+        .analyze-table th { background: var(--web-table-th); }
+        .analyze-table td { background: var(--web-table-td); }
     </style>
+    <script src="/static/js/web_theme.js?t={{ cache_timestamp }}" defer></script>
 </head>
 <body>
     <header>
         {% include "includes/web_service_nav.html" %}
-        <div class="header-actions">
-            {% if is_admin %}
-            <a class="btn ghost" href="/admin/">Админка</a>
-            {% endif %}
-            <form method="post" action="/web/hints/logout">
-                <button class="ghost" type="submit">Выйти</button>
-            </form>
-        </div>
+        {% include "includes/web_header_actions.html" %}
     </header>
     <div class="wrap">
         <div class="card">

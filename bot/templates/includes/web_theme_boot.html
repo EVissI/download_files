@@ -1,0 +1,11 @@
+<script>
+(function () {
+    var meta = document.querySelector('meta[name="web-standalone-mode"]');
+    if (meta && meta.getAttribute('content') !== '1') return;
+    try {
+        if (localStorage.getItem('web_theme') === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+    } catch (e) {}
+})();
+</script>

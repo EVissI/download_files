@@ -1,0 +1,226 @@
+:root {
+    color-scheme: dark;
+    --web-bg: #121212;
+    --web-bg-header: #1a1a1a;
+    --web-bg-card: #1e1e1e;
+    --web-bg-sunken: #181818;
+    --web-bg-nav: #111;
+    --web-bg-drop-hover: #17301a;
+    --web-border: #333;
+    --web-border-subtle: #2a2a2a;
+    --web-border-dashed: #555;
+    --web-text: #eee;
+    --web-text-muted: #999;
+    --web-text-soft: #bbb;
+    --web-text-nav: #bbb;
+    --web-link: #81c784;
+    --web-accent: #2e7d32;
+    --web-accent-2: #66bb6a;
+    --web-ghost-bg: #2a2a2a;
+    --web-ghost-fg: #ddd;
+    --web-nav-hover: #2a2a2a;
+    --web-disabled: #444;
+    --web-danger-border: #8d2f2f;
+    --web-table-border: #3a3a3a;
+    --web-table-th: #252525;
+    --web-table-td: #181818;
+    --web-analyze-h: #ccc;
+    --web-progress-bg: #2a2a2a;
+    --web-input-bg: #111;
+    --web-input-border: #444;
+    --web-error-bg: #3b1c1c;
+    --web-error-fg: #ffb4b4;
+    --web-error-border: #8d2f2f;
+    --web-toast-bg: #1b5e20;
+}
+
+html[data-theme="light"] {
+    color-scheme: light;
+    background: var(--web-bg);
+    --web-bg: #f3f4f6;
+    --web-bg-header: #ffffff;
+    --web-bg-card: #ffffff;
+    --web-bg-sunken: #f7f8fa;
+    --web-bg-nav: #eef0f3;
+    --web-bg-drop-hover: #e8f5e9;
+    --web-border: #d8dbe2;
+    --web-border-subtle: #e2e5eb;
+    --web-border-dashed: #b4b9c3;
+    --web-text: #1c1d21;
+    --web-text-muted: #6b7280;
+    --web-text-soft: #4b5563;
+    --web-text-nav: #3f4650;
+    --web-link: #1b6e3a;
+    --web-accent: #2e7d32;
+    --web-accent-2: #43a047;
+    --web-ghost-bg: #eceef2;
+    --web-ghost-fg: #2a2d34;
+    --web-nav-hover: #e0e3e9;
+    --web-disabled: #c5c9d1;
+    --web-danger-border: #c62828;
+    --web-table-border: #d8dbe2;
+    --web-table-th: #eef0f3;
+    --web-table-td: #ffffff;
+    --web-analyze-h: #3f4650;
+    --web-progress-bg: #e5e7eb;
+    --web-input-bg: #ffffff;
+    --web-input-border: #cfd3db;
+    --web-error-bg: #fdecec;
+    --web-error-fg: #8a1f1f;
+    --web-error-border: #e0a0a0;
+    --web-toast-bg: #2e7d32;
+}
+
+.theme-toggle,
+.web-cabinet-header .theme-toggle,
+header .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    min-width: 40px;
+    padding-left: 0;
+    padding-right: 0;
+}
+.theme-toggle svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+.theme-toggle-moon {
+    display: none;
+}
+html[data-theme="light"] .theme-toggle-sun {
+    display: none;
+}
+html[data-theme="light"] .theme-toggle-moon {
+    display: block;
+}
+
+html[data-theme="light"] body {
+    background: var(--web-bg);
+    background-color: var(--web-bg);
+    color: var(--web-text);
+}
+
+html[data-theme="light"] .web-cabinet-header {
+    background: var(--web-bg-header);
+    border-bottom-color: var(--web-border);
+}
+html[data-theme="light"] .web-cabinet-header .service-nav {
+    background: var(--web-bg-nav);
+}
+html[data-theme="light"] .web-cabinet-header .service-nav a {
+    color: var(--web-text-nav);
+}
+html[data-theme="light"] .web-cabinet-header .service-nav a:hover:not(.active) {
+    background: var(--web-nav-hover);
+    color: var(--web-text);
+}
+html[data-theme="light"] .web-cabinet-header button,
+html[data-theme="light"] .web-cabinet-header .btn {
+    background: var(--web-ghost-bg);
+    color: var(--web-ghost-fg);
+}
+
+html[data-theme="light"] .web-standalone-back {
+    color: var(--web-link);
+}
+
+html[data-theme="light"] .cabinet-footer {
+    background: rgba(255, 255, 255, 0.94);
+    border-top-color: var(--web-border);
+}
+html[data-theme="light"] .cabinet-shuffle-btn,
+html[data-theme="light"] .cabinet-id-toggle-btn,
+html[data-theme="light"] .cabinet-mode-btn,
+html[data-theme="light"] .cabinet-send-btn,
+html[data-theme="light"] .cabinet-link-btn,
+html[data-theme="light"] .cabinet-admin-btn,
+html[data-theme="light"] .cabinet-footer .cabinet-hints-toggle {
+    background: #fff;
+    border-color: #cfd3db;
+    color: #2a2d34;
+}
+html[data-theme="light"] .cabinet-shuffle-btn:active,
+html[data-theme="light"] .cabinet-id-toggle-btn:active,
+html[data-theme="light"] .cabinet-mode-btn:active,
+html[data-theme="light"] .cabinet-send-btn:active,
+html[data-theme="light"] .cabinet-link-btn:active,
+html[data-theme="light"] .cabinet-admin-btn:active {
+    background: #e8eaee;
+}
+html[data-theme="light"] .hint,
+html[data-theme="light"] .empty {
+    color: var(--web-text-muted);
+}
+html[data-theme="light"] .search-input,
+html[data-theme="light"] .status-filter-select,
+html[data-theme="light"] .label-filter-select,
+html[data-theme="light"] .cabinet-footer .cabinet-quick-select-input,
+html[data-theme="light"] .link-modal__input,
+html[data-theme="light"] .link-modal__textarea,
+html[data-theme="light"] .shuffle-modal__input {
+    background: #fff;
+    color: var(--web-text);
+    border-color: #cfd3db;
+}
+html[data-theme="light"] .ma-audio-only-filter {
+    background: #fff;
+    border-color: #cfd3db;
+    color: #3f4650;
+}
+html[data-theme="light"] .ma-audio-only-filter__mark {
+    background: #fff;
+    border-color: #b4b9c3;
+}
+html[data-theme="light"] .tile {
+    background: #fff;
+    border-color: #d0d4dc;
+    color: #1c1d21;
+}
+html[data-theme="light"] .tile--create {
+    background: transparent;
+    border-color: #b4b9c3;
+    color: #6b7280;
+}
+html[data-theme="light"] .tile--create:active {
+    color: #3f4650;
+}
+html[data-theme="light"] .link-modal__box,
+html[data-theme="light"] .shuffle-modal__box,
+html[data-theme="light"] .card-bg-modal__box {
+    background: #fff;
+    border-color: var(--web-border);
+    color: var(--web-text);
+}
+html[data-theme="light"] .link-modal__msg,
+html[data-theme="light"] .shuffle-modal__label,
+html[data-theme="light"] .card-bg-modal__hint,
+html[data-theme="light"] .card-bg-modal__msg {
+    color: var(--web-text-muted);
+}
+html[data-theme="light"] .link-modal__btn,
+html[data-theme="light"] .card-bg-modal__btn {
+    background: var(--web-ghost-bg);
+    border-color: #cfd3db;
+    color: var(--web-ghost-fg);
+}
+html[data-theme="light"] .label-scroll-bottom-btn,
+html[data-theme="light"] .card-bg-open-btn {
+    background: #fff;
+    border-color: #cfd3db;
+    color: #2a2d34;
+}
+html[data-theme="light"] .card-bg-modal__color-text,
+html[data-theme="light"] .card-bg-modal__cell {
+    background: #fff;
+    border-color: #cfd3db;
+    color: var(--web-text);
+}
+
+html[data-theme="light"] .game-type-label,
+html[data-theme="light"] .hide-pips-label,
+html[data-theme="light"] .player-position-toggle {
+    color: var(--web-text);
+}

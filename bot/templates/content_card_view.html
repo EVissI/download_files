@@ -5,10 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Сохранённая карточка</title>
+    <meta name="web-standalone-mode" content="{% if web_standalone_mode|default(false) %}1{% else %}0{% endif %}">
+    {% include "includes/web_theme_boot.html" %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="/static/css/content_editor.css?t={{ cache_timestamp }}">
+    <link rel="stylesheet" href="/static/css/web_theme.css?t={{ cache_timestamp }}">
     <meta name="static-asset-v" content="{{ cache_timestamp }}">
-    <meta name="web-standalone-mode" content="{% if web_standalone_mode|default(false) %}1{% else %}0{% endif %}">
     <meta name="cabinet-return-path" content="{{ cabinet_return_path|default('') }}">
     <script>window.__STATIC_ASSET_V = "{{ cache_timestamp }}";</script>
     <style>
