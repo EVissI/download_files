@@ -71,16 +71,46 @@ html[data-theme="light"] {
     --web-toast-bg: #2e7d32;
 }
 
-.theme-toggle,
-.web-cabinet-header .theme-toggle,
-header .theme-toggle {
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.header-actions form {
+    margin: 0;
+    display: flex;
+    align-items: stretch;
+}
+.header-actions .btn,
+.header-actions button,
+.web-cabinet-header .header-actions .btn,
+.web-cabinet-header .header-actions button,
+header .header-actions .btn,
+header .header-actions button {
+    box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+.theme-toggle,
+.web-cabinet-header .theme-toggle,
+header .theme-toggle,
+.header-actions .theme-toggle {
     width: 40px;
     min-width: 40px;
-    padding-left: 0;
-    padding-right: 0;
+    padding: 0;
 }
 .theme-toggle svg {
     width: 18px;
