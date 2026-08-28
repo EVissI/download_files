@@ -1,6 +1,7 @@
 <nav class="service-nav" aria-label="Сервисы">
     <a href="/web/hints" class="{% if web_service|default('') == 'hints' %}active{% endif %}">Ошибки</a>
     <a href="/web/board" class="{% if web_service|default('') == 'board' %}active{% endif %}">Плеер</a>
+    <a href="/web/analyze" class="{% if web_service|default('') == 'analyze' %}active{% endif %}">Анализ</a>
     <a href="/web/pokaz" class="{% if web_service|default('') == 'pokaz' %}active{% endif %}">Позиция</a>
     <a href="/web/cards" class="{% if web_service|default('') == 'cards' %}active{% endif %}">Карточки</a>
     <a href="/web/match-analysis" class="{% if web_service|default('') == 'match_analysis' %}active{% endif %}">Анализ матча</a>

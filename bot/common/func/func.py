@@ -1,5 +1,6 @@
 ﻿import prettytable as pt
 from io import BytesIO
+import html
 import os
 import re
 from PIL import Image, ImageEnhance, ImageFilter
@@ -537,6 +538,202 @@ def format_detailed_analysis(analysis_data: dict, i18n: TranslatorRunner) -> str
     except Exception as e:
         logger.error(f"Ошибка при форматировании анализа: {e}")
         return i18n.analysis.error_formatting()
+
+
+_ANALYSIS_RATING_SHORT = {
+    "Advanced": "Advanced",
+    "Supernatural": "Supernat",
+    "Expert": "Expert",
+    "World class": "WorldClass",
+    "None": "None",
+    "Good dice, man!": "GoodDice",
+    "Bad dice, man!": "BadDice",
+    "Go to Las Vegas": "SuperDice",
+    "Beginner": "Beginner",
+    "Intermediate": "Intermed",
+    "Casual player": "Casual",
+    "Master": "Master",
+    "Professional": "Pro",
+    "Grandmaster": "GrandMstr",
+    "No data": "N/A",
+}
+
+
+def _analysis_cell(val, is_float=False) -> str:
+    if val is None or val in ("No data", "Нет данных"):
+        return "—"
+    cleaned = re.sub(r"\s*\(.*\)", "", str(val)).strip()
+    if is_float and cleaned:
+        try:
+            num = float(cleaned)
+            formatted = f"{num:.1f}"
+            if num > 0:
+                formatted = f"+{formatted}"
+            return formatted
+        except ValueError:
+            return cleaned
+    return _ANALYSIS_RATING_SHORT.get(cleaned, cleaned)
+
+
+def format_detailed_analysis_html(analysis_data: dict, i18n: TranslatorRunner) -> str:
+    """HTML-таблицы анализа для веб-кабинета (те же поля, что format_detailed_analysis)."""
+    try:
+        player_names = list(analysis_data.keys())
+        if len(player_names) != 2:
+            raise ValueError("No data found for two players")
+        player1_name, player2_name = player_names
+        p1 = analysis_data[player1_name]
+        p2 = analysis_data[player2_name]
+        n1 = html.escape(str(player1_name))
+        n2 = html.escape(str(player2_name))
+        param = html.escape(str(i18n.analysis.param()))
+
+        def table(title: str, rows: list[tuple[str, str, str]]) -> str:
+            body = "".join(
+                f"<tr><th>{html.escape(label)}</th><td>{html.escape(a)}</td><td>{html.escape(b)}</td></tr>"
+                for label, a, b in rows
+            )
+            return (
+                f'<section class="analyze-block"><h3>{html.escape(title)}</h3>'
+                f'<table class="analyze-table"><thead><tr>'
+                f"<th>{param}</th><th>{n1}</th><th>{n2}</th>"
+                f"</tr></thead><tbody>{body}</tbody></table></section>"
+            )
+
+        vs = html.escape(
+            str(i18n.analysis.vs(player1_name=player1_name, player2_name=player2_name))
+        )
+        parts = [
+            f'<div class="analyze-result"><p class="analyze-vs">{vs}</p>',
+            table(
+                str(i18n.analysis.playing_checkers()),
+                [
+                    (
+                        str(i18n.analysis.chequerplay.bad_move()),
+                        _analysis_cell(p1["moves_marked_bad"]),
+                        _analysis_cell(p2["moves_marked_bad"]),
+                    ),
+                    (
+                        str(i18n.analysis.chequerplay.bad_plus_move()),
+                        _analysis_cell(p1["moves_marked_very_bad"]),
+                        _analysis_cell(p2["moves_marked_very_bad"]),
+                    ),
+                    (
+                        str(i18n.analysis.chequerplay.error_rate()),
+                        _analysis_cell(p1["error_rate_chequer"], True),
+                        _analysis_cell(p2["error_rate_chequer"], True),
+                    ),
+                    (
+                        str(i18n.analysis.chequerplay.rating()),
+                        _analysis_cell(p1["chequerplay_rating"]),
+                        _analysis_cell(p2["chequerplay_rating"]),
+                    ),
+                ],
+            ),
+            table(
+                str(i18n.analysis.luck()),
+                [
+                    (
+                        str(i18n.analysis.luck.luck_plus_move()),
+                        _analysis_cell(p1["rolls_marked_very_lucky"]),
+                        _analysis_cell(p2["rolls_marked_very_lucky"]),
+                    ),
+                    (
+                        str(i18n.analysis.luck.luck_move()),
+                        _analysis_cell(p1["rolls_marked_lucky"]),
+                        _analysis_cell(p2["rolls_marked_lucky"]),
+                    ),
+                    (
+                        str(i18n.analysis.luck.unluck_plus_move()),
+                        _analysis_cell(p1["rolls_marked_very_unlucky"]),
+                        _analysis_cell(p2["rolls_marked_very_unlucky"]),
+                    ),
+                    (
+                        str(i18n.analysis.luck.unluck_move()),
+                        _analysis_cell(p1["rolls_marked_unlucky"]),
+                        _analysis_cell(p2["rolls_marked_unlucky"]),
+                    ),
+                    (
+                        str(i18n.analysis.luck.luck_rate()),
+                        _analysis_cell(p1["rolls_rate_chequer"], True),
+                        _analysis_cell(p2["rolls_rate_chequer"], True),
+                    ),
+                    (
+                        str(i18n.analysis.luck.rating()),
+                        _analysis_cell(p1["luck_rating"]),
+                        _analysis_cell(p2["luck_rating"]),
+                    ),
+                ],
+            ),
+            table(
+                str(i18n.analysis.cube()),
+                [
+                    (
+                        str(i18n.analysis.cube.missed_doubles_below_cp()),
+                        _analysis_cell(p1["missed_doubles_below_cp"]),
+                        _analysis_cell(p2["missed_doubles_below_cp"]),
+                    ),
+                    (
+                        str(i18n.analysis.cube.missed_doubles_above_cp()),
+                        _analysis_cell(p1["missed_doubles_above_cp"]),
+                        _analysis_cell(p2["missed_doubles_above_cp"]),
+                    ),
+                    (
+                        str(i18n.analysis.cube.wrong_doubles_below_sp()),
+                        _analysis_cell(p1["wrong_doubles_below_sp"]),
+                        _analysis_cell(p2["wrong_doubles_below_sp"]),
+                    ),
+                    (
+                        str(i18n.analysis.cube.wrong_doubles_above_tg()),
+                        _analysis_cell(p1["wrong_doubles_above_tg"]),
+                        _analysis_cell(p2["wrong_doubles_above_tg"]),
+                    ),
+                    (
+                        str(i18n.analysis.cube.wrong_takes()),
+                        _analysis_cell(p1["wrong_takes"]),
+                        _analysis_cell(p2["wrong_takes"]),
+                    ),
+                    (
+                        str(i18n.analysis.cube.wrong_passes()),
+                        _analysis_cell(p1["wrong_passes"]),
+                        _analysis_cell(p2["wrong_passes"]),
+                    ),
+                    (
+                        str(i18n.analysis.cube.error_rate()),
+                        _analysis_cell(p1["cube_error_rate"], True),
+                        _analysis_cell(p2["cube_error_rate"], True),
+                    ),
+                    (
+                        str(i18n.analysis.cube.rating()),
+                        _analysis_cell(p1["cube_decision_rating"]),
+                        _analysis_cell(p2["cube_decision_rating"]),
+                    ),
+                ],
+            ),
+            table(
+                str(i18n.analysis.overall_statistic()),
+                [
+                    (
+                        str(i18n.analysis.overall.error_rate()),
+                        _analysis_cell(p1["snowie_error_rate"], True),
+                        _analysis_cell(p2["snowie_error_rate"], True),
+                    ),
+                    (
+                        str(i18n.analysis.overall.rating()),
+                        _analysis_cell(p1["overall_rating"]),
+                        _analysis_cell(p2["overall_rating"]),
+                    ),
+                ],
+            ),
+            "</div>",
+        ]
+        return "".join(parts)
+    except Exception as e:
+        logger.error(f"Ошибка при HTML-форматировании анализа: {e}")
+        try:
+            return html.escape(str(i18n.analysis.error_formatting()))
+        except Exception:
+            return "Ошибка при форматировании результатов анализа."
 
 
 def parse_eg_value(value: str | None, as_int: bool = True) -> int | float | str:

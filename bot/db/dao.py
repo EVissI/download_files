@@ -2902,6 +2902,8 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         game_id: str | None = None,
         error_message: str | None = None,
         finished: bool = False,
+        red_player: str | None = None,
+        black_player: str | None = None,
     ) -> None:
         query = select(HintViewerWebUpload).where(HintViewerWebUpload.job_id == job_id)
         if original_filename:
@@ -2914,5 +2916,9 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
                 row.game_id = game_id
             if error_message is not None:
                 row.error_message = error_message
+            if red_player:
+                row.red_player = red_player
+            if black_player:
+                row.black_player = black_player
             if finished:
                 row.finished_at = now

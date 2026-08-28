@@ -24,6 +24,7 @@ from bot.routers.hint_viewer_router import hint_viewer_api_router
 from bot.routers.hint_viewer_web_router import hint_viewer_web_api_router
 from bot.routers.board_viewer_web_router import board_viewer_web_api_router
 from bot.routers.pokaz_web_router import pokaz_web_api_router
+from bot.routers.autoanalize_web_router import autoanalize_web_api_router
 from bot.routers.match_analysis_router import match_analysis_api_router
 from bot.routers.content_cards_web_router import content_cards_web_api_router
 from bot.routers.short_board import short_board_api_router
@@ -309,6 +310,7 @@ app.include_router(hint_viewer_api_router, prefix="")
 app.include_router(hint_viewer_web_api_router, prefix="")
 app.include_router(board_viewer_web_api_router, prefix="")
 app.include_router(pokaz_web_api_router, prefix="")
+app.include_router(autoanalize_web_api_router, prefix="")
 app.include_router(match_analysis_api_router, prefix="")
 app.include_router(content_cards_web_api_router, prefix="")
 app.include_router(short_board_api_router, prefix="")

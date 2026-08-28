@@ -150,6 +150,19 @@
         }
         .pager button.active { background: #2e7d32; color: #fff; }
         .pager .pager-info { color: #999; font-size: 0.85rem; margin-left: 4px; }
+        .history-item--expandable { cursor: pointer; }
+        .history-item--expandable:hover { border-color: #4caf50; }
+        .history-item--expandable.is-open { border-color: #2e7d32; }
+        .history-item-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+        .history-item-head .chevron { color: #888; font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
+        .history-table-wrap { margin-top: 12px; overflow-x: auto; }
+        .analyze-vs { margin: 0 0 10px; font-weight: 600; }
+        .analyze-block { margin-bottom: 14px; }
+        .analyze-block h3 { margin: 0 0 6px; font-size: 0.9rem; color: #ccc; }
+        .analyze-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .analyze-table th, .analyze-table td { border: 1px solid #3a3a3a; padding: 6px 8px; text-align: left; }
+        .analyze-table th { background: #252525; }
+        .analyze-table td { background: #181818; }
     </style>
 </head>
 <body>
@@ -197,6 +210,7 @@
         const uploadOkMessage = {{ upload_ok_message|default('Файл(ы) приняты, анализ в очереди.')|tojson }};
         const allowMultiple = {{ allow_multiple|default(true)|tojson }};
         const openOnUpload = {{ open_on_upload|default(false)|tojson }};
+        const historyExpandable = {{ history_expandable|default(false)|tojson }};
         const fileInput = document.getElementById('fileInput');
         const dropzone = document.getElementById('dropzone');
         const fileList = document.getElementById('fileList');
@@ -447,6 +461,8 @@
         const historyEl = document.getElementById('history');
         const historyPagerEl = document.getElementById('historyPager');
         let historyPage = 1;
+        const loadedTables = {};
+        const openGameIds = new Set();
 
         function historyStatusLabel(status) {
             if (status === 'done') return 'Готово';
@@ -488,17 +504,71 @@
             }
             historyEl.innerHTML = items.map((item) => {
                 const players = [item.red_player, item.black_player].filter(Boolean).join(' vs ');
-                const open = openMatchButtons(item.open_links);
+                const open = historyExpandable ? '' : openMatchButtons(item.open_links);
                 const err = item.error_message ? `<div class="muted">${escapeHtml(item.error_message)}</div>` : '';
-                return `<div class="history-item">
-                    <strong>${escapeHtml(item.original_filename || 'Матч')}</strong>
-                    <div class="muted">${escapeHtml(players || '—')} · ${historyStatusLabel(item.status)}</div>
-                    ${err}
-                    ${open}
+                const expandable = !!(historyExpandable && item.expandable && item.game_id);
+                const gameId = expandable ? String(item.game_id) : '';
+                const isOpen = expandable && openGameIds.has(gameId);
+                const extraClass = expandable
+                    ? ('history-item--expandable' + (isOpen ? ' is-open' : ''))
+                    : '';
+                const chevron = expandable ? `<span class="chevron">${isOpen ? '▴' : '▾'}</span>` : '';
+                const cached = gameId && loadedTables[gameId]
+                    ? loadedTables[gameId]
+                    : '<div class="muted">Загрузка таблицы…</div>';
+                const table = expandable
+                    ? `<div class="history-table-wrap"${isOpen ? '' : ' hidden'}>${isOpen ? cached : ''}</div>`
+                    : '';
+                return `<div class="history-item ${extraClass}"${expandable ? ` data-game-id="${escapeHtml(gameId)}"` : ''}>
+                    <div class="history-item-head">
+                        <div>
+                            <strong>${escapeHtml(item.original_filename || 'Матч')}</strong>
+                            <div class="muted">${escapeHtml(players || '—')} · ${historyStatusLabel(item.status)}</div>
+                            ${err}
+                            ${open}
+                        </div>
+                        ${chevron}
+                    </div>
+                    ${table}
                 </div>`;
             }).join('');
             historyPage = data.page || historyPage;
             renderHistoryPager(data.page || 1, data.pages || 1, data.total || 0);
+        }
+
+        async function toggleHistoryTable(itemEl) {
+            const gameId = itemEl.getAttribute('data-game-id');
+            const wrap = itemEl.querySelector('.history-table-wrap');
+            if (!gameId || !wrap) return;
+            if (openGameIds.has(gameId)) {
+                openGameIds.delete(gameId);
+                wrap.hidden = true;
+                itemEl.classList.remove('is-open');
+                const chevron = itemEl.querySelector('.chevron');
+                if (chevron) chevron.textContent = '▾';
+                return;
+            }
+            openGameIds.add(gameId);
+            itemEl.classList.add('is-open');
+            wrap.hidden = false;
+            const chevron = itemEl.querySelector('.chevron');
+            if (chevron) chevron.textContent = '▴';
+            if (!loadedTables[gameId]) {
+                wrap.innerHTML = '<div class="muted">Загрузка таблицы…</div>';
+                try {
+                    const res = await fetch(apiBase + '/api/table?game_id=' + encodeURIComponent(gameId));
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        wrap.innerHTML = '<div class="muted">' + escapeHtml(data.detail || 'Не удалось загрузить таблицу') + '</div>';
+                        return;
+                    }
+                    loadedTables[gameId] = data.html || '<div class="muted">Нет данных</div>';
+                } catch (e) {
+                    wrap.innerHTML = '<div class="muted">Сеть недоступна</div>';
+                    return;
+                }
+            }
+            wrap.innerHTML = loadedTables[gameId];
         }
 
         async function pollHistory() {
@@ -511,6 +581,15 @@
                 }
                 renderHistory(data);
             } catch (e) {}
+        }
+
+        if (historyEl && historyExpandable) {
+            historyEl.addEventListener('click', (event) => {
+                if (event.target.closest('a, button')) return;
+                const item = event.target.closest('.history-item--expandable');
+                if (!item) return;
+                toggleHistoryTable(item);
+            });
         }
 
         if (historyPagerEl) {

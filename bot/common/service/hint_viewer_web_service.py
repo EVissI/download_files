@@ -21,6 +21,7 @@ ACCT_CACHE_KEY = "hint_web:acct:{user_id}"
 ACCT_CACHE_TTL_SEC = 60
 WEB_SERVICE_HINTS = "hints"
 WEB_SERVICE_BOARD = "board"
+WEB_SERVICE_ANALYZE = "analyze"
 WEB_ALLOWED_NEXT = (
     "/web/hints",
     "/web/board",
@@ -28,6 +29,7 @@ WEB_ALLOWED_NEXT = (
     "/web/cards",
     "/web/pip-count",
     "/web/match-analysis",
+    "/web/analyze",
 )
 
 
@@ -78,6 +80,8 @@ def web_open_links_for_service(
 ) -> list[dict[str, str]]:
     if service == WEB_SERVICE_BOARD:
         return web_board_open_links(game_id)
+    if service == WEB_SERVICE_ANALYZE:
+        return []
     return web_hint_open_links(game_id, red_player, black_player)
 
 
@@ -155,6 +159,28 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
             "dropzone_hint": ".mat",
             "accept": ".mat",
             "dropzone_title": "Нажмите или перетащите файл сюда",
+        }
+    if service == WEB_SERVICE_ANALYZE:
+        return {
+            "web_service": WEB_SERVICE_ANALYZE,
+            "api_base": "/web/analyze",
+            "page_title": "Анализ",
+            "intro_text": (
+                "Загрузите один или несколько файлов партий либо zip. "
+                "Когда GNU Backgammon посчитает статистику, в истории "
+                "можно раскрыть таблицу анализа."
+            ),
+            "upload_ok_message": "Файл(ы) приняты, анализ запущен.",
+            "login_url": "/web/hints/login?next=/web/analyze",
+            "card_title": "Новый анализ",
+            "upload_btn_label": "Отправить на анализ",
+            "show_current_jobs": True,
+            "allow_multiple": True,
+            "open_on_upload": False,
+            "history_expandable": True,
+            "dropzone_hint": ".mat, .zip, .sgf, .gam и др.",
+            "accept": ".mat,.zip,.txt,.sgf,.sgg,.bkg,.gam,.pos,.fibs,.tmg,application/zip",
+            "dropzone_title": "Нажмите или перетащите файлы сюда",
         }
     return {
         "web_service": WEB_SERVICE_HINTS,
@@ -277,6 +303,7 @@ async def destroy_session(token: str | None) -> None:
     await redis_client.delete(SESSION_KEY.format(token=token))
     await redis_client.delete(_jobs_key(token, WEB_SERVICE_HINTS))
     await redis_client.delete(_jobs_key(token, WEB_SERVICE_BOARD))
+    await redis_client.delete(_jobs_key(token, WEB_SERVICE_ANALYZE))
 
 
 async def append_session_job(
@@ -336,10 +363,15 @@ HISTORY_PAGE_SIZE = 10
 def _history_item(row) -> dict[str, Any]:
     game_id = row.game_id
     service = getattr(row, "service", None) or WEB_SERVICE_HINTS
+    is_analyze = service == WEB_SERVICE_ANALYZE
     links = (
-        web_open_links_for_service(service, game_id, row.red_player, row.black_player)
-        if row.status == "done" and game_id
-        else []
+        []
+        if is_analyze
+        else (
+            web_open_links_for_service(service, game_id, row.red_player, row.black_player)
+            if row.status == "done" and game_id
+            else []
+        )
     )
     return {
         "id": row.id,
@@ -351,6 +383,7 @@ def _history_item(row) -> dict[str, Any]:
         "game_id": game_id,
         "view_url": links[0]["url"] if links else None,
         "open_links": links,
+        "expandable": bool(is_analyze and row.status == "done" and game_id),
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "finished_at": row.finished_at.isoformat() if row.finished_at else None,
     }
@@ -417,9 +450,11 @@ async def sync_history_from_job(job: dict[str, Any]) -> None:
                         job_id,
                         file_status if file_status in {"done", "error", "processing", "queued"} else status,
                         original_filename=entry.get("filename"),
-                        game_id=entry.get("game_id"),
-                        error_message=entry.get("error"),
-                        finished=file_finished,
+                    game_id=entry.get("game_id"),
+                    error_message=entry.get("error"),
+                    finished=file_finished,
+                    red_player=entry.get("red_player"),
+                    black_player=entry.get("black_player"),
                     )
             else:
                 await dao.update_status_for_job(
@@ -429,6 +464,8 @@ async def sync_history_from_job(job: dict[str, Any]) -> None:
                     game_id=job.get("game_id"),
                     error_message=job.get("error"),
                     finished=finished,
+                    red_player=job.get("red_player"),
+                    black_player=job.get("black_player"),
                 )
             await session.commit()
     except Exception as e:
