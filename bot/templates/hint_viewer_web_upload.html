@@ -93,6 +93,10 @@
             cursor: not-allowed;
         }
         .ghost { background: var(--web-ghost-bg); color: var(--web-ghost-fg); }
+        .ghost:hover {
+            background: var(--web-ghost-hover);
+            color: var(--web-text);
+        }
         .file-list { margin: 10px 0 0; padding-left: 18px; color: var(--web-text-soft); }
         .job {
             border: 1px solid var(--web-border);
@@ -114,6 +118,10 @@
         .history-item a { color: var(--web-link); }
         .open-modes { margin-top: 8px; }
         .open-modes .btn { font-size: 0.85rem; padding: 8px 10px; }
+        .open-modes .btn:hover {
+            background: var(--web-ghost-hover);
+            color: var(--web-text);
+        }
         .toast {
             position: fixed;
             right: 16px;

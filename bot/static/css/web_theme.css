@@ -18,6 +18,7 @@
     --web-accent-2: #66bb6a;
     --web-ghost-bg: #2a2a2a;
     --web-ghost-fg: #ddd;
+    --web-ghost-hover: #3a3a3a;
     --web-nav-hover: #2a2a2a;
     --web-disabled: #444;
     --web-danger-border: #8d2f2f;
@@ -55,6 +56,7 @@ html[data-theme="light"] {
     --web-accent-2: #43a047;
     --web-ghost-bg: #eceef2;
     --web-ghost-fg: #2a2d34;
+    --web-ghost-hover: #d8dce4;
     --web-nav-hover: #e0e3e9;
     --web-disabled: #9aa0ab;
     --web-danger-border: #c62828;
