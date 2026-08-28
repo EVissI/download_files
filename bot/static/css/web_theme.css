@@ -85,15 +85,18 @@ header .theme-toggle {
 .theme-toggle svg {
     width: 18px;
     height: 18px;
-    display: block;
+    flex-shrink: 0;
 }
-.theme-toggle-sun {
+.theme-toggle .theme-toggle-sun {
     display: none;
 }
-html[data-theme="light"] .theme-toggle-sun {
+.theme-toggle .theme-toggle-moon {
     display: block;
 }
-html[data-theme="light"] .theme-toggle-moon {
+html[data-theme="light"] .theme-toggle .theme-toggle-sun {
+    display: block;
+}
+html[data-theme="light"] .theme-toggle .theme-toggle-moon {
     display: none;
 }
 
