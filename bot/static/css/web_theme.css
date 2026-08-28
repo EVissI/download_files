@@ -87,14 +87,14 @@ header .theme-toggle {
     height: 18px;
     display: block;
 }
-.theme-toggle-moon {
+.theme-toggle-sun {
     display: none;
 }
 html[data-theme="light"] .theme-toggle-sun {
-    display: none;
+    display: block;
 }
 html[data-theme="light"] .theme-toggle-moon {
-    display: block;
+    display: none;
 }
 
 html[data-theme="light"] body {
