@@ -22,6 +22,7 @@ from loguru import logger
 from bot.common.func.analiz_func import analyze_mat_file
 from bot.common.func.func import format_detailed_analysis_html, get_analysis_data
 from bot.common.func.hint_viewer import extract_player_names
+from bot.common.service.hint_s3_service import HintS3Storage
 from bot.common.service.hint_viewer_web_service import (
     COOKIE_NAME,
     HISTORY_PAGE_SIZE,
@@ -85,10 +86,6 @@ def _file_type(name: str) -> str | None:
     if ext == "gam":
         return None
     return ext or "mat"
-
-
-def _analysis_json_path(game_id: str) -> Path:
-    return ANALYZE_DIR / game_id / "analysis.json"
 
 
 def _read_players(path: str) -> tuple[str, str]:
@@ -203,18 +200,15 @@ async def _process_file_item(item: dict[str, Any]) -> None:
             await fail("В файле должно быть ровно два игрока")
             return
         metrics = get_analysis_data(analysis_data)
-        dest = _analysis_json_path(game_id)
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(
-            json.dumps(
-                {
-                    "players": metrics,
-                    "duration": duration,
-                    "filename": filename,
-                },
-                ensure_ascii=False,
-            ),
-            encoding="utf-8",
+        s3 = HintS3Storage.from_settings()
+        await asyncio.to_thread(
+            s3.put_autoanalyze_json,
+            game_id,
+            {
+                "players": metrics,
+                "duration": duration,
+                "filename": filename,
+            },
         )
         red_player, black_player = player_names[0], player_names[1]
         now = datetime.now(timezone.utc).isoformat()
@@ -516,13 +510,10 @@ async def web_analyze_table(request: Request, game_id: str = ""):
         )
         if result.scalar_one_or_none() is None:
             raise HTTPException(status_code=404, detail="Анализ не найден")
-    path = _analysis_json_path(gid)
-    if not path.is_file():
+    s3 = HintS3Storage.from_settings()
+    payload = await asyncio.to_thread(s3.get_autoanalyze_json, gid)
+    if not payload:
         raise HTTPException(status_code=404, detail="Таблица ещё не готова")
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=500, detail="Повреждённый файл анализа") from exc
     metrics = payload.get("players") or payload
     i18n = translator_hub.get_translator_by_locale("ru")
     html = format_detailed_analysis_html(metrics, i18n)

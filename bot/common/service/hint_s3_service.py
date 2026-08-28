@@ -3,8 +3,10 @@ S3 для hint viewer: обмен .mat и JSON между ботом и ворк
 """
 from __future__ import annotations
 
+import json
 import os
 from datetime import datetime, timezone
+from typing import Any
 
 import boto3
 from botocore.client import Config
@@ -17,6 +19,7 @@ class HintS3Storage:
     """Ключи: hints/{game_id}.mat, hints/{game_id}.json, hints/{game_id}_games/..."""
 
     PREFIX = "hints"
+    AUTOANALYZE_PREFIX = "autoanalyze"
     CONTENT_CARDS_MEDIA_PREFIX = "content_cards/media"
     MATCH_ANALYSIS_MEDIA_PREFIX = "match_analysis/media"
     CABINET_GALLERY_FOLDER = "cabinet_gallery"
@@ -118,6 +121,31 @@ class HintS3Storage:
         if not name or len(name) > 220 or ".." in name:
             return False
         return all(c.isalnum() or c in "._-" for c in name)
+
+    @staticmethod
+    def autoanalyze_json_key(game_id: str) -> str:
+        return f"{HintS3Storage.AUTOANALYZE_PREFIX}/{game_id}.json"
+
+    def put_autoanalyze_json(self, game_id: str, payload: dict[str, Any]) -> str:
+        key = self.autoanalyze_json_key(game_id)
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.upload_bytes(key, body, content_type="application/json")
+        return key
+
+    def get_autoanalyze_json(self, game_id: str) -> dict[str, Any] | None:
+        key = self.autoanalyze_json_key(game_id)
+        try:
+            raw = self.download_bytes(key)
+        except ClientError as e:
+            code = e.response.get("Error", {}).get("Code", "")
+            if code in ("404", "NoSuchKey", "NotFound"):
+                return None
+            raise
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return None
+        return data if isinstance(data, dict) else None
 
     def put_source_mat(self, game_id: str, local_path: str) -> str:
         """Загружает локальный .mat в hints/{game_id}.mat, возвращает ключ объекта."""
