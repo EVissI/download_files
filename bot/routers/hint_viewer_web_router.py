@@ -41,9 +41,11 @@ from bot.common.service.hint_viewer_web_service import (
     HISTORY_PAGE_SIZE,
     SESSION_TTL_SEC,
     append_session_job,
+    attach_device_cookie,
     authenticate_web_user,
     create_session,
     destroy_session,
+    device_id_from_request,
     list_history_for_user,
     list_session_jobs,
     record_history,
@@ -509,7 +511,7 @@ async def web_hints_login_page(request: Request, next: str = "/web/hints"):
     next_path = safe_web_next(next)
     if await resolve_web_session(request):
         return RedirectResponse(url=next_path, status_code=303)
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         "hint_viewer_web_login.html",
         {
             "request": request,
@@ -519,6 +521,8 @@ async def web_hints_login_page(request: Request, next: str = "/web/hints"):
             "cache_timestamp": get_static_asset_version(),
         },
     )
+    attach_device_cookie(response, device_id_from_request(request))
+    return response
 
 
 @hint_viewer_web_api_router.post("/web/hints/login")
@@ -536,7 +540,7 @@ async def web_hints_login(
             if auth_error == "expired"
             else "Неверный логин или пароль"
         )
-        return templates.TemplateResponse(
+        response = templates.TemplateResponse(
             "hint_viewer_web_login.html",
             {
                 "request": request,
@@ -547,7 +551,24 @@ async def web_hints_login(
             },
             status_code=200,
         )
-    created = await create_session(user)
+        attach_device_cookie(response, device_id_from_request(request))
+        return response
+    device_id = device_id_from_request(request)
+    created = await create_session(user, device_id=device_id)
+    if not created.get("token"):
+        response = templates.TemplateResponse(
+            "hint_viewer_web_login.html",
+            {
+                "request": request,
+                "error": "Вход заблокирован",
+                "login_value": (login or "").strip(),
+                "next_path": next_path,
+                "cache_timestamp": get_static_asset_version(),
+            },
+            status_code=200,
+        )
+        attach_device_cookie(response, created.get("device_id") or device_id)
+        return response
     response = RedirectResponse(url=next_path, status_code=303)
     response.set_cookie(
         key=COOKIE_NAME,
@@ -557,6 +578,7 @@ async def web_hints_login(
         samesite="lax",
         path="/",
     )
+    attach_device_cookie(response, created.get("device_id") or device_id)
     return response
 
 

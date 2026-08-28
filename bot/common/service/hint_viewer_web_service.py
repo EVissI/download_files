@@ -3,22 +3,30 @@
 from __future__ import annotations
 
 import json
+import re
 import secrets
+import time
 from typing import Any
 from urllib.parse import quote
 
 from loguru import logger
 
 from bot.common.utils.password import passwords_match
+from bot.db.models import WebUser
 from bot.db.redis import redis_client
 
 COOKIE_NAME = "hint_web_session"
+DEVICE_COOKIE_NAME = "hint_web_device"
 SESSION_TTL_SEC = 7 * 24 * 3600
+DEVICE_COOKIE_TTL_SEC = 400 * 24 * 3600
 JOBS_TTL_SEC = 7 * 24 * 3600
 SESSION_KEY = "hint_web:session:{token}"
+USER_SESSIONS_KEY = "hint_web:sessions:{user_id}"
+DEVICE_TOKEN_KEY = "hint_web:user_device:{user_id}:{device_id}"
 JOBS_KEY = "hint_web:jobs:{token}"
 ACCT_CACHE_KEY = "hint_web:acct:{user_id}"
 ACCT_CACHE_TTL_SEC = 60
+_DEVICE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 WEB_SERVICE_HINTS = "hints"
 WEB_SERVICE_BOARD = "board"
 WEB_SERVICE_ANALYZE = "analyze"
@@ -43,6 +51,40 @@ def _jobs_key(token: str, service: str = WEB_SERVICE_HINTS) -> str:
     if service == WEB_SERVICE_HINTS:
         return JOBS_KEY.format(token=token)
     return f"hint_web:jobs:{service}:{token}"
+
+
+def normalize_device_id(raw: str | None) -> str | None:
+    value = (raw or "").strip()
+    if _DEVICE_ID_RE.fullmatch(value):
+        return value
+    return None
+
+
+def new_device_id() -> str:
+    return secrets.token_urlsafe(24)
+
+
+def device_id_from_request(request) -> str:
+    return normalize_device_id(request.cookies.get(DEVICE_COOKIE_NAME)) or new_device_id()
+
+
+def attach_device_cookie(response, device_id: str) -> None:
+    response.set_cookie(
+        key=DEVICE_COOKIE_NAME,
+        value=device_id,
+        max_age=DEVICE_COOKIE_TTL_SEC,
+        httponly=True,
+        samesite="lax",
+        path="/",
+    )
+
+
+def _sessions_key(user_id: int) -> str:
+    return USER_SESSIONS_KEY.format(user_id=int(user_id))
+
+
+def _device_key(user_id: int, device_id: str) -> str:
+    return DEVICE_TOKEN_KEY.format(user_id=int(user_id), device_id=device_id)
 
 
 def web_hint_open_links(
@@ -110,33 +152,92 @@ async def authenticate_web_user(login: str, password: str):
             id=int(user.id),
             login=user.login,
             is_admin=bool(user.is_admin),
+            max_sessions=WebUser.clamp_max_sessions(getattr(user, "max_sessions", 1)),
         ), None
 
 
-async def create_session(user) -> dict[str, Any]:
+async def _user_session_tokens(user_id: int) -> list[str]:
+    tokens = await redis_client.zrange(_sessions_key(user_id), 0, -1)
+    return [str(t) for t in tokens if t]
+
+
+async def _register_session_index(
+    user_id: int, token: str, created_at: float, device_id: str | None
+) -> None:
+    await redis_client.zadd(_sessions_key(user_id), {token: created_at})
+    await redis_client.expire(_sessions_key(user_id), SESSION_TTL_SEC)
+    if device_id:
+        await redis_client.set(
+            _device_key(user_id, device_id), token, expire=SESSION_TTL_SEC
+        )
+
+
+async def _unregister_session_index(
+    user_id: int, token: str, device_id: str | None
+) -> None:
+    await redis_client.zrem(_sessions_key(user_id), token)
+    if not device_id:
+        return
+    dkey = _device_key(user_id, device_id)
+    current = await redis_client.get(dkey)
+    if current == token:
+        await redis_client.delete(dkey)
+
+
+async def _ensure_session_indexed(token: str, data: dict[str, Any]) -> None:
+    uid = int(data["user_id"])
+    tokens = await _user_session_tokens(uid)
+    if token in tokens:
+        return
+    created_at = float(data.get("created_at") or time.time())
+    await _register_session_index(uid, token, created_at, data.get("device_id"))
+
+
+async def create_session(user, device_id: str | None = None) -> dict[str, Any]:
+    uid = int(user.id)
+    max_sessions = WebUser.clamp_max_sessions(getattr(user, "max_sessions", 1))
+    device_id = normalize_device_id(device_id) or new_device_id()
+
+    old_token = await redis_client.get(_device_key(uid, device_id))
+    if old_token:
+        await destroy_session(old_token, user_id=uid)
+
+    active = await _user_session_tokens(uid)
+    if len(active) >= max_sessions:
+        return {
+            "ok": False,
+            "error": "session_limit",
+            "max_sessions": max_sessions,
+            "device_id": device_id,
+        }
+
     token = secrets.token_urlsafe(32)
+    created_at = time.time()
     payload = {
         "ok": True,
-        "user_id": int(user.id),
-        "web_uid": -int(user.id),
+        "user_id": uid,
+        "web_uid": -uid,
         "is_admin": bool(getattr(user, "is_admin", False)),
+        "device_id": device_id,
+        "created_at": created_at,
     }
     await redis_client.set(
         SESSION_KEY.format(token=token), json.dumps(payload), expire=SESSION_TTL_SEC
     )
+    await _register_session_index(uid, token, created_at, device_id)
     try:
         from bot.common.service.web_grant_user import ensure_web_grant_user_async
 
         await ensure_web_grant_user_async(
-            int(user.id), login=getattr(user, "login", None)
+            uid, login=getattr(user, "login", None)
         )
         if bool(getattr(user, "is_admin", False)):
             from bot.common.service.cabinet_admin import grant_all_cabinet_content_async
             from bot.common.service.web_grant_user import web_grant_user_id
 
-            await grant_all_cabinet_content_async(web_grant_user_id(int(user.id)))
+            await grant_all_cabinet_content_async(web_grant_user_id(uid))
     except Exception:
-        logger.exception("web grant user ensure failed for web_user_id={}", user.id)
+        logger.exception("web grant user ensure failed for web_user_id={}", uid)
     return {"token": token, **payload}
 
 
@@ -227,6 +328,7 @@ async def get_session(token: str | None) -> dict[str, Any] | None:
     if not snapshot or not snapshot.get("active"):
         await destroy_session(token)
         return None
+    await _ensure_session_indexed(token, data)
     data["is_admin"] = bool(snapshot.get("is_admin"))
     if "web_uid" not in data:
         data["web_uid"] = -int(data["user_id"])
@@ -234,7 +336,7 @@ async def get_session(token: str | None) -> dict[str, Any] | None:
 
 
 async def web_account_snapshot(user_id: int | None) -> dict[str, Any] | None:
-    """active + is_admin; кэш в Redis, чтобы не ходить в БД на каждый запрос."""
+    """active + is_admin + max_sessions; кэш в Redis, чтобы не ходить в БД на каждый запрос."""
     if not user_id:
         return None
     uid = int(user_id)
@@ -243,7 +345,7 @@ async def web_account_snapshot(user_id: int | None) -> dict[str, Any] | None:
     if cached:
         try:
             data = json.loads(cached)
-            if isinstance(data, dict) and "active" in data:
+            if isinstance(data, dict) and "active" in data and "max_sessions" in data:
                 return data
         except json.JSONDecodeError:
             pass
@@ -255,17 +357,21 @@ async def web_account_snapshot(user_id: int | None) -> dict[str, Any] | None:
 
     async with async_session_maker() as session:
         result = await session.execute(
-            select(WebUser.id, WebUser.is_admin, WebUser.expires_at).where(
-                WebUser.id == uid
-            )
+            select(
+                WebUser.id,
+                WebUser.is_admin,
+                WebUser.expires_at,
+                WebUser.max_sessions,
+            ).where(WebUser.id == uid)
         )
         row = result.one_or_none()
     if row is None:
-        payload = {"active": False, "is_admin": False}
+        payload = {"active": False, "is_admin": False, "max_sessions": 1}
     else:
         payload = {
             "active": not web_user_expires_at_passed(row.expires_at),
             "is_admin": bool(row.is_admin),
+            "max_sessions": WebUser.clamp_max_sessions(row.max_sessions),
         }
     await redis_client.set(
         cache_key, json.dumps(payload), expire=ACCT_CACHE_TTL_SEC
@@ -297,13 +403,26 @@ async def web_user_is_admin(user_id: int | None) -> bool:
     return bool(snapshot and snapshot.get("active") and snapshot.get("is_admin"))
 
 
-async def destroy_session(token: str | None) -> None:
+async def destroy_session(token: str | None, *, user_id: int | None = None) -> None:
     if not token:
         return
+    payload_user_id = None
+    device_id = None
+    raw = await redis_client.get(SESSION_KEY.format(token=token))
+    if raw:
+        try:
+            data = json.loads(raw)
+            payload_user_id = int(data.get("user_id") or 0) or None
+            device_id = data.get("device_id")
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+    uid = payload_user_id or user_id
     await redis_client.delete(SESSION_KEY.format(token=token))
     await redis_client.delete(_jobs_key(token, WEB_SERVICE_HINTS))
     await redis_client.delete(_jobs_key(token, WEB_SERVICE_BOARD))
     await redis_client.delete(_jobs_key(token, WEB_SERVICE_ANALYZE))
+    if uid:
+        await _unregister_session_index(int(uid), token, device_id)
 
 
 async def append_session_job(

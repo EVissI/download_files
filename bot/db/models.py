@@ -1552,13 +1552,27 @@ class WebUser(Base):
     expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    max_sessions: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
     uploads: Mapped[list["HintViewerWebUpload"]] = relationship(
         "HintViewerWebUpload",
         back_populates="web_user",
     )
 
+    MAX_SESSIONS_MIN = 1
+    MAX_SESSIONS_MAX = 99
+
     def is_expired(self) -> bool:
         return web_user_expires_at_passed(self.expires_at)
+
+    @staticmethod
+    def clamp_max_sessions(value) -> int:
+        try:
+            n = int(value)
+        except (TypeError, ValueError):
+            n = WebUser.MAX_SESSIONS_MIN
+        return min(WebUser.MAX_SESSIONS_MAX, max(WebUser.MAX_SESSIONS_MIN, n))
 
     @property
     @renders("expires_at_display")

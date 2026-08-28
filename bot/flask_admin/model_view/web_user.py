@@ -7,8 +7,8 @@ from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_wtf.csrf import generate_csrf
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
-from wtforms import BooleanField, DateTimeLocalField, PasswordField
-from wtforms.validators import DataRequired, Length, Optional
+from wtforms import BooleanField, DateTimeLocalField, IntegerField, PasswordField
+from wtforms.validators import DataRequired, Length, NumberRange, Optional
 
 from bot.common.service.web_grant_user import ensure_web_grant_user_sync, web_grant_user_id
 from bot.common.utils.password import store_password
@@ -52,6 +52,7 @@ class WebUserModelView(ModelView):
         "is_admin",
         "account_status",
         "expires_at_display",
+        "max_sessions",
         "password_masked",
     ]
     show_columns = [
@@ -60,10 +61,11 @@ class WebUserModelView(ModelView):
         "is_admin",
         "account_status",
         "expires_at_display",
+        "max_sessions",
         "password_display",
     ]
-    add_columns = ["login", "password", "is_admin", "unlimited", "expires_at"]
-    edit_columns = ["login", "password", "is_admin", "unlimited", "expires_at"]
+    add_columns = ["login", "password", "is_admin", "unlimited", "expires_at", "max_sessions"]
+    edit_columns = ["login", "password", "is_admin", "unlimited", "expires_at", "max_sessions"]
     search_columns = ["login"]
     exclude_columns = ["password_hash", "password_encrypted", "uploads"]
 
@@ -78,6 +80,7 @@ class WebUserModelView(ModelView):
         "account_status": "Статус",
         "password_masked": "Пароль",
         "password_display": "Пароль",
+        "max_sessions": "Одновременных сессий",
     }
     description_columns = {
         "is_admin": "Флаг хранится в БД и не принимается из клиентских запросов веб-ошибок.",
@@ -86,6 +89,11 @@ class WebUserModelView(ModelView):
         "password_display": "Расшифрованная копия. Для входа используется отдельный хеш.",
         "unlimited": "Если отмечено, срок не ограничен и вход всегда разрешён.",
         "expires_at": "Московское время. После этой даты войти нельзя. Не нужно, если аккаунт бессрочный.",
+        "max_sessions": (
+            "Сколько браузеров/устройств могут быть в кабинете одновременно. "
+            "Повторный вход с того же браузера не занимает новый слот. "
+            "Если лимит уже занят, вход с нового устройства блокируется."
+        ),
     }
 
     add_form_extra_fields = {
@@ -96,6 +104,11 @@ class WebUserModelView(ModelView):
             validators=[Optional()],
             format="%Y-%m-%dT%H:%M",
         ),
+        "max_sessions": IntegerField(
+            "Одновременных сессий",
+            default=1,
+            validators=[DataRequired(), NumberRange(min=1, max=99)],
+        ),
     }
     edit_form_extra_fields = {
         "password": _password_field("Новый пароль (оставьте пустым, чтобы не менять)", required=False),
@@ -104,6 +117,10 @@ class WebUserModelView(ModelView):
             "Активен до",
             validators=[Optional()],
             format="%Y-%m-%dT%H:%M",
+        ),
+        "max_sessions": IntegerField(
+            "Одновременных сессий",
+            validators=[DataRequired(), NumberRange(min=1, max=99)],
         ),
     }
 
@@ -166,6 +183,7 @@ class WebUserModelView(ModelView):
             raise ValueError("password too short")
         item.password_hash, item.password_encrypted = store_password(raw)
         item.is_admin = bool(item.is_admin)
+        item.max_sessions = WebUser.clamp_max_sessions(getattr(item, "max_sessions", 1))
         self._apply_expiry(item)
         self._drop_transient_password(item)
 
@@ -189,6 +207,7 @@ class WebUserModelView(ModelView):
                 raise ValueError("password too short")
             item.password_hash, item.password_encrypted = store_password(raw)
         item.is_admin = bool(item.is_admin)
+        item.max_sessions = WebUser.clamp_max_sessions(getattr(item, "max_sessions", 1))
         self._apply_expiry(item)
         self._drop_transient_password(item)
 

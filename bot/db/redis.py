@@ -84,6 +84,26 @@ class RedisClient:
         await self.ensure_connection()
         return await self.redis.ttl(key)
 
+    async def expire(self, key: str, seconds: int):
+        await self.ensure_connection()
+        return await self.redis.expire(key, seconds)
+
+    async def zadd(self, key: str, mapping: dict):
+        await self.ensure_connection()
+        if not mapping:
+            return 0
+        return await self.redis.zadd(key, mapping)
+
+    async def zrange(self, key: str, start: int, end: int) -> list:
+        await self.ensure_connection()
+        return await self.redis.zrange(key, start, end) or []
+
+    async def zrem(self, key: str, *members: str) -> int:
+        await self.ensure_connection()
+        if not members:
+            return 0
+        return await self.redis.zrem(key, *members)
+
     def ping(self):
         """Sync метод для проверки соединения"""
         return self.redis.ping() if self.redis else False
