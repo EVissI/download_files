@@ -51,12 +51,12 @@ html[data-theme="light"] {
     --web-text-soft: #4b5563;
     --web-text-nav: #3f4650;
     --web-link: #1b6e3a;
-    --web-accent: #2e7d32;
+    --web-accent: #1f8a38;
     --web-accent-2: #43a047;
     --web-ghost-bg: #eceef2;
     --web-ghost-fg: #2a2d34;
     --web-nav-hover: #e0e3e9;
-    --web-disabled: #c5c9d1;
+    --web-disabled: #9aa0ab;
     --web-danger-border: #c62828;
     --web-table-border: #d8dbe2;
     --web-table-th: #eef0f3;

@@ -86,7 +86,12 @@
             display: inline-block;
         }
         .primary { background: var(--web-accent); color: #fff; }
-        .primary:disabled { background: var(--web-disabled); }
+        .primary:disabled {
+            background: var(--web-accent);
+            color: #fff;
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
         .ghost { background: var(--web-ghost-bg); color: var(--web-ghost-fg); }
         .file-list { margin: 10px 0 0; padding-left: 18px; color: var(--web-text-soft); }
         .job {
