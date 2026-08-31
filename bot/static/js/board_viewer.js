@@ -4,6 +4,12 @@ function staticAsset(path) {
     return path + (path.indexOf('?') >= 0 ? '&' : '?') + 't=' + encodeURIComponent(v);
 }
 
+function screenshotImageFileName() {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    return `image_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.png`;
+}
+
 function isBoardViewerAdminFromMeta() {
     const meta = document.querySelector('meta[name="board-viewer-is-admin"]');
     return !!(meta && meta.getAttribute('content') === '1');
@@ -1752,13 +1758,13 @@ async function ensureContentEditor() {
                 canvas.toBlob(blob => {
                     if (isWebStandaloneBoardViewer() || !(window.Telegram && window.Telegram.WebApp)) {
                         const link = document.createElement('a');
-                        link.download = 'screenshot.png';
+                        link.download = screenshotImageFileName();
                         link.href = canvas.toDataURL();
                         link.click();
                         showMessageModal('Скриншот скачан', 'success');
                         return;
                     }
-                    const file = new File([blob], 'screenshot.png', { type: 'image/png' });
+                    const file = new File([blob], screenshotImageFileName(), { type: 'image/png' });
                     const formData = new FormData();
                     formData.append('photo', file);
                     fetch(`/api/send_screenshot?chat_id=${chat_id}`, {

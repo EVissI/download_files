@@ -4,6 +4,12 @@ function pokazAsset(path) {
     return path + (path.indexOf('?') >= 0 ? '&' : '?') + 't=' + encodeURIComponent(v);
 }
 
+function screenshotImageFileName() {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    return `image_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.png`;
+}
+
 function isWebStandalonePokaz() {
     const meta = document.querySelector('meta[name="web-standalone-mode"]');
     return !!(meta && meta.getAttribute('content') === '1');
@@ -4468,7 +4474,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }).then(canvas => {
             restoreControls();
             canvas.toBlob(blob => {
-                const file = new File([blob], 'screenshot.png', { type: 'image/png' });
+                const file = new File([blob], screenshotImageFileName(), { type: 'image/png' });
 
                 if (window.Telegram && window.Telegram.WebApp) {
                     const formData = new FormData();
@@ -4503,7 +4509,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 } else {
                     // Если не в Telegram, скачиваем файл
                     const link = document.createElement('a');
-                    link.download = 'screenshot.png';
+                    link.download = screenshotImageFileName();
                     link.href = canvas.toDataURL();
                     link.click();
                     showMessageModal('Скриншот сохранён', 'success');

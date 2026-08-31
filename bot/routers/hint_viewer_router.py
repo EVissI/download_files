@@ -1182,7 +1182,8 @@ async def send_screenshot(request: Request):
             # Читаем файл и отправляем
             photo_bytes = await photo.read()
             logger.debug(f"Screenshot file size: {len(photo_bytes)} bytes")
-            photo_file = BufferedInputFile(photo_bytes, filename="screenshot.png")
+            screenshot_name = f"image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            photo_file = BufferedInputFile(photo_bytes, filename=screenshot_name)
             await bot.send_photo(chat_id=chat_id_int, photo=photo_file)
 
             audio_payload = await _load_optional_screenshot_audio(form_data)
@@ -1319,7 +1320,7 @@ async def save_screenshot(request: Request):
 
         # Сохраняем файл с timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"screenshot_{timestamp}.png"
+        filename = f"image_{timestamp}.png"
         filepath = os.path.join(buffer_dir, filename)
 
         photo_bytes = await photo.read()
@@ -1332,7 +1333,7 @@ async def save_screenshot(request: Request):
             _, ext = os.path.splitext(audio_name)
             if not ext:
                 ext = ".webm"
-            audio_filename = f"screenshot_{timestamp}_audio{ext}"
+            audio_filename = f"image_{timestamp}_audio{ext}"
             audio_path = os.path.join(buffer_dir, audio_filename)
             with open(audio_path, "wb") as f:
                 f.write(audio_bytes)

@@ -706,7 +706,7 @@ async def web_save_screenshot(request: Request, photo: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Пустой скриншот")
     buffer_dir = _web_screenshots_dir(int(user_id))
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filepath = buffer_dir / f"screenshot_{timestamp}.png"
+    filepath = buffer_dir / f"image_{timestamp}.png"
     filepath.write_bytes(photo_bytes)
     return {"status": "success"}
 

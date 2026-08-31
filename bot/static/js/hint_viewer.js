@@ -4,6 +4,12 @@ function staticAsset(path) {
     return path + (path.indexOf('?') >= 0 ? '&' : '?') + 't=' + encodeURIComponent(v);
 }
 
+function screenshotImageFileName() {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    return `image_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.png`;
+}
+
 function isHintViewerAdminFromMeta() {
     const meta = document.querySelector('meta[name="hint-viewer-is-admin"]');
     return !!(meta && meta.getAttribute('content') === '1');
@@ -2934,7 +2940,7 @@ async function ensureContentEditor() {
                 // Convert canvas to blob
                 canvas.toBlob(blob => {
                     // Create a file from the blob
-                    const file = new File([blob], 'screenshot.png', { type: 'image/png' });
+                    const file = new File([blob], screenshotImageFileName(), { type: 'image/png' });
 
                     // Send the file to Telegram
                     if (window.Telegram && window.Telegram.WebApp) {
@@ -2972,7 +2978,7 @@ async function ensureContentEditor() {
                         });
                     } else {
                         const link = document.createElement('a');
-                        link.download = 'screenshot.png';
+                        link.download = screenshotImageFileName();
                         link.href = canvas.toDataURL();
                         link.click();
                     }
