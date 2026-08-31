@@ -4377,7 +4377,8 @@ body {
         body.web-standalone .container {
             flex: 1;
         }
-        body.screenshot-mode .web-cabinet-header {
+        body.screenshot-mode .web-cabinet-header,
+        body.screenshot-mode .web-standalone-back {
             display: none !important;
         }
         body.web-standalone #adminCommentBtn {

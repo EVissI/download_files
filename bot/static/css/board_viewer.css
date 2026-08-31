@@ -1076,4 +1076,7 @@ html {
             font-size: 14px;
         }
         .web-standalone-back:hover { text-decoration: underline; }
+        body.screenshot-mode .web-standalone-back {
+            display: none !important;
+        }
         body.web-standalone #supportBtn { display: none; }

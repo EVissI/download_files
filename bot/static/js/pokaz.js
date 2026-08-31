@@ -48,6 +48,17 @@ function ensureHtml2Canvas() {
 }
 
 function pokazHtml2Canvas(options) {
+    options = Object.assign({}, options || {});
+    const userIgnore = options.ignoreElements;
+    options.ignoreElements = function (el) {
+        if (el && el.classList && (
+            el.classList.contains('web-standalone-back') ||
+            el.classList.contains('web-cabinet-header')
+        )) {
+            return true;
+        }
+        return typeof userIgnore === 'function' ? !!userIgnore(el) : false;
+    };
     return ensureHtml2Canvas().then(function (html2canvas) {
         return html2canvas(document.body, options);
     });

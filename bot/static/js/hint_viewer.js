@@ -2545,17 +2545,24 @@ async function ensureContentEditor() {
                 scrollX: 0,
                 scrollY: 0,
                 scale: Math.min(window.devicePixelRatio || 1, 2),
+                ignoreElements: function (el) {
+                    return !!(el && el.classList && el.classList.contains('web-standalone-back'));
+                },
             };
         }
 
         function captureHintViewerScreenshot() {
             window.scrollTo(0, 0);
+            document.body.classList.add('screenshot-mode');
             return new Promise((resolve, reject) => {
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         ensureHtml2Canvas().then(function (html2canvas) { return html2canvas(document.body, getHintViewerHtml2CanvasOptions()); })
                             .then(resolve)
-                            .catch(reject);
+                            .catch(reject)
+                            .finally(function () {
+                                document.body.classList.remove('screenshot-mode');
+                            });
                     });
                 });
             });

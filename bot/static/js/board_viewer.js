@@ -1416,12 +1416,16 @@ async function ensureContentEditor() {
                 scrollX: 0,
                 scrollY: 0,
                 scale: Math.min(window.devicePixelRatio || 1, 2),
+                ignoreElements: function (el) {
+                    return !!(el && el.classList && el.classList.contains('web-standalone-back'));
+                },
             };
         }
 
         function captureBoardViewerScreenshot() {
             window.scrollTo(0, 0);
             applyScreenshotFontScale();
+            document.body.classList.add('screenshot-mode');
             const boardBlock = document.querySelector('.board-block');
             return new Promise((resolve, reject) => {
                 requestAnimationFrame(() => {
@@ -1432,13 +1436,18 @@ async function ensureContentEditor() {
                             allowTaint: true,
                             backgroundColor: '#1a1a1a',
                             scale: Math.min(window.devicePixelRatio || 1, 2),
+                            ignoreElements: function (el) {
+                                return !!(el && el.classList && el.classList.contains('web-standalone-back'));
+                            },
                         } : getBoardViewerHtml2CanvasOptions();
                         boardViewerHtml2Canvas(target, options)
                             .then((canvas) => {
+                                document.body.classList.remove('screenshot-mode');
                                 removeScreenshotFontScale();
                                 resolve(canvas);
                             })
                             .catch((err) => {
+                                document.body.classList.remove('screenshot-mode');
                                 removeScreenshotFontScale();
                                 reject(err);
                             });

@@ -161,6 +161,9 @@ html[data-theme="light"] .web-cabinet-header .btn {
 html[data-theme="light"] .web-standalone-back {
     color: var(--web-link);
 }
+body.screenshot-mode .web-standalone-back {
+    display: none !important;
+}
 
 html[data-theme="light"] .cabinet-footer {
     background: rgba(255, 255, 255, 0.94);
