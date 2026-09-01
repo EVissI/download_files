@@ -779,8 +779,8 @@ async def handle_send_batch_to_hint_viewer(
     from bot.routers.hint_viewer_router import process_batch_hint_files
     
     message_dao = MessagesTextsDAO(session_without_commit)
-    await callback.message.delete()
-    
+    await callback.answer()
+
     if callback_data.action == "yes":
         # Получаем список путей к файлам из Redis
         file_paths_json = await redis_client.get(f"batch_analyze_file_paths:{user_info.id}")
@@ -838,7 +838,7 @@ async def handle_download_pdf(
     i18n: TranslatorRunner,
 ):
     message_dao = MessagesTextsDAO(session_without_commit)
-    await callback.message.delete()
+    await callback.answer()
     if callback_data.action == "yes":
         key = f"batch_analysis_data:{user_info.id}"
         file_name_key = f"pdf_file_name:{user_info.id}"

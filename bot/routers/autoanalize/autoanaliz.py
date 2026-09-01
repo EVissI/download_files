@@ -555,7 +555,7 @@ async def handle_download_pdf(
     session_without_commit: AsyncSession,
 ):
     message_dao = MessagesTextsDAO(session_without_commit)
-    await callback.message.delete()
+    await callback.answer()
     if callback_data.action == "yes":
         key = f"analysis_data:{user_info.id}"
         file_name_key = f"file_name:{user_info.id}"
@@ -590,8 +590,8 @@ async def handle_send_to_hint_viewer(
 ):
     """Обрабатывает отправку файла на анализ ошибок после автоанализа"""
     message_dao = MessagesTextsDAO(session_without_commit)
-    await callback.message.delete()
-    
+    await callback.answer()
+
     if callback_data.action == "yes":
         # Получаем file_id из callback_data
         file_id = callback_data.file_id if callback_data.file_id else ""
