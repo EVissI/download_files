@@ -148,6 +148,9 @@ html[data-theme="light"] .web-cabinet-header .service-nav {
 html[data-theme="light"] .web-cabinet-header .service-nav a {
     color: var(--web-text-nav);
 }
+html[data-theme="light"] .web-cabinet-header .service-nav a.active {
+    color: #fff;
+}
 html[data-theme="light"] .web-cabinet-header .service-nav a:hover:not(.active) {
     background: var(--web-nav-hover);
     color: var(--web-text);
