@@ -19,6 +19,7 @@ from aiogram.types import (
     Document,
 )
 from aiogram.fsm.context import FSMContext
+from aiogram.exceptions import TelegramRetryAfter
 from aiogram.filters import StateFilter
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from loguru import logger
@@ -38,6 +39,8 @@ from bot.routers.hint_viewer_router import (
     check_job_status,
 )
 from bot.routers.autoanalize.autoanaliz import AutoAnalyzeDialog, analyze_file_by_path
+from bot.common.func.analyze_followup import send_analyze_followup_chat
+from bot.common.func.telegram_safe import mark_flood, safe_bot_send
 from bot.common.func.game_parser import parse_file, get_names
 from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.func.hint_viewer import (
@@ -48,7 +51,6 @@ from bot.common.func.hint_viewer import (
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.service.sync_folder_service import SyncthingSync
 from bot.common.kbds.markup.main_kb import MainKeyboard
-from bot.common.kbds.inline.autoanalize import get_download_pdf_kb, get_hint_viewer_kb
 from bot.config import bot, settings, translator_hub
 
 file_router = Router()
@@ -623,7 +625,8 @@ async def process_auto_analyze_file(
         except ValueError as e:
             await waiting_manager.stop()
             await state.clear()
-            await bot.send_message(
+            await safe_bot_send(
+                bot,
                 chat_id,
                 str(e),
                 reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
@@ -646,7 +649,8 @@ async def process_auto_analyze_file(
                 keyboard.button(text=player, callback_data=f"auto_player:{player}")
             keyboard.adjust(1)
             await waiting_manager.stop()
-            await bot.send_message(
+            await safe_bot_send(
+                bot,
                 chat_id,
                 await messages_dao.get_text('analyze_complete_ch_player', user_info.lang_code),
                 reply_markup=keyboard.as_markup(),
@@ -655,38 +659,46 @@ async def process_auto_analyze_file(
             # Single player
             formatted_analysis, new_file_path = result
             await waiting_manager.stop()
-            await bot.send_message(
+            await safe_bot_send(
+                bot,
                 chat_id,
                 f"{formatted_analysis}\n\n",
                 parse_mode="HTML",
                 reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
             )
-            from bot.common.kbds.inline.autoanalize import get_download_pdf_kb, get_hint_viewer_kb
-            # Генерируем уникальный ID для файла
             file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
-            # Сохраняем путь к файлу в Redis с уникальным идентификатором
-            from bot.db.redis import redis_client
             await redis_client.set(
                 f"auto_analyze_file_path:{user_info.id}:{file_id}", new_file_path, expire=3600
             )
-            # Добавляем кнопку для отправки на анализ ошибок
-            await bot.send_message(
+            await send_analyze_followup_chat(
+                bot,
                 chat_id,
-                await messages_dao.get_text('analyze_ask_hints', user_info.lang_code) or 
-                "Хотите отправить этот файл на анализ ошибок?",
-                reply_markup=get_hint_viewer_kb(i18n, 'solo', file_id=file_id)
-            )
-            await bot.send_message(
-                chat_id,
-                await messages_dao.get_text('analyze_ask_pdf', user_info.lang_code),
-                reply_markup=get_download_pdf_kb(i18n, 'solo')
+                i18n=i18n,
+                user_info=user_info,
+                context="solo",
+                file_id=file_id,
+                file_path=new_file_path,
+                file_name=os.path.basename(new_file_path),
+                username=getattr(user_info, "username", None),
+                include_pro=False,
+                message_dao=messages_dao,
             )
             await session_without_commit.commit()
-            # Очищаем состояние после успешной обработки
             await state.clear()
             
+    except TelegramRetryAfter as e:
+        await session_without_commit.rollback()
+        logger.warning(
+            "Flood control при анализе файла chat={}: retry after {}с",
+            chat_id,
+            e.retry_after,
+        )
+        await mark_flood(chat_id, e.retry_after)
+        await waiting_manager.stop()
+        await state.clear()
     except Exception as e:
         await session_without_commit.rollback()
         logger.error(f"Ошибка при автоматическом анализе файла: {e}")
-        await bot.send_message(chat_id, i18n.auto.analyze.error.parse())
+        await waiting_manager.stop()
+        await safe_bot_send(bot, chat_id, i18n.auto.analyze.error.parse())
         await state.clear()

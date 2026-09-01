@@ -6,7 +6,7 @@ import asyncio
 from typing import Optional
 
 from aiogram.client.session.aiohttp import AiohttpSession
-from aiogram.exceptions import TelegramNetworkError
+from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter
 from aiogram.methods.base import TelegramMethod
 from aiogram.client.session.base import TelegramType
 from loguru import logger
@@ -250,6 +250,7 @@ class FailoverAiohttpSession(AiohttpSession):
         """
         last_error: TelegramNetworkError | None = None
         excluded_proxy_ids: set[int] = set()
+        flood_retried = False
 
         while True:
             async with self._state_lock:
@@ -290,6 +291,19 @@ class FailoverAiohttpSession(AiohttpSession):
                     proxy_url,
                 )
                 return result
+            except TelegramRetryAfter as exc:
+                retry_after = int(getattr(exc, "retry_after", 1) or 1)
+                # Короткие лимиты — один повтор. Часовые (24114с и т.п.) не блокируем.
+                if not flood_retried and retry_after <= 5:
+                    flood_retried = True
+                    logger.warning(
+                        "Telegram flood control on {}, retry in {}s",
+                        type(method).__name__,
+                        retry_after,
+                    )
+                    await asyncio.sleep(retry_after)
+                    continue
+                raise
             except ValueError as exc:
                 logger.error(
                     "Invalid telegram proxy URL {}: {}",

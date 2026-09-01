@@ -98,8 +98,14 @@ async def notify_user(user_id: int, text: str, media_id: str = None, media_type:
         logger.warning(f"Ошибка отправки сообщения пользователю {user_id}: {e}")
         return False
     except TelegramRetryAfter as e:
-        logger.warning(f"Флуд-контроль для пользователя {user_id}. Ожидание {e.retry_after} секунд.")
-        await asyncio.sleep(e.retry_after)
+        wait = int(e.retry_after or 1)
+        if wait > 5:
+            logger.warning(
+                f"Флуд-контроль для пользователя {user_id}: retry after {wait}с, пропускаем"
+            )
+            return False
+        logger.warning(f"Флуд-контроль для пользователя {user_id}. Ожидание {wait} секунд.")
+        await asyncio.sleep(wait)
         return await notify_user(user_id, text, media_id, media_type)
     except Exception as e:
         logger.error(f"Неожиданная ошибка при отправке сообщения пользователю {user_id}: {e}")

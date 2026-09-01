@@ -14,6 +14,7 @@ from aiogram.types import FSInputFile, Message
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from bot.common.func.telegram_safe import safe_answer
 from bot.common.kbds.inline.pro_analysis import (
     get_pro_analysis_admin_reply_kb,
     get_pro_analysis_order_kb,
@@ -122,7 +123,8 @@ async def offer_pro_analysis_order(
         logger.error(f"create_pro_order failed: {e}")
         return None
 
-    await message.answer(
+    await safe_answer(
+        message,
         i18n.pro.analysis.ask(),
         reply_markup=get_pro_analysis_order_kb(request_id, i18n),
     )

@@ -11,6 +11,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile
+from aiogram.exceptions import TelegramRetryAfter
 import pytz
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
@@ -28,11 +29,11 @@ from bot.common.func.generate_pdf import html_to_pdf_bytes, make_page, merge_pag
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
+from bot.common.func.analyze_followup import send_analyze_followup
+from bot.common.func.telegram_safe import mark_flood, safe_answer, safe_edit_text
 from bot.common.kbds.inline.autoanalize import (
     DownloadPDFCallback, 
     SendToHintViewerCallback,
-    get_download_pdf_kb,
-    get_hint_viewer_kb,
 )
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
@@ -194,7 +195,7 @@ async def handle_sequential_file(
                 await message.bot.download(file.file_id, destination=file_path)
             except Exception as e:
                 logger.error(f"Failed to download file {file_name} for user {user_info.id}: {e}")
-                await message.answer("Ошибка при загрузке файла. Попробуйте снова.")
+                await safe_answer(message, "Ошибка при загрузке файла. Попробуйте снова.")
                 return
 
             try:
@@ -208,13 +209,20 @@ async def handle_sequential_file(
                     logger.warning(f"Duplicate file {file_path} skipped for user {user_info.id}")
             except Exception as e:
                 logger.error(f"Failed to update state for user {user_info.id}: {e}")
-                await message.answer("Ошибка при обработке файла. Попробуйте снова.")
+                await safe_answer(message, "Ошибка при обработке файла. Попробуйте снова.")
                 return
-            await message.answer(i18n.auto.batch.added(count=len(file_paths)))
-            await asyncio.sleep(0.3)  # slight delay to avoid message flooding
+            await safe_answer(message, i18n.auto.batch.added(count=len(file_paths)))
+            await asyncio.sleep(0.4)
+        except TelegramRetryAfter as e:
+            logger.warning(
+                "Flood control при последовательной загрузке chat={}: retry after {}с",
+                message.chat.id,
+                e.retry_after,
+            )
+            await mark_flood(message.chat.id, e.retry_after)
         except Exception as e:
             logger.error(f"Unexpected error in handle_sequential_file for user {user_info.id}: {e}")
-            await message.answer("Произошла ошибка при обработке файла. Попробуйте снова.")
+            await safe_answer(message, "Произошла ошибка при обработке файла. Попробуйте снова.")
 
 
 @batch_auto_analyze_router.message(
@@ -285,12 +293,16 @@ async def process_batch_files(
     all_analysis_datas = []
     successful_count = 0
     total = len(file_paths)
-    progress_message = await message.answer(i18n.auto.batch.progress(current = 0, total = total))
+    progress_message = await safe_answer(message, i18n.auto.batch.progress(current=0, total=total))
     data = await state.get_data()
     current_file_idx = data.get('current_file_idx', 1)
     for idx, file_dict in enumerate(file_paths, current_file_idx):
-        await message.bot.delete_message(chat_id=message.chat.id, message_id=progress_message.message_id)
-        progress_message = await message.answer(i18n.auto.batch.progress(current = idx, total = total))
+        if progress_message:
+            updated = await safe_edit_text(
+                progress_message, i18n.auto.batch.progress(current=idx, total=total)
+            )
+            if updated:
+                progress_message = updated
         file_path = file_dict['path']
         original_name = file_dict['original_name']
         file_type = os.path.splitext(file_path)[1][1:]
@@ -342,14 +354,15 @@ async def process_batch_files(
                 player_names=player_names,
                 all_analysis_datas=all_analysis_datas,
                 successful_count=successful_count,
-                progress_message_id=progress_message.message_id,
+                progress_message_id=progress_message.message_id if progress_message else None,
                 duration=duration
             )
             keyboard = InlineKeyboardBuilder()
             for player in player_names:
                 keyboard.button(text=player, callback_data=f"batch_player:{player}")
             keyboard.adjust(1)
-            await message.answer(
+            await safe_answer(
+                message,
                 i18n.auto.analyze.complete(),
                 reply_markup=keyboard.as_markup(),
             )
@@ -363,7 +376,11 @@ async def process_batch_files(
             await state.update_data(file_id=file_id)
             await state.set_state(BatchAnalyzeDialog.select_player)
             return  
-    await message.bot.delete_message(chat_id=message.chat.id, message_id=progress_message.message_id)
+    if progress_message:
+        try:
+            await progress_message.delete()
+        except Exception:
+            pass
     await finalize_batch(message, state, user_info, i18n, all_analysis_datas, successful_count, session_without_commit)
 
 
@@ -421,26 +438,34 @@ async def process_single_analysis(
         await dao.add(SDetailedAnalysis(**player_data))
         
         formatted_analysis = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
-        await message.answer(
+        await safe_answer(
+            message,
             f"{formatted_analysis}\n\n",
             parse_mode="HTML",
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
         )
-        # Генерируем уникальный ID для файла
-        import hashlib
         file_id = hashlib.md5(file_path.encode()).hexdigest()[:8]
-        # Сохраняем путь к файлу в Redis с уникальным идентификатором
         await redis_client.set(
             f"auto_analyze_file_path:{user_info.id}:{file_id}", file_path, expire=3600
         )
-        # Добавляем кнопку для отправки этого файла на анализ ошибок
-        await message.answer(
-            i18n.auto.analyze.ask_hints(),
-            reply_markup=get_hint_viewer_kb(i18n, 'solo', file_id=file_id)
+        await send_analyze_followup(
+            message,
+            i18n=i18n,
+            user_info=user_info,
+            context="solo",
+            file_id=file_id,
+            file_path=file_path,
+            file_name=file_name,
+            include_pdf=False,
+            include_pro=False,
         )
         return True
     else:
-        await message.answer(i18n.auto.analyze.error.balance(), reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n))
+        await safe_answer(
+            message,
+            i18n.auto.analyze.error.balance(),
+            reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
+        )
         return False
     
 
@@ -509,13 +534,21 @@ async def handle_batch_player_selection(
 
         try:
             await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message_id)
-        except:
+        except Exception:
             pass
-        progress_message = await callback.message.answer(i18n.auto.batch.progress(current = current_file_idx, total = total_files))
+        progress_message = await safe_answer(
+            callback.message,
+            i18n.auto.batch.progress(current=current_file_idx, total=total_files),
+        )
         if process_result:
             for idx, file_dict in enumerate(file_paths, current_file_idx + 1):
-                await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message.message_id)
-                progress_message = await callback.message.answer(i18n.auto.batch.progress(current = idx, total = total_files))
+                if progress_message:
+                    updated = await safe_edit_text(
+                        progress_message,
+                        i18n.auto.batch.progress(current=idx, total=total_files),
+                    )
+                    if updated:
+                        progress_message = updated
                 file_path = file_dict['path']
                 original_name = file_dict['original_name']
                 file_type = os.path.splitext(file_path)[1][1:]
@@ -571,7 +604,7 @@ async def handle_batch_player_selection(
                         player_names=player_names,
                         all_analysis_datas=all_analysis_datas,
                         successful_count=successful_count,
-                        progress_message_id=progress_message.message_id,
+                        progress_message_id=progress_message.message_id if progress_message else None,
                         duration=duration
                     )
                     keyboard = InlineKeyboardBuilder()
@@ -579,7 +612,8 @@ async def handle_batch_player_selection(
                         keyboard.button(text=player, callback_data=f"batch_player:{player}")
 
                     keyboard.adjust(1)
-                    await callback.message.answer(
+                    await safe_answer(
+                        callback.message,
                         await message_dao.get_text('analyze_complete_ch_player', user_info.lang_code),
                         reply_markup=keyboard.as_markup(),
                     )
@@ -593,19 +627,28 @@ async def handle_batch_player_selection(
                     await state.update_data(file_id=file_id)
                     await state.set_state(BatchAnalyzeDialog.select_player)
                     return
-        try:
-            await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=progress_message.message_id)
-        except:
-            pass
+        if progress_message:
+            try:
+                await progress_message.delete()
+            except Exception:
+                pass
         await finalize_batch(
             callback.message, state, user_info, i18n, all_analysis_datas,
             successful_count, session_without_commit
         )
     
+    except TelegramRetryAfter as e:
+        await session_without_commit.rollback()
+        logger.warning(
+            "Flood control при пакетном выборе игрока chat={}: retry after {}с",
+            callback.message.chat.id,
+            e.retry_after,
+        )
+        await mark_flood(callback.message.chat.id, e.retry_after)
     except Exception as e:
         await session_without_commit.rollback()
         logger.error(f"Error in batch player selection: {e}")
-        await callback.message.answer(i18n.auto.analyze.error.save())
+        await safe_answer(callback.message, i18n.auto.analyze.error.save())
 
 
 async def finalize_batch(
@@ -690,17 +733,28 @@ async def finalize_batch(
                 expire=3600
             )
         
-        await message.answer(
+        await safe_answer(
+            message,
             user_pr_msg,
             parse_mode="HTML",
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n)
         )
-        await message.answer(
-            await message_dao.get_text('analyze_ask_pdf', user_info.lang_code), 
-            reply_markup=get_download_pdf_kb(i18n, 'batch')
+        await send_analyze_followup(
+            message,
+            i18n=i18n,
+            user_info=user_info,
+            context="batch",
+            include_hints=False,
+            include_pdf=True,
+            include_pro=False,
+            message_dao=message_dao,
         )
     else:
-        await message.answer(i18n.auto.batch.no_matches(), reply_markup=MainKeyboard.build(user_info.role, i18n))
+        await safe_answer(
+            message,
+            i18n.auto.batch.no_matches(),
+            reply_markup=MainKeyboard.build(user_info.role, i18n),
+        )
     
     await session_without_commit.commit()
     await state.clear()

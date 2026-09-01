@@ -190,7 +190,10 @@ async def _send_to_user(
     except TelegramBadRequest:
         return False
     except TelegramRetryAfter as exc:
-        await asyncio.sleep(exc.retry_after)
+        wait = int(exc.retry_after or 1)
+        if wait > 5:
+            return False
+        await asyncio.sleep(wait)
         return await _send_to_user(tg_bot, user_id, text, media_id, media_type)
     except Exception:
         return False

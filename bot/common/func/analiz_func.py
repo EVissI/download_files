@@ -2,7 +2,10 @@ import json
 import re
 import subprocess
 import os
+import threading
 from loguru import logger
+
+_gnubg_lock = threading.Lock()
 
 def clean_nick(raw: str) -> str:
     """
@@ -67,51 +70,52 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
             "exit",
         ]
 
-        process = subprocess.Popen(
-            ["gnubg", "-t"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-        )
+        with _gnubg_lock:
+            process = subprocess.Popen(
+                ["gnubg", "-t"],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding="utf-8",
+            )
 
-        stdout, stderr = process.communicate("\n".join(gnubg_commands))
-        logger.debug(f"Вывод gnubg:\n{stdout}")
+            stdout, stderr = process.communicate("\n".join(gnubg_commands))
+            logger.debug(f"Вывод gnubg:\n{stdout}")
 
-        # Если импорт не удался для .gam, пробуем другие команды
-        if process.returncode != 0 and type in ("gam", "empire", "party"):
-            logger.warning(f"Не удалось импортировать .gam файл как {type}: {stderr}")
-            alternative_types = ["gam", "empire", "party"]
-            alternative_types.remove(type)  # Удаляем уже опробованный тип
+            # Если импорт не удался для .gam, пробуем другие команды
+            if process.returncode != 0 and type in ("gam", "empire", "party"):
+                logger.warning(f"Не удалось импортировать .gam файл как {type}: {stderr}")
+                alternative_types = ["gam", "empire", "party"]
+                alternative_types.remove(type)  # Удаляем уже опробованный тип
 
-            for alt_type in alternative_types:
-                logger.info(f"Попытка импорта как {alt_type}")
-                gnubg_commands = [
-                    import_commands[alt_type],
-                    "analyse match",
-                    "show statistics match",
-                    "exit",
-                ]
-                process = subprocess.Popen(
-                    ["gnubg", "-t"],
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    encoding="utf-8",
-                )
-                stdout, stderr = process.communicate("\n".join(gnubg_commands))
-                if process.returncode == 0:
-                    logger.info(f"Успешный импорт как {alt_type}")
-                    break
-            else:
-                logger.error(f"Ошибка выполнения gnubg для всех типов .gam: {stderr}")
+                for alt_type in alternative_types:
+                    logger.info(f"Попытка импорта как {alt_type}")
+                    gnubg_commands = [
+                        import_commands[alt_type],
+                        "analyse match",
+                        "show statistics match",
+                        "exit",
+                    ]
+                    process = subprocess.Popen(
+                        ["gnubg", "-t"],
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        encoding="utf-8",
+                    )
+                    stdout, stderr = process.communicate("\n".join(gnubg_commands))
+                    if process.returncode == 0:
+                        logger.info(f"Успешный импорт как {alt_type}")
+                        break
+                else:
+                    logger.error(f"Ошибка выполнения gnubg для всех типов .gam: {stderr}")
+                    raise RuntimeError(f"Ошибка выполнения gnubg: {stderr}")
+
+            if process.returncode != 0:
+                logger.error(f"Ошибка выполнения gnubg: {stderr}")
                 raise RuntimeError(f"Ошибка выполнения gnubg: {stderr}")
-
-        if process.returncode != 0:
-            logger.error(f"Ошибка выполнения gnubg: {stderr}")
-            raise RuntimeError(f"Ошибка выполнения gnubg: {stderr}")
 
         logger.info(f"Анализ матча завершён для файла: {file}")
 

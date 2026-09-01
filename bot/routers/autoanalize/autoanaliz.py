@@ -7,6 +7,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BufferedInputFile
+from aiogram.exceptions import TelegramRetryAfter
 import pytz
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
@@ -23,12 +24,17 @@ from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
 from bot.common.kbds.inline.autoanalize import (
-    DownloadPDFCallback, 
-    SendToHintViewerCallback, 
-    get_download_pdf_kb,
-    get_hint_viewer_kb,
+    DownloadPDFCallback,
+    SendToHintViewerCallback,
 )
-from bot.common.func.pro_analysis_order import offer_pro_analysis_order
+from bot.common.func.analyze_followup import send_analyze_followup
+from bot.common.func.telegram_safe import (
+    mark_flood,
+    mark_user_free,
+    safe_answer,
+    should_send_busy_notice,
+    try_mark_user_busy,
+)
 from bot.common.kbds.markup.cancel import get_cancel_kb
 from bot.common.kbds.markup.main_kb import MainKeyboard
 from bot.db.dao import DetailedAnalysisDAO, UserDAO, MessagesTextsDAO
@@ -46,6 +52,8 @@ if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
 auto_analyze_router = Router()
+# gnubg не любит параллельные процессы — сериализуем анализ, не флудим «подождите» всем.
+_gnubg_semaphore = asyncio.Semaphore(1)
 
 
 class AutoAnalyzeDialog(StatesGroup):
@@ -136,9 +144,10 @@ async def analyze_file_by_path(
     Analyzes a file by path, used for both uploaded files and existing files.
     """
     loop = asyncio.get_running_loop()
-    duration, analysis_result = await loop.run_in_executor(
-        None, analyze_mat_file, file_path, file_type
-    )
+    async with _gnubg_semaphore:
+        duration, analysis_result = await loop.run_in_executor(
+            None, analyze_mat_file, file_path, file_type
+        )
     if forward_message and duration > 0 and hasattr(message_or_callback, 'bot') and hasattr(message_or_callback, 'chat') and hasattr(message_or_callback, 'message_id'):
         try:
             await message_or_callback.bot.forward_message(
@@ -248,8 +257,6 @@ async def analyze_file_by_path(
         return analysis_data, new_file_path, player_names, duration
 
 
-mat_file_lock = asyncio.Lock()
-
 @auto_analyze_router.message(
     F.document, StateFilter(AutoAnalyzeDialog.file), UserInfo()
 )
@@ -263,138 +270,140 @@ async def handle_mat_file(
     """
     Handles single file uploads for analysis, ensuring only one file is processed at a time.
     """
-    # Try to acquire the lock non-blocking
-    if not mat_file_lock.locked():
-        async with mat_file_lock:
-            message_dao = MessagesTextsDAO(session_without_commit)
-            try:
-                waiting_manager = WaitingMessageManager(message.chat.id, message.bot, i18n)
-                file = message.document
-                if not file.file_name.endswith(
-                    (".mat", ".txt", ".sgf", ".sgg", ".bkg", ".gam", ".pos", ".fibs", ".tmg")
-                ):
-                    return await message.answer(await message_dao.get_text('analyze_type_invalid', user_info.lang_code))
-
-                # Create the 'files' directory if it doesn't exist
-                files_dir = os.path.join(os.getcwd(), "files")
-                os.makedirs(files_dir, exist_ok=True)
-                await waiting_manager.start()
-                file_name = file.file_name.replace(" ", "").replace(".txt", ".mat")
-                file_path = os.path.join(files_dir, file_name)
-
-                file_type = file_name.split(".")[-1]
-
-                # Download the file
-                try:
-                    await message.bot.download(file.file_id, destination=file_path)
-                except Exception as e:
-                    logger.error(f"Failed to download file {file_name} for user {user_info.id}: {e}")
-                    await waiting_manager.stop()
-                    await message.answer("Ошибка при загрузке файла. Попробуйте снова.")
-                    return
-
-                data = await state.get_data()
-                analysis_type = data.get("analysis_type")   
-
-                try:
-                    result = await analyze_file_by_path(
-                        file_path, file_type, user_info, session_without_commit, i18n, message, analysis_type, forward_message=True
-                    )
-                except ValueError as e:
-                    await waiting_manager.stop()
-                    await state.clear()
-                    return await message.answer(
-                        str(e),
-                        reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
-                    )
-
-                if isinstance(result, tuple) and len(result) == 4:
-                    # Multiple players
-                    analysis_data, new_file_path, player_names, duration = result
-                    await state.update_data(
-                        analysis_data=analysis_data,
-                        file_name=os.path.basename(new_file_path),
-                        file_path=new_file_path,
-                        player_names=player_names,
-                        duration=duration,
-                    )
-
-                    keyboard = InlineKeyboardBuilder()
-                    for player in player_names:
-                        keyboard.button(text=player, callback_data=f"auto_player:{player}")
-                    keyboard.adjust(1)
-                    await waiting_manager.stop()
-                    # Генерируем уникальный ID для файла
-                    import hashlib
-                    file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
-                    # Сохраняем путь к файлу в Redis с уникальным идентификатором
-                    await redis_client.set(
-                        f"auto_analyze_file_path:{user_info.id}:{file_id}", new_file_path, expire=3600
-                    )
-                    await message.answer(
-                        await message_dao.get_text('analyze_complete_ch_player', user_info.lang_code),
-                        reply_markup=keyboard.as_markup(),
-                    )
-                    # Добавляем кнопку для отправки на анализ ошибок
-                    await message.answer(
-                        i18n.auto.analyze.ask_hints(),
-                        reply_markup=get_hint_viewer_kb(i18n, 'solo', file_id=file_id)
-                    )
-                    await offer_pro_analysis_order(
-                        message,
-                        user_id=message.from_user.id,
-                        username=message.from_user.username
-                        or getattr(user_info, "username", None),
-                        service="autoanaliz",
-                        i18n=i18n,
-                        file_path=new_file_path,
-                        file_name=os.path.basename(new_file_path),
-                    )
-                else:
-                    # Single player
-                    formatted_analysis, new_file_path = result
-                    await waiting_manager.stop()
-                    # Генерируем уникальный ID для файла
-                    import hashlib
-                    file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
-                    # Сохраняем путь к файлу в Redis с уникальным идентификатором
-                    await redis_client.set(
-                        f"auto_analyze_file_path:{user_info.id}:{file_id}", new_file_path, expire=3600
-                    )
-                    await message.answer(
-                        f"{formatted_analysis}\n\n",
-                        parse_mode="HTML",
-                        reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
-                    )
-                    # Добавляем кнопку для отправки на анализ ошибок
-                    await message.answer(
-                        i18n.auto.analyze.ask_hints(),
-                        reply_markup=get_hint_viewer_kb(i18n, 'solo', file_id=file_id)
-                    )
-                    await message.answer(
-                        await message_dao.get_text('analyze_ask_pdf', user_info.lang_code),
-                        reply_markup=get_download_pdf_kb(i18n, 'solo')
-                    )
-                    await offer_pro_analysis_order(
-                        message,
-                        user_id=message.from_user.id,
-                        username=message.from_user.username
-                        or getattr(user_info, "username", None),
-                        service="autoanaliz",
-                        i18n=i18n,
-                        file_path=new_file_path,
-                        file_name=os.path.basename(new_file_path),
-                    )
-                    await session_without_commit.commit()
-
-            except Exception as e:
-                await session_without_commit.rollback()
-                logger.error(f"Ошибка при автоматическом анализе файла: {e}")
-                await waiting_manager.stop()
-                await message.answer(i18n.auto.analyze.error.parse())
-    else:
-        await message.answer("Другой файл уже обрабатывается. Пожалуйста, подождите и попробуйте снова.")
+    if not await try_mark_user_busy(user_info.id):
+        if await should_send_busy_notice(message.chat.id):
+            await safe_answer(
+                message,
+                "Другой файл уже обрабатывается. Пожалуйста, подождите и попробуйте снова.",
+            )
         logger.info(f"Ignored file upload from user {user_info.id} due to ongoing processing")
+        return
+
+    waiting_manager = None
+    message_dao = MessagesTextsDAO(session_without_commit)
+    try:
+        waiting_manager = WaitingMessageManager(message.chat.id, message.bot, i18n)
+        file = message.document
+        if not file.file_name.endswith(
+            (".mat", ".txt", ".sgf", ".sgg", ".bkg", ".gam", ".pos", ".fibs", ".tmg")
+        ):
+            await safe_answer(
+                message,
+                await message_dao.get_text("analyze_type_invalid", user_info.lang_code),
+            )
+            return
+
+        files_dir = os.path.join(os.getcwd(), "files")
+        os.makedirs(files_dir, exist_ok=True)
+        await waiting_manager.start()
+        file_name = file.file_name.replace(" ", "").replace(".txt", ".mat")
+        file_path = os.path.join(files_dir, file_name)
+
+        file_type = file_name.split(".")[-1]
+
+        try:
+            await message.bot.download(file.file_id, destination=file_path)
+        except Exception as e:
+            logger.error(f"Failed to download file {file_name} for user {user_info.id}: {e}")
+            await waiting_manager.stop()
+            await safe_answer(message, "Ошибка при загрузке файла. Попробуйте снова.")
+            return
+
+        data = await state.get_data()
+        analysis_type = data.get("analysis_type")
+
+        try:
+            result = await analyze_file_by_path(
+                file_path, file_type, user_info, session_without_commit, i18n, message, analysis_type, forward_message=True
+            )
+        except ValueError as e:
+            await waiting_manager.stop()
+            await state.clear()
+            await safe_answer(
+                message,
+                str(e),
+                reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
+            )
+            return
+
+        if isinstance(result, tuple) and len(result) == 4:
+            analysis_data, new_file_path, player_names, duration = result
+            await state.update_data(
+                analysis_data=analysis_data,
+                file_name=os.path.basename(new_file_path),
+                file_path=new_file_path,
+                player_names=player_names,
+                duration=duration,
+            )
+
+            keyboard = InlineKeyboardBuilder()
+            for player in player_names:
+                keyboard.button(text=player, callback_data=f"auto_player:{player}")
+            keyboard.adjust(1)
+            await waiting_manager.stop()
+            file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
+            await redis_client.set(
+                f"auto_analyze_file_path:{user_info.id}:{file_id}", new_file_path, expire=3600
+            )
+            await safe_answer(
+                message,
+                await message_dao.get_text("analyze_complete_ch_player", user_info.lang_code),
+                reply_markup=keyboard.as_markup(),
+            )
+            await send_analyze_followup(
+                message,
+                i18n=i18n,
+                user_info=user_info,
+                context="solo",
+                file_id=file_id,
+                file_path=new_file_path,
+                file_name=os.path.basename(new_file_path),
+                include_pdf=False,
+                message_dao=message_dao,
+            )
+        else:
+            formatted_analysis, new_file_path = result
+            await waiting_manager.stop()
+            file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
+            await redis_client.set(
+                f"auto_analyze_file_path:{user_info.id}:{file_id}", new_file_path, expire=3600
+            )
+            await safe_answer(
+                message,
+                f"{formatted_analysis}\n\n",
+                parse_mode="HTML",
+                reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
+            )
+            await send_analyze_followup(
+                message,
+                i18n=i18n,
+                user_info=user_info,
+                context="solo",
+                file_id=file_id,
+                file_path=new_file_path,
+                file_name=os.path.basename(new_file_path),
+                message_dao=message_dao,
+            )
+            await session_without_commit.commit()
+
+    except TelegramRetryAfter as e:
+        await session_without_commit.rollback()
+        logger.warning(
+            "Flood control при анализе файла chat={}: retry after {}с",
+            message.chat.id,
+            e.retry_after,
+        )
+        await mark_flood(message.chat.id, e.retry_after)
+        if waiting_manager:
+            await waiting_manager.stop()
+    except Exception as e:
+        await session_without_commit.rollback()
+        logger.error(f"Ошибка при автоматическом анализе файла: {e}")
+        if waiting_manager:
+            await waiting_manager.stop()
+        await safe_answer(message, i18n.auto.analyze.error.parse())
+    finally:
+        await mark_user_free(user_info.id)
 
 
 @auto_analyze_router.callback_query(F.data.startswith("auto_player:"), UserInfo())
@@ -499,37 +508,38 @@ async def handle_player_selection(
         await redis_client.set(
             f"auto_analyze_file_path:{user_info.id}:{file_id}", file_path, expire=3600
         )
-        await callback.message.answer(
+        await safe_answer(
+            callback.message,
             f"{formatted_analysis}\n\n",
             parse_mode="HTML",
             reply_markup=MainKeyboard.build(user_role=user_info.role, i18n=i18n),
         )
-        # Добавляем кнопку для отправки на анализ ошибок
-        await callback.message.answer(
-            i18n.auto.analyze.ask_hints(),
-            reply_markup=get_hint_viewer_kb(i18n, 'solo', file_id=file_id)
-        )
-        await callback.message.answer(
-            await message_dao.get_text('analyze_ask_pdf', user_info.lang_code), 
-            reply_markup=get_download_pdf_kb(i18n, 'solo')
-        )
-        await offer_pro_analysis_order(
+        await send_analyze_followup(
             callback.message,
-            user_id=callback.from_user.id,
-            username=callback.from_user.username
-            or getattr(user_info, "username", None),
-            service="autoanaliz",
             i18n=i18n,
+            user_info=user_info,
+            context="solo",
+            file_id=file_id,
             file_path=file_path,
             file_name=file_name or os.path.basename(file_path),
+            message_dao=message_dao,
         )
         await session_without_commit.commit()
         await state.clear()
 
+    except TelegramRetryAfter as e:
+        await session_without_commit.rollback()
+        logger.warning(
+            "Flood control при выборе игрока chat={}: retry after {}с",
+            callback.message.chat.id,
+            e.retry_after,
+        )
+        await mark_flood(callback.message.chat.id, e.retry_after)
+        await state.clear()
     except Exception as e:
         await session_without_commit.rollback()
-        logger.error(f"Ошибка при ѝохранении выбора игрока: {e}")
-        await callback.message.answer(i18n.auto.analyze.error.save())
+        logger.error(f"Ошибка при сохранении выбора игрока: {e}")
+        await safe_answer(callback.message, i18n.auto.analyze.error.save())
         await state.clear()
 
 
@@ -750,9 +760,18 @@ async def handle_send_to_hint_viewer(
                 check_job_status(fake_message, actual_job_id, state, i18n, session_without_commit, user_info)
             )
             
+        except TelegramRetryAfter as e:
+            logger.warning(
+                "Flood control при отправке на анализ ошибок chat={}: retry after {}с",
+                callback.message.chat.id,
+                e.retry_after,
+            )
+            await mark_flood(callback.message.chat.id, e.retry_after)
+            await state.clear()
         except Exception as e:
             logger.error(f"Ошибка при отправке файла на анализ ошибок: {e}")
-            await callback.message.answer(
+            await safe_answer(
+                callback.message,
                 await message_dao.get_text('analyze_error_sending_to_hints', user_info.lang_code) or
                 f"Произошла ошибка при отправке файла на анализ ошибок: {e}"
             )

@@ -1,9 +1,10 @@
 ﻿import asyncio
-import random
 from aiogram.types import Message
 from typing import Optional
 from fluentogram import TranslatorRunner
 from typing import TYPE_CHECKING
+from loguru import logger
+
 if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
@@ -18,8 +19,17 @@ class WaitingMessageManager:
 
     async def start(self):
         self.active = True
-        self.message = await self.bot.send_message(self.chat_id, self.i18n.waiting.think1())
-        self.task = asyncio.create_task(self._update_loop())
+        try:
+            from bot.common.func.telegram_safe import safe_bot_send
+
+            self.message = await safe_bot_send(
+                self.bot, self.chat_id, self.i18n.waiting.think1()
+            )
+        except Exception as exc:
+            logger.warning("Waiting message start failed for chat {}: {}", self.chat_id, exc)
+            self.message = None
+        if self.message:
+            self.task = asyncio.create_task(self._update_loop())
 
     async def stop(self):
         self.active = False
@@ -27,21 +37,26 @@ class WaitingMessageManager:
             self.task.cancel()
             try:
                 await self.task
-            except asyncio.CancelledError:
+            except (asyncio.CancelledError, Exception):
                 pass
+            self.task = None
         if self.message:
-            await self.message.delete()
+            try:
+                await self.message.delete()
+            except Exception:
+                pass
+            self.message = None
 
     async def _update_loop(self):
         idx = 1
         while self.active:
             try:
                 await asyncio.sleep(5)
-                if not self.active:
+                if not self.active or not self.message:
                     break
                 new_text = getattr(self.i18n.waiting, f"think{idx % 3 + 1}")()
                 await self.message.edit_text(new_text)
                 idx += 1
             except Exception:
-                # Игнорируем ошибки редактирования
+                # Игнорируем ошибки редактирования и flood control
                 pass
