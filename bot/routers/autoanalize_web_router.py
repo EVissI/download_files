@@ -30,15 +30,17 @@ from bot.common.service.hint_viewer_web_service import (
     append_session_job,
     list_history_for_user,
     list_session_jobs,
+    patch_session_job,
     record_history,
-    replace_session_jobs,
     resolve_web_session,
     sync_history_from_job,
+    update_history_status,
     web_cabinet_page_vars,
 )
 from bot.common.utils.static_assets import get_static_asset_version
 from bot.config import translator_hub
 from bot.db.models import HintViewerWebUploadStatus
+from bot.db.redis import redis_client
 
 autoanalize_web_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
@@ -48,9 +50,14 @@ MAX_UPLOAD_BYTES = 30 * 1024 * 1024
 MAX_ANALYZE_FILES = 40
 ANALYZE_DIR = Path("files/web_analyze")
 ANALYZE_EXTS = {".mat", ".txt", ".sgf", ".sgg", ".bkg", ".gam", ".pos", ".fibs", ".tmg"}
+ANALYZE_PENDING_KEY = "hint_web:analyze:pending"
+ANALYZE_ACTIVE_KEY = "hint_web:analyze:active:{game_id}"
+ANALYZE_GNU_LOCK_KEY = "hint_web:analyze:gnu_lock"
+ANALYZE_GNU_LOCK_TTL = 3 * 3600
+ANALYZE_STALE_SEC = 24 * 3600
+ANALYZE_REQUEUE_AFTER_SEC = 90
 
 _gnubg_lock = threading.Lock()
-_queue: asyncio.Queue | None = None
 _worker_task: asyncio.Task | None = None
 
 
@@ -102,37 +109,46 @@ def _run_gnubg(path: str, file_type: str) -> tuple[Any, str]:
         return analyze_mat_file(path, file_type)
 
 
-def _ensure_queue() -> asyncio.Queue:
-    global _queue, _worker_task
-    if _queue is None:
-        _queue = asyncio.Queue()
+def ensure_web_analyze_worker() -> None:
+    global _worker_task
     if _worker_task is None or _worker_task.done():
         _worker_task = asyncio.create_task(_worker_loop())
-    return _queue
+
+
+async def _run_gnubg_exclusive(path: str, file_type: str) -> tuple[Any, str]:
+    lock_val = uuid.uuid4().hex
+    while not await redis_client.set_nx(
+        ANALYZE_GNU_LOCK_KEY, lock_val, expire=ANALYZE_GNU_LOCK_TTL
+    ):
+        await asyncio.sleep(1)
+    try:
+        return await asyncio.to_thread(_run_gnubg, path, file_type)
+    finally:
+        current = await redis_client.get(ANALYZE_GNU_LOCK_KEY)
+        if current == lock_val:
+            await redis_client.delete(ANALYZE_GNU_LOCK_KEY)
 
 
 async def _patch_job(token: str, job_id: str, mutator) -> dict[str, Any] | None:
-    jobs = await list_session_jobs(token, WEB_SERVICE_ANALYZE)
-    updated = None
-    for job in jobs:
-        if job.get("job_id") == job_id:
-            mutator(job)
-            updated = job
-            break
-    await replace_session_jobs(token, jobs, WEB_SERVICE_ANALYZE)
-    return updated
+    return await patch_session_job(token, job_id, mutator, WEB_SERVICE_ANALYZE)
 
 
 async def _worker_loop() -> None:
-    assert _queue is not None
     while True:
-        item = await _queue.get()
         try:
+            raw = await redis_client.blpop(ANALYZE_PENDING_KEY, timeout=3)
+        except Exception:
+            logger.exception("web autoanalyze queue read failed")
+            await asyncio.sleep(2)
+            continue
+        if not raw:
+            continue
+        try:
+            _key, payload = raw
+            item = json.loads(payload)
             await _process_file_item(item)
         except Exception:
             logger.exception("web autoanalyze worker failed")
-        finally:
-            _queue.task_done()
 
 
 async def _process_file_item(item: dict[str, Any]) -> None:
@@ -143,8 +159,34 @@ async def _process_file_item(item: dict[str, Any]) -> None:
     file_type = item["file_type"]
     game_id = item["game_id"]
     kind = item.get("kind") or "single"
+    await redis_client.set(
+        ANALYZE_ACTIVE_KEY.format(game_id=game_id), "1", expire=ANALYZE_GNU_LOCK_TTL
+    )
+    try:
+        await _process_file_item_inner(
+            token, job_id, filename, src_path, file_type, game_id, kind
+        )
+    finally:
+        await redis_client.delete(ANALYZE_ACTIVE_KEY.format(game_id=game_id))
 
+
+async def _process_file_item_inner(
+    token: str,
+    job_id: str,
+    filename: str,
+    src_path: str,
+    file_type: str | None,
+    game_id: str,
+    kind: str,
+) -> None:
     async def mark_processing() -> None:
+        await update_history_status(
+            job_id,
+            HintViewerWebUploadStatus.PROCESSING.value,
+            original_filename=filename,
+            game_id=game_id,
+        )
+
         def mutator(job: dict[str, Any]) -> None:
             if kind == "batch":
                 for entry in job.get("files") or []:
@@ -163,6 +205,14 @@ async def _process_file_item(item: dict[str, Any]) -> None:
 
     async def fail(message: str) -> None:
         now = datetime.now(timezone.utc).isoformat()
+        await update_history_status(
+            job_id,
+            HintViewerWebUploadStatus.ERROR.value,
+            original_filename=filename,
+            game_id=game_id,
+            error_message=message,
+            finished=True,
+        )
 
         def mutator(job: dict[str, Any]) -> None:
             if kind == "batch":
@@ -193,7 +243,7 @@ async def _process_file_item(item: dict[str, Any]) -> None:
             await sync_history_from_job(updated)
 
     try:
-        duration, raw = await asyncio.to_thread(_run_gnubg, src_path, file_type)
+        duration, raw = await _run_gnubg_exclusive(src_path, file_type)
         analysis_data = json.loads(raw)
         player_names = list((analysis_data.get("chequerplay") or {}).keys())
         if len(player_names) != 2:
@@ -212,6 +262,16 @@ async def _process_file_item(item: dict[str, Any]) -> None:
         )
         red_player, black_player = player_names[0], player_names[1]
         now = datetime.now(timezone.utc).isoformat()
+        await update_history_status(
+            job_id,
+            HintViewerWebUploadStatus.DONE.value,
+            original_filename=filename,
+            game_id=game_id,
+            error_message=None,
+            finished=True,
+            red_player=red_player,
+            black_player=black_player,
+        )
 
         def mutator(job: dict[str, Any]) -> None:
             if kind == "batch":
@@ -313,7 +373,7 @@ def _persist_source(src: str, filename: str, game_id: str) -> str:
     return str(dest)
 
 
-async def _enqueue_file(
+async def _prepare_analyze_file(
     *,
     src_path: str,
     filename: str,
@@ -323,7 +383,7 @@ async def _enqueue_file(
     game_id: str,
     kind: str,
     batch_id: str | None = None,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], dict[str, Any]]:
     stored = _persist_source(src_path, filename, game_id)
     red_player, black_player = _read_players(stored)
     await record_history(
@@ -338,18 +398,7 @@ async def _enqueue_file(
         status=HintViewerWebUploadStatus.QUEUED.value,
         service=WEB_SERVICE_ANALYZE,
     )
-    await _ensure_queue().put(
-        {
-            "token": token,
-            "job_id": job_id,
-            "filename": filename,
-            "src_path": stored,
-            "file_type": _file_type(filename),
-            "game_id": game_id,
-            "kind": kind,
-        }
-    )
-    return {
+    meta = {
         "filename": filename,
         "game_id": game_id,
         "red_player": red_player,
@@ -357,6 +406,41 @@ async def _enqueue_file(
         "status": HintViewerWebUploadStatus.QUEUED.value,
         "expandable": False,
     }
+    work = {
+        "token": token,
+        "job_id": job_id,
+        "filename": filename,
+        "src_path": stored,
+        "file_type": _file_type(filename),
+        "game_id": game_id,
+        "kind": kind,
+    }
+    return meta, work
+
+
+async def _push_analyze_work(item: dict[str, Any]) -> None:
+    ensure_web_analyze_worker()
+    await redis_client.rpush(
+        ANALYZE_PENDING_KEY, json.dumps(item, ensure_ascii=False)
+    )
+
+
+async def _pending_analyze_game_ids() -> set[str]:
+    ids: set[str] = set()
+    try:
+        raw_items = await redis_client.lrange(ANALYZE_PENDING_KEY, 0, -1)
+    except Exception:
+        logger.exception("analyze pending list read failed")
+        return ids
+    for raw in raw_items:
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        gid = payload.get("game_id")
+        if gid:
+            ids.add(str(gid))
+    return ids
 
 
 @autoanalize_web_api_router.get("/web/analyze", response_class=HTMLResponse)
@@ -364,6 +448,7 @@ async def web_analyze_page(request: Request):
     session = await resolve_web_session(request)
     if not session:
         return _login_redirect()
+    ensure_web_analyze_worker()
     is_admin = bool(session.get("is_admin"))
     return templates.TemplateResponse(
         "hint_viewer_web_upload.html",
@@ -394,7 +479,7 @@ async def web_analyze_upload(request: Request, files: list[UploadFile] = File(..
             src, filename = collected[0]
             game_id = uuid.uuid4().hex
             job_id = f"web_analyze_{game_id[:12]}"
-            file_meta = await _enqueue_file(
+            file_meta, work = await _prepare_analyze_file(
                 src_path=src,
                 filename=filename,
                 token=token,
@@ -415,14 +500,16 @@ async def web_analyze_upload(request: Request, files: list[UploadFile] = File(..
                 "expandable": False,
             }
             await append_session_job(token, job, WEB_SERVICE_ANALYZE)
+            await _push_analyze_work(work)
             return JSONResponse({"ok": True, "job": job})
 
         batch_id = uuid.uuid4().hex
         job_id = f"web_analyze_batch_{batch_id[:12]}"
         files_meta = []
+        works = []
         for src, filename in collected:
             game_id = uuid.uuid4().hex
-            meta = await _enqueue_file(
+            meta, work = await _prepare_analyze_file(
                 src_path=src,
                 filename=filename,
                 token=token,
@@ -433,6 +520,7 @@ async def web_analyze_upload(request: Request, files: list[UploadFile] = File(..
                 batch_id=batch_id,
             )
             files_meta.append(meta)
+            works.append(work)
         job = {
             "kind": "batch",
             "job_id": job_id,
@@ -444,6 +532,8 @@ async def web_analyze_upload(request: Request, files: list[UploadFile] = File(..
             "created_at": now,
         }
         await append_session_job(token, job, WEB_SERVICE_ANALYZE)
+        for work in works:
+            await _push_analyze_work(work)
         return JSONResponse({"ok": True, "job": job})
     except HTTPException:
         raise
@@ -454,19 +544,171 @@ async def web_analyze_upload(request: Request, files: list[UploadFile] = File(..
         shutil.rmtree(workdir, ignore_errors=True)
 
 
+def _row_age_sec(created_at) -> float | None:
+    if not created_at:
+        return None
+    ts = created_at
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - ts.astimezone(timezone.utc)).total_seconds()
+
+
+async def reconcile_open_analyze_history(user_id: int | None) -> None:
+    if not user_id:
+        return
+    from bot.db.database import async_session_maker
+    from bot.db.dao import HintViewerWebUploadDAO, apply_web_upload_status
+
+    s3 = HintS3Storage.from_settings()
+    pending_ids = await _pending_analyze_game_ids()
+    async with async_session_maker() as session:
+        dao = HintViewerWebUploadDAO(session)
+        rows = await dao.list_open_for_user(int(user_id), WEB_SERVICE_ANALYZE)
+        if not rows:
+            return
+        changed = False
+        for row in rows:
+            gid = row.game_id
+            payload = None
+            if gid:
+                try:
+                    payload = await asyncio.to_thread(s3.get_autoanalyze_json, gid)
+                except Exception:
+                    logger.exception("analyze history s3 lookup failed game_id={}", gid)
+            if payload:
+                apply_web_upload_status(
+                    row,
+                    HintViewerWebUploadStatus.DONE.value,
+                    game_id=gid,
+                    finished=True,
+                )
+                changed = True
+                continue
+            age = _row_age_sec(row.created_at)
+            src = None
+            if gid:
+                src = ANALYZE_DIR / gid / _safe_filename(row.original_filename or "")
+            if (
+                gid
+                and row.job_id
+                and src is not None
+                and src.is_file()
+                and age is not None
+                and age >= ANALYZE_REQUEUE_AFTER_SEC
+                and not await redis_client.get(ANALYZE_ACTIVE_KEY.format(game_id=gid))
+                and gid not in pending_ids
+            ):
+                await _push_analyze_work(
+                    {
+                        "token": row.session_id,
+                        "job_id": row.job_id,
+                        "filename": row.original_filename,
+                        "src_path": str(src),
+                        "file_type": _file_type(row.original_filename),
+                        "game_id": gid,
+                        "kind": "batch" if row.batch_id else "single",
+                    }
+                )
+                pending_ids.add(gid)
+                continue
+            if age is not None and age >= ANALYZE_STALE_SEC:
+                apply_web_upload_status(
+                    row,
+                    HintViewerWebUploadStatus.ERROR.value,
+                    error_message="Анализ прерван, загрузите файл ещё раз",
+                    finished=True,
+                )
+                changed = True
+        if changed:
+            await session.commit()
+
+
+async def _refresh_analyze_job_from_results(job: dict[str, Any]) -> dict[str, Any]:
+    """Подтягивает готовый результат из S3, если сессия всё ещё показывает очередь."""
+    s3 = HintS3Storage.from_settings()
+    now = datetime.now(timezone.utc).isoformat()
+    if job.get("kind") == "batch":
+        ready = 0
+        errors = 0
+        for entry in job.get("files") or []:
+            st = entry.get("status")
+            if st == HintViewerWebUploadStatus.ERROR.value:
+                errors += 1
+                continue
+            if st == HintViewerWebUploadStatus.DONE.value:
+                ready += 1
+                continue
+            gid = entry.get("game_id")
+            payload = None
+            if gid:
+                try:
+                    payload = await asyncio.to_thread(s3.get_autoanalyze_json, gid)
+                except Exception:
+                    logger.exception("analyze job s3 lookup failed game_id={}", gid)
+            if payload:
+                entry["status"] = HintViewerWebUploadStatus.DONE.value
+                entry["error"] = None
+                entry["expandable"] = True
+                ready += 1
+        job["ready_count"] = ready
+        total = int(job.get("total_files") or 0)
+        if total and ready + errors >= total:
+            job["status"] = HintViewerWebUploadStatus.DONE.value
+            job["finished_at"] = job.get("finished_at") or now
+        elif ready or errors:
+            job["status"] = HintViewerWebUploadStatus.PROCESSING.value
+        return job
+    if job.get("status") in {
+        HintViewerWebUploadStatus.DONE.value,
+        HintViewerWebUploadStatus.ERROR.value,
+    }:
+        return job
+    gid = job.get("game_id")
+    if gid:
+        try:
+            payload = await asyncio.to_thread(s3.get_autoanalyze_json, gid)
+        except Exception:
+            logger.exception("analyze job s3 lookup failed game_id={}", gid)
+            payload = None
+        if payload:
+            job["status"] = HintViewerWebUploadStatus.DONE.value
+            job["error"] = None
+            job["expandable"] = True
+            job["finished_at"] = job.get("finished_at") or now
+    return job
+
+
 @autoanalize_web_api_router.get("/web/analyze/api/jobs")
 async def web_analyze_jobs(request: Request):
-    token, _session = await _require_session(request)
-    jobs = await list_session_jobs(token, WEB_SERVICE_ANALYZE)
-    for job in jobs:
-        await sync_history_from_job(job)
+    token, session = await _require_session(request)
+    ensure_web_analyze_worker()
+    await reconcile_open_analyze_history(session.get("user_id"))
+    jobs = []
+    for stored in await list_session_jobs(token, WEB_SERVICE_ANALYZE):
+        original_status = stored.get("status")
+        original_ready = stored.get("ready_count")
+        refreshed = await _refresh_analyze_job_from_results(stored)
+        await sync_history_from_job(refreshed)
+        if stored.get("job_id") and (
+            refreshed.get("status") != original_status
+            or refreshed.get("ready_count") != original_ready
+        ):
+
+            def mutator(job: dict[str, Any], snapshot: dict[str, Any] = refreshed) -> None:
+                job.update(snapshot)
+
+            await _patch_job(token, stored["job_id"], mutator)
+        jobs.append(refreshed)
     return {"ok": True, "jobs": jobs}
 
 
 @autoanalize_web_api_router.get("/web/analyze/api/history")
 async def web_analyze_history(request: Request, page: int = 1):
     _token, session = await _require_session(request)
+    ensure_web_analyze_worker()
     user_id = session.get("user_id")
+    if user_id:
+        await reconcile_open_analyze_history(int(user_id))
     payload = (
         await list_history_for_user(
             int(user_id),

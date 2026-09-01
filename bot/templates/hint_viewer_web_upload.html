@@ -451,6 +451,8 @@
                 pollJobs();
                 historyPage = 1;
                 pollHistory();
+                setTimeout(pollJobs, 700);
+                setTimeout(pollHistory, 700);
             } catch (e) {
                 uploadStatus.textContent = 'Сеть недоступна';
                 uploading = false;
@@ -582,6 +584,8 @@
             wrap.innerHTML = loadedTables[gameId];
         }
 
+        let lastHistoryOpen = false;
+
         async function pollHistory() {
             try {
                 const res = await fetch(apiBase + '/api/history?page=' + encodeURIComponent(historyPage));
@@ -590,6 +594,8 @@
                 if (data.page && data.page !== historyPage) {
                     historyPage = data.page;
                 }
+                const items = data.items || [];
+                lastHistoryOpen = items.some((item) => item.status === 'queued' || item.status === 'processing');
                 renderHistory(data);
             } catch (e) {}
         }
@@ -615,17 +621,29 @@
         }
 
         renderFiles();
+        function jobIsOpen(job) {
+            if (job.status === 'queued' || job.status === 'processing') return true;
+            if (job.kind === 'batch') {
+                return (job.files || []).some((f) => f.status === 'queued' || f.status === 'processing');
+            }
+            return false;
+        }
         if (jobsEl) {
             pollJobs();
             setInterval(pollJobs, 4000);
             setInterval(() => {
-                if (latestJobs.some((j) => j.status === 'queued' || j.status === 'processing')) {
+                if (latestJobs.some(jobIsOpen)) {
                     renderJobsList();
                 }
             }, 300);
         }
         pollHistory();
         setInterval(pollHistory, 8000);
+        setInterval(() => {
+            if (lastHistoryOpen || latestJobs.some(jobIsOpen)) {
+                pollHistory();
+            }
+        }, 4000);
     </script>
 </body>
 </html>

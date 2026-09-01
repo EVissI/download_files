@@ -142,6 +142,8 @@ class _SkipHintWebPollAccessLogFilter(logging.Filter):
         "/web/hints/api/jobs",
         "/web/hints/api/history",
         "/web/board/api/history",
+        "/web/analyze/api/jobs",
+        "/web/analyze/api/history",
     )
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -177,7 +179,14 @@ async def start_scheduler_on_api_startup():
 
 
 @app.on_event("startup")
-async def cleanup_match_analysis_tmp_downloads_on_startup():
+async def start_web_analyze_worker():
+    """GNU-анализ веб-кабинета: воркер поднимается сразу, чтобы не терять очередь после рестарта."""
+    try:
+        from bot.routers.autoanalize_web_router import ensure_web_analyze_worker
+
+        ensure_web_analyze_worker()
+    except Exception as e:
+        logger.warning(f"web analyze worker startup failed: {e}")
     """Подчищает просроченные временные ZIP/аудио экспорта на S3 после рестарта API."""
     try:
         from bot.routers.match_analysis_router import _maybe_cleanup_expired_tmp_downloads

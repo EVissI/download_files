@@ -40,6 +40,83 @@ logger.info(f"Redis URL: redis://<user>:<pass>@{REDIS_HOST}:{REDIS_PORT}/{REDIS_
 redis_conn = Redis.from_url(redis_url, decode_responses=False)
 
 
+def _rq_job_id(explicit: str | None = None) -> str | None:
+    if explicit:
+        return explicit
+    try:
+        from rq import get_current_job
+
+        current = get_current_job()
+        if current is not None:
+            return current.id
+    except Exception:
+        logger.exception("get_current_job failed")
+    return None
+
+
+def _sync_web_history_from_job(job_id: str | None, result: dict) -> None:
+    job_id = _rq_job_id(job_id)
+    if not job_id:
+        return
+    try:
+        from bot.common.service.hint_viewer_web_service import sync_web_history_status
+
+        if result.get("status") == "error":
+            sync_web_history_status(
+                job_id,
+                "error",
+                game_id=result.get("game_id"),
+                error_message=str(result.get("error") or "Ошибка анализа")[:400],
+                finished=True,
+            )
+        else:
+            sync_web_history_status(
+                job_id,
+                "done",
+                game_id=result.get("game_id"),
+                finished=True,
+            )
+    except Exception:
+        logger.exception("web history sync from worker failed job_id=%s", job_id)
+
+
+def _sync_web_history_batch_file(
+    job_id: str | None,
+    *,
+    filename: str,
+    game_id: str | None = None,
+    error: str | None = None,
+    red_player: str | None = None,
+    black_player: str | None = None,
+) -> None:
+    job_id = _rq_job_id(job_id)
+    if not job_id:
+        return
+    try:
+        from bot.common.service.hint_viewer_web_service import sync_web_history_status
+
+        if error:
+            sync_web_history_status(
+                job_id,
+                "error",
+                original_filename=filename,
+                error_message=str(error)[:400],
+                finished=True,
+            )
+        else:
+            sync_web_history_status(
+                job_id,
+                "done",
+                original_filename=filename,
+                game_id=game_id,
+                finished=True,
+                red_player=red_player,
+                black_player=black_player,
+            )
+    except Exception:
+        logger.exception("web batch history sync failed job_id=%s file=%s", job_id, filename)
+
+
 def _upload_hint_results(
     s3: HintS3Storage,
     game_id: str,
@@ -84,21 +161,25 @@ def analyze_backgammon_job(game_id: str, user_id: str, job_id: str = None):
         logger.info(
             f"[Job Completed] game_id={game_id} -> {mat_key} (has_games={has_games})"
         )
-        return {
+        result = {
             "status": "success",
             "mat_path": mat_key,
             "has_games": has_games,
             "game_id": game_id,
         }
+        _sync_web_history_from_job(job_id, result)
+        return result
 
     except Exception as e:
         logger.exception(f"[Job Failed] game_id={game_id}")
-        return {
+        result = {
             "status": "error",
             "error": str(e),
             "mat_path": src_key,
             "game_id": game_id,
         }
+        _sync_web_history_from_job(job_id, result)
+        return result
 
 
 def analyze_backgammon_batch_job(
@@ -178,6 +259,13 @@ def analyze_backgammon_batch_job(
                 },
                 ttl=status_ttl,
             )
+            _sync_web_history_batch_file(
+                job_id,
+                filename=fname,
+                game_id=game_id,
+                red_player=red_player,
+                black_player=black_player,
+            )
 
             logger.info(
                 f"[Batch File Completed] {fname} -> {mat_key} (has_games={has_games})"
@@ -198,6 +286,11 @@ def analyze_backgammon_batch_job(
                     "error": str(e)[:200],
                 },
                 ttl=status_ttl,
+            )
+            _sync_web_history_batch_file(
+                job_id,
+                filename=fname,
+                error=str(e)[:200],
             )
             errors += 1
 

@@ -2789,6 +2789,71 @@ class WebUserDAO(BaseDAO[WebUser]):
         return result.scalar_one_or_none()
 
 
+_WEB_UPLOAD_DONE = HintViewerWebUploadStatus.DONE.value
+_WEB_UPLOAD_ERROR = HintViewerWebUploadStatus.ERROR.value
+
+
+def web_upload_job_filter(
+    job_id: str,
+    *,
+    game_id: str | None = None,
+    original_filename: str | None = None,
+):
+    conditions = [HintViewerWebUpload.job_id == job_id]
+    if game_id:
+        conditions.append(HintViewerWebUpload.game_id == game_id)
+    elif original_filename:
+        conditions.append(HintViewerWebUpload.original_filename == original_filename)
+    return conditions
+
+
+def apply_web_upload_status(
+    row: HintViewerWebUpload,
+    status: str,
+    *,
+    game_id: str | None = None,
+    error_message: str | None = None,
+    finished: bool = False,
+    red_player: str | None = None,
+    black_player: str | None = None,
+) -> bool:
+    """Обновляет строку истории. Готовый анализ не откатывается в очередь."""
+    changed = False
+    if game_id and row.game_id != game_id:
+        row.game_id = game_id
+        changed = True
+    if red_player and row.red_player != red_player:
+        row.red_player = red_player
+        changed = True
+    if black_player and row.black_player != black_player:
+        row.black_player = black_player
+        changed = True
+
+    if row.status == _WEB_UPLOAD_DONE and status != _WEB_UPLOAD_DONE:
+        return changed
+    if row.status == _WEB_UPLOAD_ERROR and status not in {
+        _WEB_UPLOAD_DONE,
+        _WEB_UPLOAD_ERROR,
+    }:
+        return changed
+
+    if row.status != status:
+        row.status = status
+        changed = True
+    if status == _WEB_UPLOAD_DONE and row.error_message:
+        row.error_message = None
+        changed = True
+    elif status == _WEB_UPLOAD_ERROR and error_message is not None:
+        if row.error_message != error_message:
+            row.error_message = error_message
+            changed = True
+    if finished or status in {_WEB_UPLOAD_DONE, _WEB_UPLOAD_ERROR}:
+        if row.finished_at is None:
+            row.finished_at = datetime.now(timezone.utc)
+            changed = True
+    return changed
+
+
 class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
     model = HintViewerWebUpload
 
@@ -2884,13 +2949,36 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         row = await self._session.get(HintViewerWebUpload, upload_id)
         if not row:
             return
-        row.status = status
-        if game_id:
-            row.game_id = game_id
-        if error_message is not None:
-            row.error_message = error_message
-        if finished:
-            row.finished_at = datetime.now(timezone.utc)
+        apply_web_upload_status(
+            row,
+            status,
+            game_id=game_id,
+            error_message=error_message,
+            finished=finished,
+        )
+
+    async def list_open_for_user(
+        self,
+        user_id: int,
+        service: str | None = None,
+        limit: int = 100,
+    ) -> list[HintViewerWebUpload]:
+        conditions = [
+            *self._user_service_filter(user_id, service),
+            HintViewerWebUpload.status.in_(
+                (
+                    HintViewerWebUploadStatus.QUEUED.value,
+                    HintViewerWebUploadStatus.PROCESSING.value,
+                )
+            ),
+        ]
+        result = await self._session.execute(
+            select(HintViewerWebUpload)
+            .where(*conditions)
+            .order_by(HintViewerWebUpload.id.desc())
+            .limit(max(1, min(int(limit or 100), 200)))
+        )
+        return list(result.scalars().all())
 
     async def update_status_for_job(
         self,
@@ -2904,20 +2992,21 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         red_player: str | None = None,
         black_player: str | None = None,
     ) -> None:
-        query = select(HintViewerWebUpload).where(HintViewerWebUpload.job_id == job_id)
-        if original_filename:
-            query = query.where(HintViewerWebUpload.original_filename == original_filename)
+        query = select(HintViewerWebUpload).where(
+            *web_upload_job_filter(
+                job_id,
+                game_id=game_id,
+                original_filename=original_filename,
+            )
+        )
         result = await self._session.execute(query)
-        now = datetime.now(timezone.utc)
         for row in result.scalars().all():
-            row.status = status
-            if game_id:
-                row.game_id = game_id
-            if error_message is not None:
-                row.error_message = error_message
-            if red_player:
-                row.red_player = red_player
-            if black_player:
-                row.black_player = black_player
-            if finished:
-                row.finished_at = now
+            apply_web_upload_status(
+                row,
+                status,
+                game_id=game_id,
+                error_message=error_message,
+                finished=finished,
+                red_player=red_player,
+                black_player=black_player,
+            )

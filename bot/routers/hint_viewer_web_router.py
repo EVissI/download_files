@@ -29,6 +29,7 @@ from bot.common.func.hint_viewer import (
     random_filename,
 )
 from bot.common.hint_job_state import (
+    BATCH_DONE_FIELD,
     BATCH_TIMEOUT_MAX_SEC,
     add_active_job,
     calc_batch_job_timeout,
@@ -48,8 +49,8 @@ from bot.common.service.hint_viewer_web_service import (
     device_id_from_request,
     list_history_for_user,
     list_session_jobs,
+    prune_session_jobs,
     record_history,
-    replace_session_jobs,
     resolve_web_session,
     sync_history_from_job,
     web_cabinet_page_vars,
@@ -195,6 +196,27 @@ async def _enqueue_single(
         return HintS3Storage.from_settings().put_source_mat(game_id, local_mat)
 
     mat_s3_key = await asyncio.to_thread(_put_mat)
+    job_payload = {
+        "kind": "single",
+        "job_id": job_id,
+        "game_id": game_id,
+        "filename": filename,
+        "red_player": red_player,
+        "black_player": black_player,
+        "estimated_time": estimated_time,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await record_history(
+        session_id=session_token,
+        user_id=user_id,
+        original_filename=filename,
+        game_id=game_id,
+        job_id=job_id,
+        red_player=red_player,
+        black_player=black_player,
+        status=HintViewerWebUploadStatus.QUEUED.value,
+    )
+    await append_session_job(session_token, job_payload)
     task_queue.enqueue(
         "bot.workers.hint_worker.analyze_backgammon_job",
         game_id,
@@ -218,27 +240,6 @@ async def _enqueue_single(
             }
         ),
         expire=WEB_JOB_TTL,
-    )
-    job_payload = {
-        "kind": "single",
-        "job_id": job_id,
-        "game_id": game_id,
-        "filename": filename,
-        "red_player": red_player,
-        "black_player": black_player,
-        "estimated_time": estimated_time,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-    await append_session_job(session_token, job_payload)
-    await record_history(
-        session_id=session_token,
-        user_id=user_id,
-        original_filename=filename,
-        game_id=game_id,
-        job_id=job_id,
-        red_player=red_player,
-        black_player=black_player,
-        status=HintViewerWebUploadStatus.QUEUED.value,
     )
     return job_payload
 
@@ -269,6 +270,37 @@ async def _enqueue_batch(
     estimated_time = sum(estimate_processing_time(path) for path, _ in files)
     job_timeout = calc_batch_job_timeout(total_files)
 
+    file_items = []
+    for i, fname in enumerate(original_fnames):
+        red_player, black_player = players[i]
+        file_items.append(
+            {
+                "index": i,
+                "filename": fname,
+                "red_player": red_player,
+                "black_player": black_player,
+            }
+        )
+        await record_history(
+            session_id=session_token,
+            user_id=user_id,
+            original_filename=fname,
+            job_id=job_id,
+            batch_id=batch_id,
+            red_player=red_player,
+            black_player=black_player,
+            status=HintViewerWebUploadStatus.QUEUED.value,
+        )
+    job_payload = {
+        "kind": "batch",
+        "job_id": job_id,
+        "batch_id": batch_id,
+        "total_files": total_files,
+        "files": file_items,
+        "estimated_time": estimated_time,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await append_session_job(session_token, job_payload)
     batch_queue.enqueue(
         "bot.workers.hint_worker.analyze_backgammon_batch_job",
         mat_s3_keys,
@@ -312,37 +344,6 @@ async def _enqueue_batch(
         ),
         expire=job_timeout + 3600,
     )
-    file_items = []
-    for i, fname in enumerate(original_fnames):
-        red_player, black_player = players[i]
-        file_items.append(
-            {
-                "index": i,
-                "filename": fname,
-                "red_player": red_player,
-                "black_player": black_player,
-            }
-        )
-        await record_history(
-            session_id=session_token,
-            user_id=user_id,
-            original_filename=fname,
-            job_id=job_id,
-            batch_id=batch_id,
-            red_player=red_player,
-            black_player=black_player,
-            status=HintViewerWebUploadStatus.QUEUED.value,
-        )
-    job_payload = {
-        "kind": "batch",
-        "job_id": job_id,
-        "batch_id": batch_id,
-        "total_files": total_files,
-        "files": file_items,
-        "estimated_time": estimated_time,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-    await append_session_job(session_token, job_payload)
     return job_payload
 
 
@@ -502,6 +503,12 @@ def _enrich_batch_job(stored: dict[str, Any]) -> dict[str, Any]:
             item["error"] = _JOB_NOT_FOUND_ERROR
             return item
     item["status"] = "done"
+    for entry in files_out:
+        if entry.get("status") == "queued":
+            entry["status"] = "error"
+            entry["error"] = "Файл не был обработан"
+            errors += 1
+    item["error_count"] = errors
     _stamp_finished_at(item, job)
     return item
 
@@ -649,33 +656,211 @@ async def web_hints_upload(request: Request, files: list[UploadFile] = File(...)
 
 @hint_viewer_web_api_router.get("/web/hints/api/jobs")
 async def web_hints_jobs(request: Request):
-    token, _session = await _require_session(request)
+    token, session = await _require_session(request)
+    await reconcile_open_hint_history(session.get("user_id"))
     stored = await list_session_jobs(token)
     jobs = []
-    kept = []
+    drop_ids: set[str] = set()
+    finished_at_by_id: dict[str, str] = {}
     for item in stored:
         enriched = (
             _enrich_batch_job(item)
             if item.get("kind") == "batch"
             else _enrich_single_job(item)
         )
-        if _is_missing_job(enriched):
-            continue
-        if _is_stale_current_job(enriched):
-            continue
-        if enriched.get("finished_at"):
-            item["finished_at"] = enriched["finished_at"]
-        kept.append(item)
-        jobs.append(enriched)
         await sync_history_from_job(enriched)
-    await replace_session_jobs(token, kept)
+        if _is_missing_job(enriched) or _is_stale_current_job(enriched):
+            jid = item.get("job_id")
+            if jid:
+                drop_ids.add(jid)
+            continue
+        stamp = enriched.get("finished_at")
+        if stamp and item.get("job_id"):
+            finished_at_by_id[item["job_id"]] = stamp
+        jobs.append(enriched)
+    await prune_session_jobs(
+        token,
+        drop_job_ids=drop_ids,
+        finished_at_by_id=finished_at_by_id,
+    )
     return {"ok": True, "jobs": jobs}
+
+
+HINT_STALE_SEC = 48 * 3600
+
+
+def _row_age_sec(created_at) -> float | None:
+    if not created_at:
+        return None
+    ts = created_at
+    if isinstance(ts, str):
+        try:
+            ts = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - ts.astimezone(timezone.utc)).total_seconds()
+
+
+def _hint_s3_ready(game_id: str | None) -> bool:
+    if not game_id:
+        return False
+    try:
+        return HintS3Storage.from_settings().exists(
+            HintS3Storage.summary_json_key(game_id)
+        )
+    except Exception:
+        logger.exception("hint history s3 lookup failed game_id={}", game_id)
+        return False
+
+
+async def reconcile_open_hint_history(user_id: int | None) -> None:
+    if not user_id:
+        return
+    from bot.db.database import async_session_maker
+    from bot.db.dao import HintViewerWebUploadDAO, apply_web_upload_status
+
+    async with async_session_maker() as session:
+        dao = HintViewerWebUploadDAO(session)
+        rows = await dao.list_open_for_user(int(user_id), "hints")
+        if not rows:
+            return
+        changed = False
+        for row in rows:
+            job_id = row.job_id
+            game_id = row.game_id
+            batch_id = row.batch_id
+            if _hint_s3_ready(game_id):
+                apply_web_upload_status(
+                    row,
+                    HintViewerWebUploadStatus.DONE.value,
+                    game_id=game_id,
+                    finished=True,
+                )
+                changed = True
+                continue
+            if batch_id:
+                statuses = get_batch_file_statuses(batch_id)
+                matched = None
+                for idx, raw in statuses.items():
+                    if idx == BATCH_DONE_FIELD:
+                        continue
+                    try:
+                        payload = json.loads(raw)
+                    except json.JSONDecodeError:
+                        continue
+                    if payload.get("fname") == row.original_filename:
+                        matched = payload
+                        break
+                if matched:
+                    if matched.get("status") == "error":
+                        apply_web_upload_status(
+                            row,
+                            HintViewerWebUploadStatus.ERROR.value,
+                            error_message=matched.get("error") or "Ошибка анализа",
+                            finished=True,
+                        )
+                    else:
+                        apply_web_upload_status(
+                            row,
+                            HintViewerWebUploadStatus.DONE.value,
+                            game_id=matched.get("game_id"),
+                            finished=True,
+                            red_player=matched.get("red_player"),
+                            black_player=matched.get("black_player"),
+                        )
+                    changed = True
+                    continue
+                total = 0
+                try:
+                    info_raw = await redis_client.get(f"batch_info:{batch_id}")
+                    if info_raw:
+                        total = int(json.loads(info_raw).get("total_files") or 0)
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    total = 0
+                if total and is_batch_effectively_done(batch_id, total):
+                    apply_web_upload_status(
+                        row,
+                        HintViewerWebUploadStatus.ERROR.value,
+                        error_message="Файл не был обработан",
+                        finished=True,
+                    )
+                    changed = True
+                    continue
+            if job_id:
+                try:
+                    job = Job.fetch(job_id, connection=redis_rq)
+                except NoSuchJobError:
+                    age = _row_age_sec(row.created_at)
+                    if age is not None and age >= 120:
+                        apply_web_upload_status(
+                            row,
+                            HintViewerWebUploadStatus.ERROR.value,
+                            error_message="Анализ прерван, загрузите файл ещё раз",
+                            finished=True,
+                        )
+                        changed = True
+                    continue
+                if job.is_failed:
+                    apply_web_upload_status(
+                        row,
+                        HintViewerWebUploadStatus.ERROR.value,
+                        error_message="Анализ завершился с ошибкой",
+                        finished=True,
+                    )
+                    changed = True
+                    continue
+                if job.is_finished:
+                    result = job.result if isinstance(job.result, dict) else {}
+                    if result.get("status") == "error":
+                        apply_web_upload_status(
+                            row,
+                            HintViewerWebUploadStatus.ERROR.value,
+                            error_message=result.get("error") or "Ошибка анализа",
+                            finished=True,
+                        )
+                    elif result.get("status") == "success" or result.get("game_id"):
+                        apply_web_upload_status(
+                            row,
+                            HintViewerWebUploadStatus.DONE.value,
+                            game_id=result.get("game_id") or game_id,
+                            finished=True,
+                        )
+                    elif not batch_id:
+                        apply_web_upload_status(
+                            row,
+                            HintViewerWebUploadStatus.DONE.value,
+                            game_id=game_id,
+                            finished=True,
+                        )
+                    changed = True
+                    continue
+                if job.is_started and row.status != HintViewerWebUploadStatus.PROCESSING.value:
+                    apply_web_upload_status(
+                        row, HintViewerWebUploadStatus.PROCESSING.value
+                    )
+                    changed = True
+                    continue
+            age = _row_age_sec(row.created_at)
+            if age is not None and age >= HINT_STALE_SEC:
+                apply_web_upload_status(
+                    row,
+                    HintViewerWebUploadStatus.ERROR.value,
+                    error_message="Анализ прерван, загрузите файл ещё раз",
+                    finished=True,
+                )
+                changed = True
+        if changed:
+            await session.commit()
 
 
 @hint_viewer_web_api_router.get("/web/hints/api/history")
 async def web_hints_history(request: Request, page: int = 1):
     _token, session = await _require_session(request)
     user_id = session.get("user_id")
+    if user_id:
+        await reconcile_open_hint_history(int(user_id))
     payload = (
         await list_history_for_user(
             int(user_id),

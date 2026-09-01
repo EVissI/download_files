@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import secrets
 import time
-from typing import Any
+from contextlib import asynccontextmanager
+from typing import Any, Callable
 from urllib.parse import quote
 
 from loguru import logger
+from sqlalchemy.orm import Session, sessionmaker
 
 from bot.common.utils.password import passwords_match
 from bot.db.models import WebUser
@@ -24,6 +27,7 @@ SESSION_KEY = "hint_web:session:{token}"
 USER_SESSIONS_KEY = "hint_web:sessions:{user_id}"
 DEVICE_TOKEN_KEY = "hint_web:user_device:{user_id}:{device_id}"
 JOBS_KEY = "hint_web:jobs:{token}"
+JOBS_LOCK_KEY = "hint_web:jobs_lock:{service}:{token}"
 ACCT_CACHE_KEY = "hint_web:acct:{user_id}"
 ACCT_CACHE_TTL_SEC = 60
 _DEVICE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
@@ -425,26 +429,7 @@ async def destroy_session(token: str | None, *, user_id: int | None = None) -> N
         await _unregister_session_index(int(uid), token, device_id)
 
 
-async def append_session_job(
-    token: str, job: dict[str, Any], service: str = WEB_SERVICE_HINTS
-) -> None:
-    key = _jobs_key(token, service)
-    raw = await redis_client.get(key)
-    items: list[dict[str, Any]] = []
-    if raw:
-        try:
-            items = json.loads(raw)
-        except json.JSONDecodeError:
-            items = []
-    items.insert(0, job)
-    items = items[:80]
-    await redis_client.set(key, json.dumps(items, ensure_ascii=False), expire=JOBS_TTL_SEC)
-
-
-async def list_session_jobs(
-    token: str, service: str = WEB_SERVICE_HINTS
-) -> list[dict[str, Any]]:
-    raw = await redis_client.get(_jobs_key(token, service))
+def _parse_jobs_payload(raw: Any) -> list[dict[str, Any]]:
     if not raw:
         return []
     try:
@@ -454,13 +439,108 @@ async def list_session_jobs(
     return data if isinstance(data, list) else []
 
 
+async def _read_session_jobs(token: str, service: str) -> list[dict[str, Any]]:
+    return _parse_jobs_payload(await redis_client.get(_jobs_key(token, service)))
+
+
+async def _write_session_jobs(
+    token: str, jobs: list[dict[str, Any]], service: str
+) -> None:
+    await redis_client.set(
+        _jobs_key(token, service),
+        json.dumps(jobs, ensure_ascii=False),
+        expire=JOBS_TTL_SEC,
+    )
+
+
+@asynccontextmanager
+async def _session_jobs_lock(token: str, service: str):
+    lock_key = JOBS_LOCK_KEY.format(service=service, token=token)
+    lock_val = secrets.token_hex(8)
+    acquired = False
+    for _ in range(80):
+        acquired = await redis_client.set_nx(lock_key, lock_val, expire=8)
+        if acquired:
+            break
+        await asyncio.sleep(0.05)
+    if not acquired:
+        logger.warning("web session jobs lock timeout service={} token={}", service, token[:8])
+    try:
+        yield
+    finally:
+        if acquired:
+            current = await redis_client.get(lock_key)
+            if current == lock_val:
+                await redis_client.delete(lock_key)
+
+
+async def append_session_job(
+    token: str, job: dict[str, Any], service: str = WEB_SERVICE_HINTS
+) -> None:
+    async with _session_jobs_lock(token, service):
+        items = await _read_session_jobs(token, service)
+        items.insert(0, job)
+        await _write_session_jobs(token, items[:80], service)
+
+
+async def list_session_jobs(
+    token: str, service: str = WEB_SERVICE_HINTS
+) -> list[dict[str, Any]]:
+    return await _read_session_jobs(token, service)
+
+
 async def replace_session_jobs(
     token: str, jobs: list[dict[str, Any]], service: str = WEB_SERVICE_HINTS
 ) -> None:
-    key = _jobs_key(token, service)
-    await redis_client.set(
-        key, json.dumps(jobs, ensure_ascii=False), expire=JOBS_TTL_SEC
-    )
+    async with _session_jobs_lock(token, service):
+        await _write_session_jobs(token, jobs, service)
+
+
+async def patch_session_job(
+    token: str,
+    job_id: str,
+    mutator: Callable[[dict[str, Any]], None],
+    service: str = WEB_SERVICE_HINTS,
+) -> dict[str, Any] | None:
+    if not token or not job_id:
+        return None
+    async with _session_jobs_lock(token, service):
+        jobs = await _read_session_jobs(token, service)
+        updated = None
+        for job in jobs:
+            if job.get("job_id") == job_id:
+                mutator(job)
+                updated = job
+                break
+        if updated is None:
+            return None
+        await _write_session_jobs(token, jobs, service)
+        return updated
+
+
+async def prune_session_jobs(
+    token: str,
+    *,
+    drop_job_ids: set[str] | None = None,
+    finished_at_by_id: dict[str, str] | None = None,
+    service: str = WEB_SERVICE_HINTS,
+) -> None:
+    drop_job_ids = {jid for jid in (drop_job_ids or set()) if jid}
+    finished_at_by_id = finished_at_by_id or {}
+    if not drop_job_ids and not finished_at_by_id:
+        return
+    async with _session_jobs_lock(token, service):
+        jobs = await _read_session_jobs(token, service)
+        kept: list[dict[str, Any]] = []
+        for job in jobs:
+            jid = job.get("job_id")
+            if jid in drop_job_ids:
+                continue
+            stamp = finished_at_by_id.get(jid)
+            if stamp and not job.get("finished_at"):
+                job["finished_at"] = stamp
+            kept.append(job)
+        await _write_session_jobs(token, kept, service)
 
 
 async def record_history(**kwargs: Any) -> None:
@@ -474,6 +554,108 @@ async def record_history(**kwargs: Any) -> None:
             await session.commit()
     except Exception as e:
         logger.exception("hint viewer web history write failed: {}", e)
+
+
+async def update_history_status(
+    job_id: str | None,
+    status: str,
+    *,
+    original_filename: str | None = None,
+    game_id: str | None = None,
+    error_message: str | None = None,
+    finished: bool | None = None,
+    red_player: str | None = None,
+    black_player: str | None = None,
+) -> None:
+    if not job_id or status not in {"queued", "processing", "done", "error"}:
+        return
+    if finished is None:
+        finished = status in {"done", "error"}
+    try:
+        from bot.db.database import async_session_maker
+        from bot.db.dao import HintViewerWebUploadDAO
+
+        async with async_session_maker() as session:
+            dao = HintViewerWebUploadDAO(session)
+            await dao.update_status_for_job(
+                job_id,
+                status,
+                original_filename=original_filename,
+                game_id=game_id,
+                error_message=error_message,
+                finished=finished,
+                red_player=red_player,
+                black_player=black_player,
+            )
+            await session.commit()
+    except Exception as e:
+        logger.exception("hint viewer web history status update failed: {}", e)
+
+
+_sync_web_upload_engine = None
+_sync_web_upload_session: sessionmaker[Session] | None = None
+
+
+def _web_upload_sync_session() -> Session:
+    global _sync_web_upload_engine, _sync_web_upload_session
+    if _sync_web_upload_session is None:
+        from sqlalchemy import create_engine
+
+        from bot.config import settings
+
+        _sync_web_upload_engine = create_engine(settings.DB_URL_SYNC, pool_pre_ping=True)
+        _sync_web_upload_session = sessionmaker(bind=_sync_web_upload_engine)
+    return _sync_web_upload_session()
+
+
+def sync_web_history_status(
+    job_id: str | None,
+    status: str,
+    *,
+    original_filename: str | None = None,
+    game_id: str | None = None,
+    error_message: str | None = None,
+    finished: bool | None = None,
+    red_player: str | None = None,
+    black_player: str | None = None,
+) -> None:
+    """Синхронная запись статуса истории — для RQ-воркера."""
+    if not job_id or status not in {"queued", "processing", "done", "error"}:
+        return
+    if finished is None:
+        finished = status in {"done", "error"}
+    try:
+        from sqlalchemy import select
+
+        from bot.db.dao import apply_web_upload_status, web_upload_job_filter
+        from bot.db.models import HintViewerWebUpload
+
+        with _web_upload_sync_session() as session:
+            rows = session.execute(
+                select(HintViewerWebUpload).where(
+                    *web_upload_job_filter(
+                        job_id,
+                        game_id=game_id,
+                        original_filename=original_filename,
+                    )
+                )
+            ).scalars().all()
+            changed = False
+            for row in rows:
+                if apply_web_upload_status(
+                    row,
+                    status,
+                    game_id=game_id,
+                    error_message=error_message,
+                    finished=finished,
+                    red_player=red_player,
+                    black_player=black_player,
+                ):
+                    changed = True
+            if changed:
+                session.commit()
+    except Exception:
+        logger.exception("sync web history status failed job_id={}", job_id)
 
 
 HISTORY_PAGE_SIZE = 10
@@ -564,16 +746,25 @@ async def sync_history_from_job(job: dict[str, Any]) -> None:
             if job.get("kind") == "batch":
                 for entry in job.get("files") or []:
                     file_status = entry.get("status") or status
-                    file_finished = file_status in {"done", "error"}
+                    if file_status not in {"done", "error", "processing"}:
+                        if status in {"done", "error"}:
+                            file_status = "error"
+                        else:
+                            continue
                     await dao.update_status_for_job(
                         job_id,
-                        file_status if file_status in {"done", "error", "processing", "queued"} else status,
+                        file_status,
                         original_filename=entry.get("filename"),
-                    game_id=entry.get("game_id"),
-                    error_message=entry.get("error"),
-                    finished=file_finished,
-                    red_player=entry.get("red_player"),
-                    black_player=entry.get("black_player"),
+                        game_id=entry.get("game_id"),
+                        error_message=entry.get("error")
+                        or (
+                            "Файл не был обработан"
+                            if file_status == "error" and status in {"done", "error"}
+                            else None
+                        ),
+                        finished=file_status in {"done", "error"},
+                        red_player=entry.get("red_player"),
+                        black_player=entry.get("black_player"),
                     )
             else:
                 await dao.update_status_for_job(

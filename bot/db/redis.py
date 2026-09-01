@@ -45,6 +45,25 @@ class RedisClient:
         await self.ensure_connection()
         await self.redis.set(key, value, ex=expire)
 
+    async def set_nx(self, key: str, value: str, expire: Optional[int] = None) -> bool:
+        await self.ensure_connection()
+        result = await self.redis.set(key, value, ex=expire, nx=True)
+        return bool(result)
+
+    async def rpush(self, key: str, *values: str) -> int:
+        await self.ensure_connection()
+        if not values:
+            return 0
+        return int(await self.redis.rpush(key, *values) or 0)
+
+    async def blpop(self, key: str, timeout: int = 0):
+        await self.ensure_connection()
+        return await self.redis.blpop(key, timeout=timeout)
+
+    async def lrange(self, key: str, start: int, end: int) -> list:
+        await self.ensure_connection()
+        return await self.redis.lrange(key, start, end) or []
+
     async def get(self, key: str):
         await self.ensure_connection()
         return await self.redis.get(key)
