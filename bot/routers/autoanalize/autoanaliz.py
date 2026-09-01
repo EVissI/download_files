@@ -17,9 +17,10 @@ import hashlib
 from bot.common.filters.user_info import UserInfo
 from bot.common.func.func import (
     format_detailed_analysis,
+    format_detailed_analysis_html,
     get_analysis_data,
 )
-from bot.common.func.generate_pdf import html_to_pdf_bytes
+from bot.common.func.generate_pdf import analysis_tables_to_pdf_bytes
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
@@ -230,8 +231,8 @@ async def analyze_file_by_path(
         if duration is not None and duration != 0:
             try:
                 # Генерация PDF
-                html_text = format_detailed_analysis(formated_data, i18n)
-                pdf_bytes = html_to_pdf_bytes(html_text)
+                html_text = format_detailed_analysis_html(formated_data, i18n)
+                pdf_bytes = analysis_tables_to_pdf_bytes(html_text)
 
                 if not pdf_bytes:
                     logger.error("Ошибка при генерации PDF.")
@@ -484,8 +485,8 @@ async def handle_player_selection(
                         f"file_name:{user_info.id}", file_name_to_pdf, expire=3600
                     )
                 # Генерация PDF
-                html_text = format_detailed_analysis(formated_data, i18n)
-                pdf_bytes = html_to_pdf_bytes(html_text)
+                html_text = format_detailed_analysis_html(formated_data, i18n)
+                pdf_bytes = analysis_tables_to_pdf_bytes(html_text)
                 if not pdf_bytes:
                     logger.error("Ошибка при генерации PDF.")
                     await callback.bot.send_message(
@@ -567,8 +568,8 @@ async def handle_download_pdf(
             await callback.message.answer("Нет данных длѝ формированиѝ PDF.")
             return
         analysis_data = json.loads(analysis_data_json)
-        html_text = format_detailed_analysis(get_analysis_data(analysis_data), i18n)
-        pdf_bytes = html_to_pdf_bytes(html_text)
+        html_text = format_detailed_analysis_html(get_analysis_data(analysis_data), i18n)
+        pdf_bytes = analysis_tables_to_pdf_bytes(html_text)
         if not pdf_bytes:
             await callback.message.answer("Ошибка при генерации PDF.")
             return

@@ -1,6 +1,10 @@
-﻿import re
+﻿from __future__ import annotations
+
 from weasyprint import HTML
 import io
+import re
+from datetime import datetime
+from urllib.parse import quote
 
 def convert_newlines_to_br(text: str) -> str:
     """Преобразует символы новой строки \n в HTML-тег <br>."""
@@ -84,3 +88,84 @@ def merge_pages(pages: list[HTML]) -> bytes:
     merged.write_pdf(pdf_io)
     pdf_io.seek(0)
     return pdf_io.read()
+
+
+ANALYSIS_TABLE_CSS = """
+@page { size: A4; margin: 12mm; }
+body {
+  font-family: 'Noto Sans', 'DejaVu Sans', sans-serif;
+  font-size: 11px;
+  color: #111;
+}
+h2 { font-size: 14px; margin: 0 0 10px; }
+.analyze-vs { font-weight: 700; font-size: 13px; margin: 0 0 12px; }
+.analyze-block { margin-bottom: 14px; page-break-inside: avoid; }
+.analyze-block h3 { font-size: 12px; margin: 0 0 6px; color: #333; }
+.analyze-table { width: 100%; border-collapse: collapse; }
+.analyze-table th, .analyze-table td {
+  border: 1px solid #444;
+  padding: 5px 8px;
+  text-align: left;
+}
+.analyze-table thead th { background: #e6e6e6; }
+.analyze-table tbody th { background: #f3f3f3; font-weight: 600; }
+.page { page-break-after: always; }
+"""
+
+
+def make_analysis_tables_page(html_fragment: str) -> HTML:
+    """PDF-страница из HTML-таблиц веб-кабинета (без ASCII/псевдографики)."""
+    full_html = (
+        "<html><head><meta charset='UTF-8'>"
+        f"<style>{ANALYSIS_TABLE_CSS}</style></head>"
+        f"<body><div class='page'>{html_fragment}</div></body></html>"
+    )
+    return HTML(string=full_html, encoding="utf-8")
+
+
+def analysis_tables_to_pdf_bytes(html_fragment: str) -> bytes:
+    pdf_io = io.BytesIO()
+    full_html = (
+        "<html><head><meta charset='UTF-8'>"
+        f"<style>{ANALYSIS_TABLE_CSS}</style></head>"
+        f"<body>{html_fragment}</body></html>"
+    )
+    HTML(string=full_html, encoding="utf-8").write_pdf(pdf_io)
+    pdf_io.seek(0)
+    return pdf_io.read()
+
+
+def analysis_pdf_filename(
+    metrics: dict | None,
+    original_filename: str | None = None,
+) -> str:
+    date = datetime.now().strftime("%d.%m.%Y_%H.%M")
+    names = list((metrics or {}).keys())
+    if len(names) >= 2:
+        p1, p2 = names[0], names[1]
+        try:
+            e1 = abs(float((metrics.get(p1) or {}).get("snowie_error_rate") or 0))
+            e2 = abs(float((metrics.get(p2) or {}).get("snowie_error_rate") or 0))
+            base = f"{p1} ({e1:.1f}) - {p2} ({e2:.1f})_{date}"
+        except (TypeError, ValueError):
+            base = f"{p1}_vs_{p2}_{date}"
+    elif original_filename:
+        stem = original_filename.replace("\\", "/").split("/")[-1]
+        if "." in stem:
+            stem = stem.rsplit(".", 1)[0]
+        base = f"{stem}_{date}"
+    else:
+        base = f"analysis_{date}"
+    safe = re.sub(r'[\\/:*?"<>|]+', ".", str(base)).replace(" ", "")
+    return f"{safe or 'analysis'}.pdf"
+
+
+def pdf_content_disposition(filename: str) -> str:
+    raw = (filename or "analysis.pdf").replace("\\", "/").split("/")[-1].strip()
+    if not raw.lower().endswith(".pdf"):
+        raw += ".pdf"
+    ascii_name = (
+        "".join(c if c.isascii() and c not in '"\\' else "_" for c in raw)[:180]
+        or "analysis.pdf"
+    )
+    return f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(raw)}"

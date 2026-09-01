@@ -180,6 +180,8 @@
         .analyze-table th, .analyze-table td { border: 1px solid var(--web-table-border); padding: 6px 8px; text-align: left; }
         .analyze-table th { background: var(--web-table-th); }
         .analyze-table td { background: var(--web-table-td); }
+        .history-item-actions { display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0; }
+        .history-pdf-btn { font-size: 0.8rem; padding: 6px 10px; white-space: nowrap; }
     </style>
     <script src="/static/js/web_theme.js?t={{ cache_timestamp }}" defer></script>
 </head>
@@ -222,6 +224,7 @@
         const allowMultiple = {{ allow_multiple|default(true)|tojson }};
         const openOnUpload = {{ open_on_upload|default(false)|tojson }};
         const historyExpandable = {{ history_expandable|default(false)|tojson }};
+        const pdfDownload = {{ pdf_download|default(false)|tojson }};
         const fileInput = document.getElementById('fileInput');
         const dropzone = document.getElementById('dropzone');
         const fileList = document.getElementById('fileList');
@@ -344,12 +347,19 @@
             }).join('')}</div>`;
         }
 
+        function pdfLink(gameId) {
+            if (!pdfDownload || !gameId) return '';
+            const url = apiBase + '/api/pdf?game_id=' + encodeURIComponent(gameId);
+            return `<a class="btn ghost history-pdf-btn" href="${escapeHtml(url)}">Скачать PDF</a>`;
+        }
+
         function renderJob(job) {
             const cls = job.status === 'done' ? 'done' : (job.status === 'error' ? 'error' : '');
             if (job.kind === 'batch') {
                 const files = (job.files || []).map((f) => {
                     const open = openMatchButtons(f.open_links);
-                    return `<li>${escapeHtml(f.filename)} — ${statusLabel(f.status)} ${open} ${f.error ? `<span class="muted">${escapeHtml(f.error)}</span>` : ''}</li>`;
+                    const pdf = f.status === 'done' ? pdfLink(f.game_id) : '';
+                    return `<li>${escapeHtml(f.filename)} — ${statusLabel(f.status)} ${open} ${pdf} ${f.error ? `<span class="muted">${escapeHtml(f.error)}</span>` : ''}</li>`;
                 }).join('');
                 return `<div class="job ${cls}">
                     <strong>Пакет: ${(job.files || []).length} файл(ов)</strong>
@@ -360,12 +370,14 @@
                 </div>`;
             }
             const open = openMatchButtons(job.open_links);
+            const pdf = job.status === 'done' ? pdfLink(job.game_id) : '';
             return `<div class="job ${cls}">
                 <strong>${escapeHtml(job.filename || 'Матч')}</strong>
                 <div class="muted">${escapeHtml(job.red_player || '')} vs ${escapeHtml(job.black_player || '')} · ${statusLabel(job.status)}</div>
                 ${progressHtml(job)}
                 ${job.error ? `<div class="muted">${escapeHtml(job.error)}</div>` : ''}
                 ${open}
+                ${pdf ? `<div class="actions">${pdf}</div>` : ''}
             </div>`;
         }
 
@@ -526,6 +538,7 @@
                     ? ('history-item--expandable' + (isOpen ? ' is-open' : ''))
                     : '';
                 const chevron = expandable ? `<span class="chevron">${isOpen ? '▴' : '▾'}</span>` : '';
+                const pdf = (item.status === 'done' && item.game_id) ? pdfLink(item.game_id) : '';
                 const cached = gameId && loadedTables[gameId]
                     ? loadedTables[gameId]
                     : '<div class="muted">Загрузка таблицы…</div>';
@@ -540,7 +553,7 @@
                             ${err}
                             ${open}
                         </div>
-                        ${chevron}
+                        <div class="history-item-actions">${pdf}${chevron}</div>
                     </div>
                     ${table}
                 </div>`;

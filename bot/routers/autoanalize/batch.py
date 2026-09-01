@@ -19,13 +19,15 @@ import os
 import json
 import zipfile
 import hashlib
+import html
 
 from bot.common.filters.user_info import UserInfo
 from bot.common.func.func import (
     format_detailed_analysis,
+    format_detailed_analysis_html,
     get_analysis_data,
 )
-from bot.common.func.generate_pdf import html_to_pdf_bytes, make_page, merge_pages
+from bot.common.func.generate_pdf import make_analysis_tables_page, make_page, merge_pages
 from bot.common.func.waiting_message import WaitingMessageManager
 from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.kbds.inline.activate_promo import get_activate_promo_keyboard
@@ -708,9 +710,11 @@ async def finalize_batch(
             if user_pr_msg:
                 pdf_pages.append(make_page(user_pr_msg, 22))
             for item in all_analysis_datas:
-                header = f"<h2>{item['file_name']}</h2>"
-                content = header + format_detailed_analysis(get_analysis_data(item['data']), i18n)
-                pdf_pages.append(make_page(content, 11))
+                header = f"<h2>{html.escape(str(item.get('file_name') or ''))}</h2>"
+                content = header + format_detailed_analysis_html(
+                    get_analysis_data(item['data']), i18n
+                )
+                pdf_pages.append(make_analysis_tables_page(content))
             pdf_bytes = merge_pages(pdf_pages)
             group_pr_msg += '\n🎲'
             await message.bot.send_document(
@@ -856,9 +860,11 @@ async def handle_download_pdf(
         if user_pr_msg:
             pdf_pages.append(make_page(user_pr_msg, 22))
         for item in analysis_data:
-            header = f"<h2>{item['file_name']}</h2>"
-            content = header + format_detailed_analysis(get_analysis_data(item['data']), i18n)
-            pdf_pages.append(make_page(content, 11))
+            header = f"<h2>{html.escape(str(item.get('file_name') or ''))}</h2>"
+            content = header + format_detailed_analysis_html(
+                get_analysis_data(item['data']), i18n
+            )
+            pdf_pages.append(make_analysis_tables_page(content))
         pdf_bytes = merge_pages(pdf_pages)
         if not pdf_bytes:
             await callback.message.answer(i18n.auto.analyze.error.parse())

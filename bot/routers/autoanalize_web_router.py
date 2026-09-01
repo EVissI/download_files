@@ -15,12 +15,17 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 
 from bot.common.func.analiz_func import analyze_mat_file
 from bot.common.func.func import format_detailed_analysis_html, get_analysis_data
+from bot.common.func.generate_pdf import (
+    analysis_pdf_filename,
+    analysis_tables_to_pdf_bytes,
+    pdf_content_disposition,
+)
 from bot.common.func.hint_viewer import extract_player_names
 from bot.common.service.hint_s3_service import HintS3Storage
 from bot.common.service.hint_viewer_web_service import (
@@ -728,15 +733,10 @@ async def web_analyze_history(request: Request, page: int = 1):
     return {"ok": True, **payload}
 
 
-@autoanalize_web_api_router.get("/web/analyze/api/table")
-async def web_analyze_table(request: Request, game_id: str = ""):
-    _token, session = await _require_session(request)
+async def _load_analyze_for_user(user_id: int, game_id: str):
     gid = (game_id or "").strip()
     if not gid:
         raise HTTPException(status_code=400, detail="Нужен game_id")
-    user_id = session.get("user_id")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Нужна авторизация")
     from sqlalchemy import select
 
     from bot.db.database import async_session_maker
@@ -744,19 +744,60 @@ async def web_analyze_table(request: Request, game_id: str = ""):
 
     async with async_session_maker() as db:
         result = await db.execute(
-            select(HintViewerWebUpload.id).where(
+            select(HintViewerWebUpload).where(
                 HintViewerWebUpload.user_id == int(user_id),
                 HintViewerWebUpload.game_id == gid,
                 HintViewerWebUpload.service == WEB_SERVICE_ANALYZE,
             )
         )
-        if result.scalar_one_or_none() is None:
+        row = result.scalar_one_or_none()
+        if row is None:
             raise HTTPException(status_code=404, detail="Анализ не найден")
+        original_filename = row.original_filename
     s3 = HintS3Storage.from_settings()
     payload = await asyncio.to_thread(s3.get_autoanalyze_json, gid)
     if not payload:
         raise HTTPException(status_code=404, detail="Таблица ещё не готова")
     metrics = payload.get("players") or payload
+    if not isinstance(metrics, dict):
+        raise HTTPException(status_code=404, detail="Таблица ещё не готова")
+    return metrics, payload, original_filename
+
+
+@autoanalize_web_api_router.get("/web/analyze/api/table")
+async def web_analyze_table(request: Request, game_id: str = ""):
+    _token, session = await _require_session(request)
+    user_id = session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Нужна авторизация")
+    metrics, _payload, _original_filename = await _load_analyze_for_user(int(user_id), game_id)
     i18n = translator_hub.get_translator_by_locale("ru")
     html = format_detailed_analysis_html(metrics, i18n)
     return {"ok": True, "html": html}
+
+
+@autoanalize_web_api_router.get("/web/analyze/api/pdf")
+async def web_analyze_pdf(request: Request, game_id: str = ""):
+    _token, session = await _require_session(request)
+    user_id = session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Нужна авторизация")
+    metrics, payload, original_filename = await _load_analyze_for_user(int(user_id), game_id)
+    i18n = translator_hub.get_translator_by_locale("ru")
+    html = format_detailed_analysis_html(metrics, i18n)
+    try:
+        pdf_bytes = await asyncio.to_thread(analysis_tables_to_pdf_bytes, html)
+    except Exception as exc:
+        logger.exception("web analyze pdf failed game_id={}: {}", game_id, exc)
+        raise HTTPException(status_code=500, detail="Не удалось собрать PDF") from exc
+    if not pdf_bytes:
+        raise HTTPException(status_code=500, detail="Не удалось собрать PDF")
+    filename = analysis_pdf_filename(
+        metrics,
+        original_filename=(payload or {}).get("filename") or original_filename,
+    )
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": pdf_content_disposition(filename)},
+    )
