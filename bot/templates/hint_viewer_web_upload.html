@@ -187,7 +187,7 @@
         }
         .analyze-table th { background: var(--web-table-th); }
         .analyze-table td { background: var(--web-table-td); }
-        .history-item-actions { display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0; }
+        .history-item-actions { display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
         .history-pdf-btn { font-size: 0.8rem; padding: 6px 10px; white-space: nowrap; }
     </style>
     <script src="/static/js/web_theme.js?t={{ cache_timestamp }}" defer></script>
@@ -232,6 +232,7 @@
         const openOnUpload = {{ open_on_upload|default(false)|tojson }};
         const historyExpandable = {{ history_expandable|default(false)|tojson }};
         const pdfDownload = {{ pdf_download|default(false)|tojson }};
+        const sendToHintsEnabled = {{ send_to_hints|default(false)|tojson }};
         const fileInput = document.getElementById('fileInput');
         const dropzone = document.getElementById('dropzone');
         const fileList = document.getElementById('fileList');
@@ -360,13 +361,23 @@
             return `<a class="btn ghost history-pdf-btn" href="${escapeHtml(url)}">Скачать PDF</a>`;
         }
 
+        function hintsButton(gameId) {
+            if (!sendToHintsEnabled || !gameId) return '';
+            return `<button type="button" class="btn ghost history-pdf-btn" data-send-hints="${escapeHtml(gameId)}">Анализ ошибок</button>`;
+        }
+
+        function analyzeFileActions(gameId) {
+            if (!gameId) return '';
+            return pdfLink(gameId) + hintsButton(gameId);
+        }
+
         function renderJob(job) {
             const cls = job.status === 'done' ? 'done' : (job.status === 'error' ? 'error' : '');
             if (job.kind === 'batch') {
                 const files = (job.files || []).map((f) => {
                     const open = openMatchButtons(f.open_links);
-                    const pdf = f.status === 'done' ? pdfLink(f.game_id) : '';
-                    return `<li>${escapeHtml(f.filename)} — ${statusLabel(f.status)} ${open} ${pdf} ${f.error ? `<span class="muted">${escapeHtml(f.error)}</span>` : ''}</li>`;
+                    const extra = f.status === 'done' ? analyzeFileActions(f.game_id) : '';
+                    return `<li>${escapeHtml(f.filename)} — ${statusLabel(f.status)} ${open} ${extra} ${f.error ? `<span class="muted">${escapeHtml(f.error)}</span>` : ''}</li>`;
                 }).join('');
                 return `<div class="job ${cls}">
                     <strong>Пакет: ${(job.files || []).length} файл(ов)</strong>
@@ -377,14 +388,14 @@
                 </div>`;
             }
             const open = openMatchButtons(job.open_links);
-            const pdf = job.status === 'done' ? pdfLink(job.game_id) : '';
+            const extra = job.status === 'done' ? analyzeFileActions(job.game_id) : '';
             return `<div class="job ${cls}">
                 <strong>${escapeHtml(job.filename || 'Матч')}</strong>
                 <div class="muted">${escapeHtml(job.red_player || '')} vs ${escapeHtml(job.black_player || '')} · ${statusLabel(job.status)}</div>
                 ${progressHtml(job)}
                 ${job.error ? `<div class="muted">${escapeHtml(job.error)}</div>` : ''}
                 ${open}
-                ${pdf ? `<div class="actions">${pdf}</div>` : ''}
+                ${extra ? `<div class="actions">${extra}</div>` : ''}
             </div>`;
         }
 
@@ -545,7 +556,7 @@
                     ? ('history-item--expandable' + (isOpen ? ' is-open' : ''))
                     : '';
                 const chevron = expandable ? `<span class="chevron">${isOpen ? '▴' : '▾'}</span>` : '';
-                const pdf = (item.status === 'done' && item.game_id) ? pdfLink(item.game_id) : '';
+                const pdf = (item.status === 'done' && item.game_id) ? analyzeFileActions(item.game_id) : '';
                 const cached = gameId && loadedTables[gameId]
                     ? loadedTables[gameId]
                     : '<div class="muted">Загрузка таблицы…</div>';
@@ -618,6 +629,46 @@
                 lastHistoryOpen = items.some((item) => item.status === 'queued' || item.status === 'processing');
                 renderHistory(data);
             } catch (e) {}
+        }
+
+        let sendingHints = false;
+        async function sendAnalyzeToHints(gameId, btn) {
+            if (!gameId || sendingHints) return;
+            sendingHints = true;
+            if (btn) btn.disabled = true;
+            try {
+                const res = await fetch(
+                    apiBase + '/api/send-to-hints?game_id=' + encodeURIComponent(gameId),
+                    { method: 'POST' }
+                );
+                const data = await res.json().catch(() => ({}));
+                if (res.status === 401) { window.location.href = loginUrl; return; }
+                if (!res.ok) {
+                    const detail = data.detail;
+                    const message = typeof detail === 'string'
+                        ? detail
+                        : 'Не удалось отправить на анализ ошибок';
+                    showToast(message);
+                    return;
+                }
+                window.location.href = data.redirect || '/web/hints';
+            } catch (e) {
+                showToast('Сеть недоступна');
+            } finally {
+                sendingHints = false;
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        const wrapEl = document.querySelector('.wrap');
+        if (wrapEl && sendToHintsEnabled) {
+            wrapEl.addEventListener('click', (event) => {
+                const btn = event.target.closest('[data-send-hints]');
+                if (!btn) return;
+                event.preventDefault();
+                event.stopPropagation();
+                sendAnalyzeToHints(btn.getAttribute('data-send-hints'), btn);
+            });
         }
 
         if (historyEl && historyExpandable) {

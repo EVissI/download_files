@@ -378,6 +378,27 @@ def _persist_source(src: str, filename: str, game_id: str) -> str:
     return str(dest)
 
 
+def _find_analyze_source(game_id: str, filename: str | None) -> Path | None:
+    dest_dir = ANALYZE_DIR / game_id
+    if filename:
+        path = dest_dir / _safe_filename(filename)
+        if path.is_file():
+            return path
+    if not dest_dir.is_dir():
+        return None
+    files = [p for p in dest_dir.iterdir() if p.is_file()]
+    if not files:
+        return None
+    preferred = [p for p in files if p.suffix.lower() in {".mat", ".txt"}]
+    if len(preferred) == 1:
+        return preferred[0]
+    if len(files) == 1:
+        return files[0]
+    if preferred:
+        return preferred[0]
+    return files[0]
+
+
 async def _prepare_analyze_file(
     *,
     src_path: str,
@@ -801,3 +822,50 @@ async def web_analyze_pdf(request: Request, game_id: str = ""):
         media_type="application/pdf",
         headers={"Content-Disposition": pdf_content_disposition(filename)},
     )
+
+
+@autoanalize_web_api_router.post("/web/analyze/api/send-to-hints")
+async def web_analyze_send_to_hints(request: Request, game_id: str = ""):
+    token, session = await _require_session(request)
+    user_id = session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Нужна авторизация")
+    _metrics, payload, original_filename = await _load_analyze_for_user(
+        int(user_id), game_id
+    )
+    gid = (game_id or "").strip()
+    src = _find_analyze_source(
+        gid, original_filename or (payload or {}).get("filename")
+    )
+    if src is None or not src.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Исходный файл не найден. Загрузите матч в разделе Ошибки.",
+        )
+    if src.suffix.lower() not in {".mat", ".txt"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Анализ ошибок принимает только файлы .mat",
+        )
+    filename = original_filename or src.name
+    if not str(filename).lower().endswith(".mat"):
+        filename = f"{Path(filename).stem}.mat"
+    web_uid = int(session.get("web_uid") or -int(user_id))
+    from bot.routers.hint_viewer_web_router import _enqueue_single
+
+    try:
+        job = await _enqueue_single(
+            local_mat=str(src),
+            filename=filename,
+            web_uid=web_uid,
+            session_token=token,
+            user_id=int(user_id),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("send analyze file to hints failed game_id={}: {}", gid, exc)
+        raise HTTPException(
+            status_code=500, detail="Не удалось отправить файл на анализ ошибок"
+        ) from exc
+    return JSONResponse({"ok": True, "redirect": "/web/hints", "job": job})

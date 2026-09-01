@@ -284,6 +284,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
             "open_on_upload": False,
             "history_expandable": True,
             "pdf_download": True,
+            "send_to_hints": True,
             "dropzone_hint": ".mat, .zip, .sgf, .gam и др.",
             "accept": ".mat,.zip,.txt,.sgf,.sgg,.bkg,.gam,.pos,.fibs,.tmg,application/zip",
             "dropzone_title": "Нажмите или перетащите файлы сюда",
