@@ -73,6 +73,48 @@ html[data-theme="light"] {
     --web-toast-bg: #2e7d32;
 }
 
+.web-cabinet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--web-border-subtle);
+    background: var(--web-bg-header);
+    gap: 12px;
+    flex-wrap: wrap;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--web-text);
+}
+.web-cabinet-header .service-nav {
+    display: flex;
+    gap: 4px;
+    background: var(--web-bg-nav);
+    padding: 4px;
+    border-radius: 10px;
+    flex-wrap: wrap;
+}
+.web-cabinet-header .service-nav a {
+    color: var(--web-text-nav);
+    text-decoration: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    font-family: inherit;
+    line-height: 1.2;
+}
+.web-cabinet-header .service-nav a.active,
+.web-cabinet-header .service-nav a.active:hover,
+.web-cabinet-header .service-nav a.active:visited {
+    background: var(--web-accent);
+    color: #fff;
+}
+.web-cabinet-header .service-nav a:hover:not(.active) {
+    background: var(--web-nav-hover);
+    color: var(--web-text);
+}
 .header-actions {
     display: flex;
     align-items: center;
@@ -83,12 +125,14 @@ html[data-theme="light"] {
     display: flex;
     align-items: stretch;
 }
-.header-actions .btn,
-.header-actions button,
 .web-cabinet-header .header-actions .btn,
 .web-cabinet-header .header-actions button,
+.web-cabinet-header .header-actions .btn:hover,
+.web-cabinet-header .header-actions button:hover,
 header .header-actions .btn,
-header .header-actions button {
+header .header-actions button,
+.header-actions .btn,
+.header-actions button {
     box-sizing: border-box;
     appearance: none;
     -webkit-appearance: none;
@@ -103,8 +147,21 @@ header .header-actions button {
     font-size: 0.85rem;
     font-weight: 600;
     line-height: 1;
+    font-family: inherit;
     text-decoration: none;
     cursor: pointer;
+    background: var(--web-ghost-bg);
+    color: var(--web-ghost-fg);
+    transition: background-color 0.15s, color 0.15s;
+}
+.web-cabinet-header .header-actions .btn:hover,
+.web-cabinet-header .header-actions button:hover,
+header .header-actions .btn:hover,
+header .header-actions button:hover,
+.header-actions .btn:hover,
+.header-actions button:hover {
+    background: var(--web-ghost-hover);
+    color: var(--web-text);
 }
 .theme-toggle,
 .web-cabinet-header .theme-toggle,
