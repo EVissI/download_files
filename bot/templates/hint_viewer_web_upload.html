@@ -104,7 +104,10 @@
             padding: 12px;
             margin-bottom: 10px;
             background: var(--web-bg-sunken);
+            overflow: hidden;
+            min-width: 0;
         }
+        .job strong { overflow-wrap: anywhere; word-break: break-word; }
         .job.done { border-color: var(--web-accent); }
         .job.error { border-color: var(--web-danger-border); }
         .muted { color: var(--web-text-muted); font-size: 0.9rem; }
@@ -134,7 +137,29 @@
             max-width: 320px;
             z-index: 20;
         }
-        .sub { margin: 8px 0 0; padding-left: 14px; }
+        .sub {
+            margin: 8px 0 0;
+            padding: 0;
+            list-style: none;
+            min-width: 0;
+        }
+        .job-file {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
+            padding: 10px 0;
+            border-top: 1px solid var(--web-border);
+        }
+        .job-file:first-child { border-top: 0; padding-top: 4px; }
+        .job-file-name {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            min-width: 0;
+        }
+        .job-file-actions {
+            margin-top: 0;
+        }
         .progress {
             height: 8px;
             background: var(--web-progress-bg);
@@ -377,7 +402,14 @@
                 const files = (job.files || []).map((f) => {
                     const open = openMatchButtons(f.open_links);
                     const extra = f.status === 'done' ? analyzeFileActions(f.game_id) : '';
-                    return `<li>${escapeHtml(f.filename)} — ${statusLabel(f.status)} ${open} ${extra} ${f.error ? `<span class="muted">${escapeHtml(f.error)}</span>` : ''}</li>`;
+                    const err = f.error ? `<div class="muted">${escapeHtml(f.error)}</div>` : '';
+                    return `<li class="job-file">
+                        <div class="job-file-name">${escapeHtml(f.filename)}</div>
+                        <div class="muted">${statusLabel(f.status)}</div>
+                        ${open}
+                        ${extra ? `<div class="actions job-file-actions">${extra}</div>` : ''}
+                        ${err}
+                    </li>`;
                 }).join('');
                 return `<div class="job ${cls}">
                     <strong>Пакет: ${(job.files || []).length} файл(ов)</strong>
