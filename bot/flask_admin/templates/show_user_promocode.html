@@ -1,0 +1,64 @@
+{% extends "appbuilder/general/model/show.html" %}
+
+{% block show_form %}
+{{ super() }}
+<div class="modal fade" id="editPromoExpiryModal" tabindex="-1" role="dialog" aria-labelledby="editPromoExpiryModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form method="post" action="{{ url_for(up_fab_endpoint ~ '.update_expiry', pk=pk) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token_value }}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title" id="editPromoExpiryModalLabel">Срок действия промокода</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="checkbox-inline" style="padding-left: 0;">
+                            <input type="checkbox" id="promo-expires-unlimited" name="unlimited" value="1"
+                                {% if promo_expires_unlimited %}checked{% endif %}>
+                            Бессрочно (∞)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="promo-expires-date">Действует до</label>
+                        <input
+                            id="promo-expires-date"
+                            name="expires_date"
+                            type="date"
+                            class="form-control"
+                            value="{{ promo_expires_date }}"
+                            {% if promo_expires_unlimited %}disabled{% endif %}
+                        >
+                        <p class="help-block" style="margin-bottom: 0;">
+                            Дата по московскому времени, включительно до конца выбранного дня.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    var unlimited = document.getElementById('promo-expires-unlimited');
+    var dateInput = document.getElementById('promo-expires-date');
+    if (!unlimited || !dateInput) return;
+    function sync() {
+        dateInput.disabled = unlimited.checked;
+        if (unlimited.checked) {
+            dateInput.removeAttribute('required');
+        } else {
+            dateInput.setAttribute('required', 'required');
+        }
+    }
+    unlimited.addEventListener('change', sync);
+    sync();
+})();
+</script>
+{% endblock %}

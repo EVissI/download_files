@@ -327,6 +327,9 @@ class UserPromocode(Base):
     issued_cards_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     remaining_services: Mapped[list["UserPromocodeService"]] = relationship(
         "UserPromocodeService",
@@ -341,21 +344,38 @@ class UserPromocode(Base):
         back_populates="source_user_promocode",
     )
 
+    @staticmethod
+    def initial_expires_at(
+        duration_days: int | None, start: datetime | None = None
+    ) -> datetime | None:
+        """Дата окончания при активации: created_at + duration_days, либо None (∞)."""
+        if duration_days is None:
+            return None
+        start = start or datetime.now(timezone.utc)
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        return start + timedelta(days=int(duration_days))
+
+    def _aware(self, value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
+
     @property
     @renders("promo_date_range")
     def promo_date_range(self) -> str:
         """Период действия промо: с даты активации по дату окончания (или ∞)"""
         if not self.created_at:
             return "—"
-        start = self.created_at
-        if isinstance(start, datetime) and start.tzinfo is None:
-            start = start.replace(tzinfo=timezone.utc)
+        start = self._aware(self.created_at)
         start_str = start.strftime("%d.%m.%Y") if isinstance(start, datetime) else str(start)
-        if self.promocode and self.promocode.duration_days is not None:
-            end = start + timedelta(days=self.promocode.duration_days)
-            end_str = end.strftime("%d.%m.%Y") if isinstance(end, datetime) else str(end)
-            return f"{start_str} — {end_str}"
-        return f"{start_str} — ∞"
+        end = self._aware(self.expires_at)
+        if end is None:
+            return f"{start_str} — ∞"
+        end_str = end.astimezone(timezone(timedelta(hours=3))).strftime("%d.%m.%Y")
+        return f"{start_str} — {end_str}"
 
     @staticmethod
     def _card_pool_label(pool) -> str:

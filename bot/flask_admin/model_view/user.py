@@ -1,5 +1,6 @@
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from aiogram import Bot
 from aiogram.types import WebAppInfo
@@ -36,6 +37,8 @@ from bot.flask_admin.promo_assign import (
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
+
+MSK = ZoneInfo("Europe/Moscow")
 
 
 def _run_telegram_sync(action):
@@ -122,6 +125,7 @@ class UserPromocodeInline(ModelView):
     can_delete = True
     list_title = "Промокоды"
     delete_row_message = "Промокод снят с пользователя, связанный остаток удалён."
+    show_template = "show_user_promocode.html"
 
     list_columns = [
         "promocode.code",
@@ -176,6 +180,74 @@ class UserPromocodeInline(ModelView):
         "remaining_balance_display": "Остаток",
         "is_active_display": "Статус",
     }
+
+    def render_template(self, template, **kwargs):
+        kwargs.setdefault(
+            "up_fab_endpoint", getattr(self, "endpoint", self.__class__.__name__)
+        )
+        kwargs.setdefault("csrf_token_value", generate_csrf())
+        if template == self.show_template:
+            current_pk = kwargs.get("pk")
+            item = self.datamodel.get(current_pk) if current_pk is not None else None
+            expires_date = ""
+            if item and item.expires_at is not None:
+                ts = item.expires_at
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
+                expires_date = ts.astimezone(MSK).strftime("%Y-%m-%d")
+            kwargs.setdefault("promo_expires_date", expires_date)
+            kwargs.setdefault(
+                "promo_expires_unlimited",
+                not (item and item.expires_at is not None),
+            )
+        return super().render_template(template, **kwargs)
+
+    @expose("/update_expiry/<pk>", methods=["POST"])
+    @has_access
+    @permission_name("show")
+    def update_expiry(self, pk):
+        item = self.datamodel.get(pk)
+        if not item:
+            flash("Связь промокода не найдена", "danger")
+            return redirect(url_for(f"{self.endpoint}.list"))
+
+        unlimited = request.form.get("unlimited") in ("y", "on", "1", "true", "True")
+        raw_date = (request.form.get("expires_date") or "").strip()
+        session = self.datamodel.session
+        try:
+            if unlimited:
+                item.expires_at = None
+                item.is_active = True
+            else:
+                if not raw_date:
+                    flash("Укажите дату окончания или отметьте «Бессрочно».", "warning")
+                    return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+                try:
+                    day = datetime.strptime(raw_date, "%Y-%m-%d").date()
+                except ValueError:
+                    flash("Некорректная дата окончания.", "warning")
+                    return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+                expires_at = datetime(
+                    day.year, day.month, day.day, 23, 59, 59, tzinfo=MSK
+                ).astimezone(timezone.utc)
+                item.expires_at = expires_at
+                item.is_active = expires_at > datetime.now(timezone.utc)
+            session.commit()
+        except SQLAlchemyError as e:
+            session.rollback()
+            flash(f"Ошибка сохранения срока действия: {e}", "danger")
+            return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
+
+        if unlimited:
+            flash("Срок действия промокода обновлён: бессрочно.", "success")
+        elif item.is_active:
+            flash("Срок действия промокода обновлён.", "success")
+        else:
+            flash(
+                "Срок действия обновлён. Промокод неактивен: выбранная дата уже прошла.",
+                "warning",
+            )
+        return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
 
     def get_query(self):
         return super().get_query().options(

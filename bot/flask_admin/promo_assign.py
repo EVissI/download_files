@@ -181,7 +181,11 @@ def assign_promocode_to_user(
     if not user:
         return False, "not_found"
 
-    user_promo = UserPromocode(user_id=user_id, promocode_id=promocode.id)
+    user_promo = UserPromocode(
+        user_id=user_id,
+        promocode_id=promocode.id,
+        expires_at=UserPromocode.initial_expires_at(promocode.duration_days),
+    )
     session.add(user_promo)
 
     if _is_cards_promo(promocode):

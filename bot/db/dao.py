@@ -482,20 +482,18 @@ class UserDAO(BaseDAO[User]):
             expired_records = []
 
             # Check UserPromocode records
-            promo_query = (
-                select(UserPromocode, Promocode.duration_days)
-                .join(Promocode, UserPromocode.promocode_id == Promocode.id)
-                .where(
-                    UserPromocode.user_id == user_id,
-                    UserPromocode.is_active == True,
-                    Promocode.duration_days.isnot(None),
-                )
+            promo_query = select(UserPromocode).where(
+                UserPromocode.user_id == user_id,
+                UserPromocode.is_active == True,
+                UserPromocode.expires_at.isnot(None),
             )
             promo_result = await self._session.execute(promo_query)
-            promo_records = promo_result.all()
+            promo_records = promo_result.scalars().all()
 
-            for user_promo, duration_days in promo_records:
-                expiration_date = user_promo.created_at + timedelta(days=duration_days)
+            for user_promo in promo_records:
+                expiration_date = user_promo.expires_at
+                if expiration_date is None:
+                    continue
                 if expiration_date.tzinfo is None:
                     expiration_date = expiration_date.replace(tzinfo=timezone.utc)
                 if current_time > expiration_date:
@@ -975,6 +973,7 @@ class PromoCodeDAO(BaseDAO[Promocode]):
             user_promo = UserPromocode(
                 user_id=user_id,
                 promocode_id=promocode.id,
+                expires_at=UserPromocode.initial_expires_at(promocode.duration_days),
             )
             self._session.add(user_promo)
 
