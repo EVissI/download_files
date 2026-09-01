@@ -102,11 +102,14 @@ h2 { font-size: 14px; margin: 0 0 10px; }
 .analyze-block { margin-bottom: 14px; page-break-inside: avoid; }
 .analyze-block h3 { font-size: 12px; margin: 0 0 6px; color: #333; }
 img.emoji { width: 1em; height: 1em; vertical-align: middle; display: inline-block; }
-.analyze-table { width: 100%; border-collapse: collapse; }
+.analyze-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.analyze-table col { width: 33.33%; }
 .analyze-table th, .analyze-table td {
   border: 1px solid #444;
   padding: 5px 8px;
   text-align: left;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .analyze-table thead th { background: #e6e6e6; }
 .analyze-table tbody th { background: #f3f3f3; font-weight: 600; }

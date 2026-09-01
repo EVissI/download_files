@@ -176,8 +176,15 @@
         .analyze-vs { margin: 0 0 10px; font-weight: 600; }
         .analyze-block { margin-bottom: 14px; }
         .analyze-block h3 { margin: 0 0 6px; font-size: 0.9rem; color: var(--web-analyze-h); }
-        .analyze-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        .analyze-table th, .analyze-table td { border: 1px solid var(--web-table-border); padding: 6px 8px; text-align: left; }
+        .analyze-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 0.85rem; }
+        .analyze-table col { width: 33.33%; }
+        .analyze-table th, .analyze-table td {
+            border: 1px solid var(--web-table-border);
+            padding: 6px 8px;
+            text-align: left;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
         .analyze-table th { background: var(--web-table-th); }
         .analyze-table td { background: var(--web-table-td); }
         .history-item-actions { display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0; }

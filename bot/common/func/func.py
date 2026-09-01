@@ -596,7 +596,7 @@ def format_detailed_analysis_html(analysis_data: dict, i18n: TranslatorRunner) -
             heading = f"{emoji} {html.escape(title)}" if emoji else html.escape(title)
             return (
                 f'<section class="analyze-block"><h3>{heading}</h3>'
-                f'<table class="analyze-table"><thead><tr>'
+                f'<table class="analyze-table"><colgroup><col><col><col></colgroup><thead><tr>'
                 f"<th>{param}</th><th>{n1}</th><th>{n2}</th>"
                 f"</tr></thead><tbody>{body}</tbody></table></section>"
             )
