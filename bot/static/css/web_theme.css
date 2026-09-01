@@ -166,10 +166,16 @@ header .header-actions button:hover,
 .theme-toggle,
 .web-cabinet-header .theme-toggle,
 header .theme-toggle,
-.header-actions .theme-toggle {
+.header-actions .theme-toggle,
+.header-actions button.theme-toggle,
+.web-cabinet-header .header-actions button.theme-toggle,
+header .header-actions button.theme-toggle {
     width: 40px;
     min-width: 40px;
+    height: 40px;
+    min-height: 40px;
     padding: 0;
+    border-radius: 50%;
 }
 .theme-toggle svg {
     width: 18px;
@@ -212,8 +218,8 @@ html[data-theme="light"] .web-cabinet-header .service-nav a:hover:not(.active) {
     background: var(--web-nav-hover);
     color: var(--web-text);
 }
-html[data-theme="light"] .web-cabinet-header button,
-html[data-theme="light"] .web-cabinet-header .btn {
+html[data-theme="light"] .web-cabinet-header .header-actions button,
+html[data-theme="light"] .web-cabinet-header .header-actions .btn {
     background: var(--web-ghost-bg);
     color: var(--web-ghost-fg);
 }

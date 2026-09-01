@@ -279,7 +279,7 @@ body {
             text-align: center;
         }
 
-        button:not(.ghost) {
+        button {
             background-color: #007bff;
             color: white;
             border: none;
@@ -288,7 +288,7 @@ body {
             transition: background-color 0.3s;
         }
 
-        button:not(.ghost):hover {
+        button:hover {
             background-color: #0056b3;
         }
 

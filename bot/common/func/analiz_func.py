@@ -2,10 +2,21 @@ import json
 import re
 import subprocess
 import os
+import tempfile
 import threading
 from loguru import logger
 
 _gnubg_lock = threading.Lock()
+
+_BEAROFF_ZERO_RE = re.compile(r"/0(\*?)(?!\d)")
+_BAR_TOKEN_RE = re.compile(r"\bBar\b", re.I)
+_DOUBLES_RE = re.compile(r"Doubles\s*=>\s*(\d+)", re.I)
+_DROPS_RE = re.compile(r"\bDrops?\b", re.I)
+_DICE_RE = re.compile(r"\d\d:")
+_WINS_RE = re.compile(r"Wins\s+\d+\s+point", re.I)
+_GAME_RE = re.compile(r"^Game\s+\d+", re.I)
+_POINTS_MATCH_RE = re.compile(r"^\d+\s+point match", re.I)
+
 
 def clean_nick(raw: str) -> str:
     """
@@ -15,6 +26,70 @@ def clean_nick(raw: str) -> str:
     raw = re.sub(r"\s*\(.*?\)", "", raw)
     return raw.strip()
 
+
+def convert_mat_for_gnubg(content: str) -> str:
+    """
+    Приводит .mat Федерации нард / похожие протоколы к Jellyfish-формату gnubg:
+    комментарии ';', снятие шашек через /0, Bar/, сдача без куба.
+    """
+    lines_out: list[str] = []
+    cube = 1
+    source_lines = content.splitlines()
+    for i, line in enumerate(source_lines):
+        stripped = line.strip()
+        if not stripped:
+            lines_out.append("")
+            continue
+        if stripped.startswith(";"):
+            continue
+        if _GAME_RE.match(stripped):
+            cube = 1
+            lines_out.append(stripped)
+            continue
+        if _POINTS_MATCH_RE.match(stripped):
+            lines_out.append(stripped)
+            continue
+
+        converted = _BAR_TOKEN_RE.sub("bar", line)
+        converted = _BEAROFF_ZERO_RE.sub(r"/off\1", converted)
+
+        dbl = _DOUBLES_RE.search(converted)
+        if dbl:
+            cube = int(dbl.group(1))
+            lines_out.append(converted)
+            continue
+
+        has_drops = bool(_DROPS_RE.search(converted))
+        has_dice = bool(_DICE_RE.search(converted))
+        has_doubles = bool(_DOUBLES_RE.search(converted))
+        if has_drops and has_dice and not has_doubles:
+            converted = _DROPS_RE.sub("     ", converted)
+            lines_out.append(converted)
+            nxt = source_lines[i + 1].strip() if i + 1 < len(source_lines) else ""
+            if not _WINS_RE.search(nxt):
+                lines_out.append(f"{' ' * 37}Wins {cube} points")
+            continue
+
+        lines_out.append(converted)
+
+    text = "\n".join(lines_out).rstrip() + "\n"
+    tail = [ln for ln in text.splitlines() if ln.strip()]
+    if tail and _DROPS_RE.search(tail[-1]) and not _WINS_RE.search(tail[-1]):
+        text = text.rstrip() + f"\n{' ' * 37}Wins {cube} points\n"
+    return text
+
+
+def prepare_mat_file_for_gnubg(src: str) -> str:
+    """Пишет нормализованную копию .mat во временный файл и возвращает путь."""
+    with open(src, "r", encoding="utf-8", errors="ignore") as fh:
+        original = fh.read()
+    converted = convert_mat_for_gnubg(original)
+    fd, path = tempfile.mkstemp(suffix=".mat", prefix="gnu_mat_")
+    os.close(fd)
+    with open(path, "w", encoding="utf-8", newline="\n") as fh:
+        fh.write(converted)
+    return path
+
 def analyze_mat_file(file: str, type: str = None) -> tuple:
     """
     Анализирует файл матча или позиции с помощью GNU Backgammon и возвращает статистику в формате JSON,
@@ -23,6 +98,7 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
     Returns:
         tuple: (points_match_value, json_string)
     """
+    prepared_mat = None
     try:
         if not os.path.exists(file):
             logger.error(f"Файл не найден: {file}")
@@ -63,6 +139,11 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
             raise ValueError(f"Неизвестный тип файла: {type}")
 
         import_command = import_commands[type]
+        if type == "mat":
+            prepared_mat = prepare_mat_file_for_gnubg(file)
+            gnu_path = prepared_mat.replace("\\", "/")
+            import_command = f'import mat "{gnu_path}"'
+            logger.info(f"MAT нормализован для gnubg: {prepared_mat}")
         gnubg_commands = [
             import_command,
             "analyse match",
@@ -245,6 +326,12 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
     except Exception as e:
         logger.error(f"Ошибка при анализе матча: {e}")
         raise
+    finally:
+        if prepared_mat:
+            try:
+                os.remove(prepared_mat)
+            except OSError:
+                pass
 
 
 # def analyze_mat_file_per_game(file: str, type: str = None) -> str:

@@ -27,10 +27,7 @@
 
 <body class="{% if web_standalone_mode|default(false) %}web-standalone{% endif %}">
     {% if web_standalone_mode|default(false) %}
-    <header class="web-cabinet-header">
-        {% include "includes/web_service_nav.html" %}
-        {% include "includes/web_header_actions.html" %}
-    </header>
+    {% include "includes/web_cabinet_header.html" %}
     {% endif %}
     <div class="wrap">
         <div class="cabinet-top-spacer" aria-hidden="true"></div>
