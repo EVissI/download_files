@@ -37,6 +37,10 @@ def _unlimited_checked() -> bool:
     return request.form.get("unlimited") in ("y", "on", "1", "true", "True")
 
 
+def _is_admin_checked() -> bool:
+    return request.form.get("is_admin") in ("y", "on", "1", "true", "True")
+
+
 class WebUserModelView(ModelView):
     datamodel = SQLAInterface(WebUser)
 
@@ -83,7 +87,7 @@ class WebUserModelView(ModelView):
         "max_sessions": "Одновременных сессий",
     }
     description_columns = {
-        "is_admin": "Флаг хранится в БД и не принимается из клиентских запросов веб-ошибок.",
+        "is_admin": "Админ?",
         "password": "Не короче 6 символов. При редактировании оставьте пустым, чтобы не менять.",
         "password_masked": "В списке пароль скрыт. Откройте карточку пользователя, чтобы увидеть исходный пароль.",
         "password_display": "Расшифрованная копия. Для входа используется отдельный хеш.",
@@ -98,6 +102,12 @@ class WebUserModelView(ModelView):
 
     add_form_extra_fields = {
         "password": _password_field("Пароль", required=True),
+        "is_admin": BooleanField(
+            "Админ",
+            default=False,
+            false_values=(False, "false", "0", ""),
+            render_kw={"required": False},
+        ),
         "unlimited": BooleanField("Бессрочный", default=False),
         "expires_at": DateTimeLocalField(
             "Активен до",
@@ -112,6 +122,12 @@ class WebUserModelView(ModelView):
     }
     edit_form_extra_fields = {
         "password": _password_field("Новый пароль (оставьте пустым, чтобы не менять)", required=False),
+        "is_admin": BooleanField(
+            "Админ",
+            default=False,
+            false_values=(False, "false", "0", ""),
+            render_kw={"required": False},
+        ),
         "unlimited": BooleanField("Бессрочный", default=False),
         "expires_at": DateTimeLocalField(
             "Активен до",
@@ -158,6 +174,8 @@ class WebUserModelView(ModelView):
             return
         if getattr(form, "unlimited", None) is not None:
             form.unlimited.data = item.expires_at is None
+        if getattr(form, "is_admin", None) is not None:
+            form.is_admin.data = bool(item.is_admin)
         if item.expires_at is not None and getattr(form, "expires_at", None) is not None:
             local = item.expires_at
             if local.tzinfo is None:
@@ -182,7 +200,7 @@ class WebUserModelView(ModelView):
             flash("Пароль должен быть не короче 6 символов", "danger")
             raise ValueError("password too short")
         item.password_hash, item.password_encrypted = store_password(raw)
-        item.is_admin = bool(item.is_admin)
+        item.is_admin = _is_admin_checked()
         item.max_sessions = WebUser.clamp_max_sessions(getattr(item, "max_sessions", 1))
         self._apply_expiry(item)
         self._drop_transient_password(item)
@@ -206,7 +224,7 @@ class WebUserModelView(ModelView):
                 flash("Пароль должен быть не короче 6 символов", "danger")
                 raise ValueError("password too short")
             item.password_hash, item.password_encrypted = store_password(raw)
-        item.is_admin = bool(item.is_admin)
+        item.is_admin = _is_admin_checked()
         item.max_sessions = WebUser.clamp_max_sessions(getattr(item, "max_sessions", 1))
         self._apply_expiry(item)
         self._drop_transient_password(item)
