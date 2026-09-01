@@ -53,6 +53,7 @@ from bot.common.service.hint_viewer_web_service import (
     record_history,
     resolve_web_session,
     sync_history_from_job,
+    clear_finished_session_jobs,
     web_cabinet_page_vars,
     web_hint_open_links,
     safe_web_next,
@@ -684,6 +685,14 @@ async def web_hints_jobs(request: Request):
         finished_at_by_id=finished_at_by_id,
     )
     return {"ok": True, "jobs": jobs}
+
+
+@hint_viewer_web_api_router.post("/web/hints/api/jobs/clear")
+async def web_hints_jobs_clear(request: Request):
+    token, _session = await _require_session(request)
+    removed = await clear_finished_session_jobs(token)
+    jobs = await list_session_jobs(token)
+    return {"ok": True, "removed": removed, "jobs": jobs}
 
 
 HINT_STALE_SEC = 48 * 3600

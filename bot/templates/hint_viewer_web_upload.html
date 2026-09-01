@@ -65,6 +65,15 @@
             margin-bottom: 16px;
         }
         h2 { margin: 0 0 12px; font-size: 1rem; }
+        .card-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .card-head h2 { margin: 0; }
+        .card-head .ghost { padding: 8px 12px; font-size: 0.85rem; }
         .drop {
             border: 2px dashed var(--web-border-dashed);
             border-radius: 10px;
@@ -234,7 +243,10 @@
 
         {% if show_current_jobs|default(true) %}
         <div class="card">
-            <h2>Текущие задачи</h2>
+            <div class="card-head">
+                <h2>Текущие задачи</h2>
+                <button type="button" class="ghost" id="clearJobsBtn" hidden>Очистить</button>
+            </div>
             <div id="jobs" class="muted">Пока нет загрузок в этой сессии.</div>
         </div>
         {% endif %}
@@ -261,6 +273,7 @@
         const uploadBtn = document.getElementById('uploadBtn');
         const uploadStatus = document.getElementById('uploadStatus');
         const jobsEl = document.getElementById('jobs');
+        const clearJobsBtn = document.getElementById('clearJobsBtn');
         const toast = document.getElementById('toast');
         let selectedFiles = [];
         const knownReady = new Set();
@@ -428,13 +441,28 @@
             </div>`;
         }
 
+        function jobIsOpen(job) {
+            if (job.status === 'queued' || job.status === 'processing') return true;
+            if (job.kind === 'batch') {
+                return (job.files || []).some((f) => f.status === 'queued' || f.status === 'processing');
+            }
+            return false;
+        }
+
+        function syncClearJobsBtn() {
+            if (!clearJobsBtn) return;
+            clearJobsBtn.hidden = !latestJobs.some((job) => !jobIsOpen(job));
+        }
+
         function renderJobsList() {
             if (!jobsEl) return;
             if (!latestJobs.length) {
                 jobsEl.innerHTML = '<span class="muted">Пока нет загрузок в этой сессии.</span>';
+                syncClearJobsBtn();
                 return;
             }
             jobsEl.innerHTML = latestJobs.map(renderJob).join('');
+            syncClearJobsBtn();
         }
 
         async function pollJobs() {
@@ -721,12 +749,17 @@
         }
 
         renderFiles();
-        function jobIsOpen(job) {
-            if (job.status === 'queued' || job.status === 'processing') return true;
-            if (job.kind === 'batch') {
-                return (job.files || []).some((f) => f.status === 'queued' || f.status === 'processing');
-            }
-            return false;
+        if (clearJobsBtn) {
+            clearJobsBtn.addEventListener('click', async () => {
+                if (clearJobsBtn.disabled) return;
+                clearJobsBtn.disabled = true;
+                try {
+                    const res = await fetch(apiBase + '/api/jobs/clear', { method: 'POST' });
+                    if (res.status === 401) { window.location.href = loginUrl; return; }
+                    await pollJobs();
+                } catch (e) {}
+                clearJobsBtn.disabled = false;
+            });
         }
         if (jobsEl) {
             pollJobs();

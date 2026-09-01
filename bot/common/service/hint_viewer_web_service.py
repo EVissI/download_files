@@ -545,6 +545,36 @@ async def prune_session_jobs(
         await _write_session_jobs(token, kept, service)
 
 
+_ACTIVE_JOB_STATUSES = {"queued", "processing"}
+
+
+def _session_job_is_active(job: dict[str, Any]) -> bool:
+    status = job.get("status")
+    if status in _ACTIVE_JOB_STATUSES:
+        return True
+    if job.get("kind") == "batch":
+        return any(
+            (item.get("status") in _ACTIVE_JOB_STATUSES)
+            for item in (job.get("files") or [])
+        )
+    return False
+
+
+async def clear_finished_session_jobs(
+    token: str, service: str = WEB_SERVICE_HINTS
+) -> int:
+    """Убирает из текущих задач готовые и ошибочные. История не меняется."""
+    if not token:
+        return 0
+    async with _session_jobs_lock(token, service):
+        jobs = await _read_session_jobs(token, service)
+        kept = [job for job in jobs if _session_job_is_active(job)]
+        removed = len(jobs) - len(kept)
+        if removed:
+            await _write_session_jobs(token, kept, service)
+        return removed
+
+
 async def record_history(**kwargs: Any) -> None:
     try:
         from bot.db.database import async_session_maker

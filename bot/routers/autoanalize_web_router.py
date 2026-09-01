@@ -40,6 +40,7 @@ from bot.common.service.hint_viewer_web_service import (
     resolve_web_session,
     sync_history_from_job,
     update_history_status,
+    clear_finished_session_jobs,
     web_cabinet_page_vars,
 )
 from bot.common.utils.static_assets import get_static_asset_version
@@ -726,6 +727,14 @@ async def web_analyze_jobs(request: Request):
             await _patch_job(token, stored["job_id"], mutator)
         jobs.append(refreshed)
     return {"ok": True, "jobs": jobs}
+
+
+@autoanalize_web_api_router.post("/web/analyze/api/jobs/clear")
+async def web_analyze_jobs_clear(request: Request):
+    token, _session = await _require_session(request)
+    removed = await clear_finished_session_jobs(token, WEB_SERVICE_ANALYZE)
+    jobs = await list_session_jobs(token, WEB_SERVICE_ANALYZE)
+    return {"ok": True, "removed": removed, "jobs": jobs}
 
 
 @autoanalize_web_api_router.get("/web/analyze/api/history")
