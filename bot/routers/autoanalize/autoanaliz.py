@@ -270,13 +270,15 @@ async def handle_mat_file(
     """
     Handles single file uploads for analysis, ensuring only one file is processed at a time.
     """
-    if not await try_mark_user_busy(user_info.id):
+    # id нужно снять до commit/rollback: после expire ORM-атрибут лениво ходит в БД.
+    user_id = int(user_info.id)
+    if not await try_mark_user_busy(user_id):
         if await should_send_busy_notice(message.chat.id):
             await safe_answer(
                 message,
                 "Другой файл уже обрабатывается. Пожалуйста, подождите и попробуйте снова.",
             )
-        logger.info(f"Ignored file upload from user {user_info.id} due to ongoing processing")
+        logger.info(f"Ignored file upload from user {user_id} due to ongoing processing")
         return
 
     waiting_manager = None
@@ -304,7 +306,7 @@ async def handle_mat_file(
         try:
             await message.bot.download(file.file_id, destination=file_path)
         except Exception as e:
-            logger.error(f"Failed to download file {file_name} for user {user_info.id}: {e}")
+            logger.error(f"Failed to download file {file_name} for user {user_id}: {e}")
             await waiting_manager.stop()
             await safe_answer(message, "Ошибка при загрузке файла. Попробуйте снова.")
             return
@@ -343,7 +345,7 @@ async def handle_mat_file(
             await waiting_manager.stop()
             file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
             await redis_client.set(
-                f"auto_analyze_file_path:{user_info.id}:{file_id}", new_file_path, expire=3600
+                f"auto_analyze_file_path:{user_id}:{file_id}", new_file_path, expire=3600
             )
             await safe_answer(
                 message,
@@ -366,7 +368,7 @@ async def handle_mat_file(
             await waiting_manager.stop()
             file_id = hashlib.md5(new_file_path.encode()).hexdigest()[:8]
             await redis_client.set(
-                f"auto_analyze_file_path:{user_info.id}:{file_id}", new_file_path, expire=3600
+                f"auto_analyze_file_path:{user_id}:{file_id}", new_file_path, expire=3600
             )
             await safe_answer(
                 message,
@@ -403,7 +405,7 @@ async def handle_mat_file(
             await waiting_manager.stop()
         await safe_answer(message, i18n.auto.analyze.error.parse())
     finally:
-        await mark_user_free(user_info.id)
+        await mark_user_free(user_id)
 
 
 @auto_analyze_router.callback_query(F.data.startswith("auto_player:"), UserInfo())
