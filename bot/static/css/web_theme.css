@@ -262,3 +262,32 @@ html[data-theme="light"] .hide-pips-label,
 html[data-theme="light"] .player-position-toggle {
     color: var(--web-text);
 }
+
+/* Карточки и вложенные блоки — тот же фон, что в тёмной теме. */
+html[data-theme="light"] .card {
+    color: #eee;
+    --web-bg-card: #1e1e1e;
+    --web-bg-sunken: #181818;
+    --web-bg-drop-hover: #17301a;
+    --web-border: #333;
+    --web-border-subtle: #2a2a2a;
+    --web-border-dashed: #555;
+    --web-text: #eee;
+    --web-text-muted: #999;
+    --web-text-soft: #bbb;
+    --web-link: #81c784;
+    --web-ghost-bg: #2a2a2a;
+    --web-ghost-fg: #ddd;
+    --web-ghost-hover: #3a3a3a;
+    --web-danger-border: #8d2f2f;
+    --web-table-border: #3a3a3a;
+    --web-table-th: #252525;
+    --web-table-td: #181818;
+    --web-analyze-h: #ccc;
+    --web-progress-bg: #2a2a2a;
+    --web-input-bg: #111;
+    --web-input-border: #444;
+    --web-error-bg: #3b1c1c;
+    --web-error-fg: #ffb4b4;
+    --web-error-border: #8d2f2f;
+}
