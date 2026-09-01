@@ -588,13 +588,14 @@ def format_detailed_analysis_html(analysis_data: dict, i18n: TranslatorRunner) -
         n2 = html.escape(str(player2_name))
         param = html.escape(str(i18n.analysis.param()))
 
-        def table(title: str, rows: list[tuple[str, str, str]]) -> str:
+        def table(title: str, rows: list[tuple[str, str, str]], emoji: str = "") -> str:
             body = "".join(
                 f"<tr><th>{html.escape(label)}</th><td>{html.escape(a)}</td><td>{html.escape(b)}</td></tr>"
                 for label, a, b in rows
             )
+            heading = f"{emoji} {html.escape(title)}" if emoji else html.escape(title)
             return (
-                f'<section class="analyze-block"><h3>{html.escape(title)}</h3>'
+                f'<section class="analyze-block"><h3>{heading}</h3>'
                 f'<table class="analyze-table"><thead><tr>'
                 f"<th>{param}</th><th>{n1}</th><th>{n2}</th>"
                 f"</tr></thead><tbody>{body}</tbody></table></section>"
@@ -629,6 +630,7 @@ def format_detailed_analysis_html(analysis_data: dict, i18n: TranslatorRunner) -
                         _analysis_cell(p2["chequerplay_rating"]),
                     ),
                 ],
+                emoji="⚪️⚫️",
             ),
             table(
                 str(i18n.analysis.luck()),
@@ -664,6 +666,7 @@ def format_detailed_analysis_html(analysis_data: dict, i18n: TranslatorRunner) -
                         _analysis_cell(p2["luck_rating"]),
                     ),
                 ],
+                emoji="🎯",
             ),
             table(
                 str(i18n.analysis.cube()),
@@ -709,6 +712,7 @@ def format_detailed_analysis_html(analysis_data: dict, i18n: TranslatorRunner) -
                         _analysis_cell(p2["cube_decision_rating"]),
                     ),
                 ],
+                emoji="🎲",
             ),
             table(
                 str(i18n.analysis.overall_statistic()),
@@ -724,6 +728,7 @@ def format_detailed_analysis_html(analysis_data: dict, i18n: TranslatorRunner) -
                         _analysis_cell(p2["overall_rating"]),
                     ),
                 ],
+                emoji="📈",
             ),
             "</div>",
         ]

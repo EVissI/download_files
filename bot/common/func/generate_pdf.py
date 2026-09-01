@@ -101,6 +101,7 @@ h2 { font-size: 14px; margin: 0 0 10px; }
 .analyze-vs { font-weight: 700; font-size: 13px; margin: 0 0 12px; }
 .analyze-block { margin-bottom: 14px; page-break-inside: avoid; }
 .analyze-block h3 { font-size: 12px; margin: 0 0 6px; color: #333; }
+img.emoji { width: 1em; height: 1em; vertical-align: middle; display: inline-block; }
 .analyze-table { width: 100%; border-collapse: collapse; }
 .analyze-table th, .analyze-table td {
   border: 1px solid #444;
@@ -115,6 +116,7 @@ h2 { font-size: 14px; margin: 0 0 10px; }
 
 def make_analysis_tables_page(html_fragment: str) -> HTML:
     """PDF-страница из HTML-таблиц веб-кабинета (без ASCII/псевдографики)."""
+    html_fragment = replace_emoji_with_twemoji_svg(html_fragment)
     full_html = (
         "<html><head><meta charset='UTF-8'>"
         f"<style>{ANALYSIS_TABLE_CSS}</style></head>"
@@ -124,6 +126,7 @@ def make_analysis_tables_page(html_fragment: str) -> HTML:
 
 
 def analysis_tables_to_pdf_bytes(html_fragment: str) -> bytes:
+    html_fragment = replace_emoji_with_twemoji_svg(html_fragment)
     pdf_io = io.BytesIO()
     full_html = (
         "<html><head><meta charset='UTF-8'>"
