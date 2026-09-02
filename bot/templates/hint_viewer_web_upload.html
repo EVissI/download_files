@@ -2,18 +2,21 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{{ page_title|default('Загрузка матчей') }}</title>
     {% include "includes/web_theme_boot.html" %}
     <link rel="stylesheet" href="/static/css/web_theme.css?t={{ cache_timestamp }}">
     <style>
         * { box-sizing: border-box; }
+        html { overflow-x: hidden; }
         body {
             margin: 0;
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
             background: var(--web-bg);
             color: var(--web-text);
             min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-text-size-adjust: 100%;
         }
         header {
             display: flex;
@@ -56,13 +59,22 @@
         }
         .header-actions form { margin: 0; }
         h1 { margin: 0; font-size: 1.15rem; }
-        .wrap { max-width: 860px; margin: 0 auto; padding: 20px; }
+        .wrap {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            min-width: 0;
+        }
         .card {
             background: var(--web-bg-card);
             border: 1px solid var(--web-border);
             border-radius: 12px;
             padding: 18px;
             margin-bottom: 16px;
+            min-width: 0;
         }
         h2 { margin: 0 0 12px; font-size: 1rem; }
         .card-head {
@@ -92,7 +104,12 @@
             cursor: pointer;
             font-weight: 600;
             text-decoration: none;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            line-height: 1.2;
+            touch-action: manipulation;
         }
         .primary { background: var(--web-accent); color: #fff; }
         .primary:disabled {
@@ -126,6 +143,12 @@
             padding: 10px 12px;
             margin-bottom: 8px;
             background: var(--web-bg-sunken);
+            min-width: 0;
+            position: relative;
+        }
+        .history-item strong {
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
         .history-item a { color: var(--web-link); }
         .open-modes { margin-top: 8px; }
@@ -205,6 +228,7 @@
         .history-item--expandable:hover { border-color: #4caf50; }
         .history-item--expandable.is-open { border-color: var(--web-accent); }
         .history-item-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+        .history-item-head > div:first-child { min-width: 0; flex: 1; }
         .history-item-head .chevron { color: var(--web-text-muted); font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
         .history-table-wrap { margin-top: 12px; overflow-x: auto; }
         .analyze-vs { margin: 0 0 10px; font-weight: 600; }
@@ -237,6 +261,93 @@
         .batch-files .history-item { margin-bottom: 0; }
         .history-item--nested { cursor: default; }
         .history-item--nested:hover { border-color: var(--web-border); }
+
+        @media (max-width: 720px) {
+            .wrap {
+                padding: 12px;
+                padding-left: max(12px, env(safe-area-inset-left));
+                padding-right: max(12px, env(safe-area-inset-right));
+                padding-bottom: max(16px, env(safe-area-inset-bottom));
+            }
+            .card {
+                padding: 14px;
+                border-radius: 10px;
+            }
+            .card-head {
+                align-items: center;
+                gap: 8px;
+            }
+            .card-head .ghost {
+                min-height: 44px;
+                padding: 0 14px;
+            }
+            .drop { padding: 20px 12px; }
+            h1 { font-size: 1.05rem; }
+            .card > .actions > .primary,
+            .card > .actions > .btn,
+            .card > .actions > button {
+                flex: 1 1 100%;
+                min-height: 44px;
+                width: 100%;
+            }
+            .job-file-actions .btn,
+            .job-file-actions button,
+            .open-modes .btn {
+                flex: 1 1 calc(50% - 4px);
+                min-height: 44px;
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+            .history-item-head {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+                padding-right: 22px;
+            }
+            .history-item-actions {
+                justify-content: stretch;
+                width: 100%;
+            }
+            .history-item-actions .btn,
+            .history-item-actions button {
+                flex: 1 1 calc(50% - 4px);
+                min-height: 44px;
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+            .history-item-head .chevron {
+                position: absolute;
+                top: 12px;
+                right: 12px;
+                margin-top: 0;
+                font-size: 1rem;
+            }
+            .history-pdf-btn { white-space: nowrap; }
+            .history-table-wrap { -webkit-overflow-scrolling: touch; }
+            .analyze-table { font-size: 0.78rem; }
+            .analyze-table th, .analyze-table td { padding: 5px 6px; }
+            .pager { gap: 4px; }
+            .pager button {
+                min-height: 40px;
+                padding: 8px 10px;
+            }
+            .toast {
+                left: 12px;
+                right: 12px;
+                bottom: max(12px, env(safe-area-inset-bottom));
+                max-width: none;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .history-item-actions .btn,
+            .history-item-actions button,
+            .job-file-actions .btn,
+            .job-file-actions button,
+            .open-modes .btn {
+                flex: 1 1 100%;
+            }
+        }
     </style>
     <script src="/static/js/web_theme.js?t={{ cache_timestamp }}" defer></script>
 </head>
@@ -407,7 +518,7 @@
         function pdfLink(gameId) {
             if (!pdfDownload || !gameId) return '';
             const url = apiBase + '/api/pdf?game_id=' + encodeURIComponent(gameId);
-            return `<a class="btn ghost history-pdf-btn" href="${escapeHtml(url)}">Скачать PDF</a>`;
+            return `<a class="btn ghost history-pdf-btn" href="${escapeHtml(url)}" title="Скачать PDF">Скачать</a>`;
         }
 
         function hintsButton(gameId) {
@@ -613,7 +724,7 @@
         function pdfBatchLink(batchId) {
             if (!pdfDownload || !batchId) return '';
             const url = apiBase + '/api/pdf?batch_id=' + encodeURIComponent(batchId);
-            return `<a class="btn ghost history-pdf-btn" href="${escapeHtml(url)}">Скачать PDF</a>`;
+            return `<a class="btn ghost history-pdf-btn" href="${escapeHtml(url)}" title="Скачать PDF">Скачать</a>`;
         }
 
         function cacheBatchPayload(batchId, data) {

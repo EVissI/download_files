@@ -328,3 +328,42 @@ html[data-theme="light"] .hide-pips-label,
 html[data-theme="light"] .player-position-toggle {
     color: var(--web-text);
 }
+
+@media (max-width: 760px) {
+    .web-cabinet-header {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px 12px;
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+        gap: 8px;
+    }
+    .web-cabinet-header .service-nav {
+        width: 100%;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .web-cabinet-header .service-nav::-webkit-scrollbar {
+        display: none;
+    }
+    .web-cabinet-header .service-nav a {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        min-height: 40px;
+        padding: 10px 12px;
+        display: inline-flex;
+        align-items: center;
+    }
+    .web-cabinet-header .header-actions {
+        width: 100%;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+    .web-cabinet-header .header-actions .btn,
+    .web-cabinet-header .header-actions button {
+        min-height: 40px;
+        height: 40px;
+    }
+}
