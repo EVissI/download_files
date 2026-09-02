@@ -146,7 +146,6 @@ async function ensureContentEditor() {
             if (el.id === 'boardCanvas') return true;
             if (el.closest('#boardCanvas')) return true;
             if (el.closest('#adminButtonContainer')) return true;
-            if (el.id === 'matchAnalysisCabinetBackBtn' || el.closest('#matchAnalysisCabinetBackBtn')) return true;
             if (el.id === 'matchAnalysisStatusBtn' || el.closest('#matchAnalysisStatusBtn')) return true;
             if (el.tagName === 'CANVAS') return true;
             return false;
@@ -3774,31 +3773,26 @@ async function ensureContentEditor() {
                 });
         }
 
+        function isMatchAnalysisFavoriteVisible() {
+            return !!matchAnalysisMode && !window.hintViewerIsAdmin;
+        }
+
         function updateMatchAnalysisChromeUi() {
-            const cabinetBackBtn = document.getElementById('matchAnalysisCabinetBackBtn');
             const statusBtn = document.getElementById('matchAnalysisStatusBtn');
             const headerEl = document.querySelector('.board-block .header');
-            if (cabinetBackBtn) {
-                cabinetBackBtn.style.display = matchAnalysisMode ? 'inline-flex' : 'none';
-            }
+            const showStatus = isMatchAnalysisFavoriteVisible();
             if (statusBtn) {
-                // Статус доступен в пользовательском (аудио) режиме просмотра.
-                const showStatus = !!matchAnalysisMode && !window.hintViewerIsAdmin;
                 statusBtn.style.display = showStatus ? 'inline-flex' : 'none';
             }
             if (headerEl) {
-                headerEl.classList.toggle('has-ma-cabinet-back', !!matchAnalysisMode);
+                headerEl.classList.toggle('has-ma-favorite', showStatus);
             }
             updateMatchAnalysisAudioUi();
         }
 
         function setMatchAnalysisCabinetBackVisibleForScreenshot(visible) {
-            const cabinetBackBtn = document.getElementById('matchAnalysisCabinetBackBtn');
             const statusBtn = document.getElementById('matchAnalysisStatusBtn');
-            if (cabinetBackBtn && matchAnalysisMode) {
-                cabinetBackBtn.style.display = visible ? 'inline-flex' : 'none';
-            }
-            if (statusBtn && matchAnalysisMode && !window.hintViewerIsAdmin) {
+            if (statusBtn && isMatchAnalysisFavoriteVisible()) {
                 statusBtn.style.display = visible ? 'inline-flex' : 'none';
             }
         }

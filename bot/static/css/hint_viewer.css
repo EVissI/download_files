@@ -1157,38 +1157,9 @@ html {
             position: relative;
         }
 
-        .ma-cabinet-back-btn {
-            position: absolute;
-            left: 0;
-            top: 0;
-            z-index: 3;
-            width: 34px;
-            height: 34px;
-            min-width: 0;
-            padding: 0;
-            margin: 0;
-            border: 1px solid #555;
-            border-radius: 8px;
-            background: rgba(45, 45, 45, 0.92);
-            color: #ddd;
-            font-size: 16px;
-            line-height: 1;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-sizing: border-box;
-        }
-
-        .ma-cabinet-back-btn:hover {
-            background: #3a3a3a;
-            border-color: #777;
-            color: #fff;
-        }
-
         .ma-status-btn {
             position: absolute;
-            right: 0;
+            left: 0;
             top: 0;
             z-index: 3;
             width: 34px;
@@ -1231,9 +1202,9 @@ html {
             pointer-events: none;
         }
 
-        .header.has-ma-cabinet-back #match-info {
+        .header.has-ma-favorite #match-info {
             padding-left: 42px;
-            padding-right: 42px;
+            padding-right: 0;
             box-sizing: border-box;
         }
 
@@ -1290,10 +1261,10 @@ html {
             flex-shrink: 0;
         }
 
-        .header.has-ma-cabinet-back:has(.match-info-row) .match-game-label,
-        .header.has-ma-cabinet-back:has(.match-info-row) #players-info {
+        .header.has-ma-favorite:has(.match-info-row) .match-game-label,
+        .header.has-ma-favorite:has(.match-info-row) #players-info {
             padding-left: 42px;
-            padding-right: 42px;
+            padding-right: 0;
             box-sizing: border-box;
         }
 
