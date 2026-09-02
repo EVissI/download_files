@@ -26,21 +26,22 @@
 </head>
 
 <body class="{% if web_standalone_mode|default(false) %}web-standalone{% endif %}{% if match_analysis_mode|default(false) %} match-analysis-viewer{% endif %}">
-    {% if web_standalone_mode|default(false) %}
-    {% if match_analysis_mode|default(false) %}
-    <a class="web-standalone-back" href="/web/match-analysis">← К кабинету «Анализ матча»</a>
-    {% else %}
+    {% if web_standalone_mode|default(false) and not match_analysis_mode|default(false) %}
     <a class="web-standalone-back" href="/web/hints">← К загрузке матчей</a>
-    {% endif %}
     {% endif %}
     <div class="container">
         <h1>Backgammon Game Analysis</h1>
         <div class="board-layout">
         <div class="board-block">
             <div class="header">
-                <button type="button" id="matchAnalysisStatusBtn" class="ma-status-btn" title="В избранное" aria-label="Добавить в избранное" aria-pressed="false" style="display:none;">
-                    <i class="fa fa-star-o" aria-hidden="true"></i>
-                </button>
+                <div class="ma-header-actions" id="matchAnalysisHeaderActions">
+                    <button type="button" id="matchAnalysisCabinetBackBtn" class="ma-home-btn" onclick="openMatchAnalysisCabinet()" title="В кабинет «Анализ матча»" aria-label="В кабинет «Анализ матча»">
+                        <i class="fa fa-home" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" id="matchAnalysisStatusBtn" class="ma-status-btn" title="В избранное" aria-label="Добавить в избранное" aria-pressed="false">
+                        <i class="fa fa-star-o" aria-hidden="true"></i>
+                    </button>
+                </div>
                 <div id="match-info"></div>
                 <div id="players-info"></div>
                 <div id="top-bar"></div>

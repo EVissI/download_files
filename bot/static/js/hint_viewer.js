@@ -147,6 +147,8 @@ async function ensureContentEditor() {
             if (el.closest('#boardCanvas')) return true;
             if (el.closest('#adminButtonContainer')) return true;
             if (el.id === 'matchAnalysisStatusBtn' || el.closest('#matchAnalysisStatusBtn')) return true;
+            if (el.id === 'matchAnalysisCabinetBackBtn' || el.closest('#matchAnalysisCabinetBackBtn')) return true;
+            if (el.closest('.ma-header-actions')) return true;
             if (el.tagName === 'CANVAS') return true;
             return false;
         }
@@ -3795,27 +3797,23 @@ async function ensureContentEditor() {
                 });
         }
 
-        function isMatchAnalysisFavoriteVisible() {
+        function isMatchAnalysisHeaderActionsVisible() {
             return !!matchAnalysisMode;
         }
 
         function updateMatchAnalysisChromeUi() {
-            const statusBtn = document.getElementById('matchAnalysisStatusBtn');
             const headerEl = document.querySelector('.board-block .header');
-            const showStatus = isMatchAnalysisFavoriteVisible();
-            if (statusBtn) {
-                statusBtn.style.display = showStatus ? 'inline-flex' : 'none';
-            }
+            const show = isMatchAnalysisHeaderActionsVisible();
             if (headerEl) {
-                headerEl.classList.toggle('has-ma-favorite', showStatus);
+                headerEl.classList.toggle('has-ma-header-actions', show);
             }
             updateMatchAnalysisAudioUi();
         }
 
         function setMatchAnalysisCabinetBackVisibleForScreenshot(visible) {
-            const statusBtn = document.getElementById('matchAnalysisStatusBtn');
-            if (statusBtn && isMatchAnalysisFavoriteVisible()) {
-                statusBtn.style.display = visible ? 'inline-flex' : 'none';
+            const headerEl = document.querySelector('.board-block .header');
+            if (headerEl && isMatchAnalysisHeaderActionsVisible()) {
+                headerEl.classList.toggle('has-ma-header-actions', !!visible);
             }
         }
 

@@ -1157,14 +1157,28 @@ html {
             position: relative;
         }
 
-        .ma-status-btn {
+        .ma-header-actions {
             position: absolute;
             left: 0;
             top: 0;
             z-index: 3;
+            display: none;
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header.has-ma-header-actions .ma-header-actions {
+            display: inline-flex;
+        }
+
+        .ma-home-btn,
+        .ma-status-btn {
+            position: static;
             width: 34px;
             height: 34px;
-            min-width: 0;
+            min-width: 34px;
+            min-height: 34px;
             padding: 0;
             margin: 0;
             border: 1px solid #555;
@@ -1173,13 +1187,15 @@ html {
             color: #ddd;
             font-size: 16px;
             line-height: 1;
-            display: none;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             box-sizing: border-box;
+            flex-shrink: 0;
         }
 
+        .ma-home-btn:hover,
         .ma-status-btn:hover {
             background: #3a3a3a;
             border-color: #777;
@@ -1202,8 +1218,8 @@ html {
             pointer-events: none;
         }
 
-        .header.has-ma-favorite #match-info {
-            padding-left: 42px;
+        .header.has-ma-header-actions #match-info {
+            padding-left: 80px;
             padding-right: 0;
             box-sizing: border-box;
         }
@@ -1261,9 +1277,9 @@ html {
             flex-shrink: 0;
         }
 
-        .header.has-ma-favorite:has(.match-info-row) .match-game-label,
-        .header.has-ma-favorite:has(.match-info-row) #players-info {
-            padding-left: 42px;
+        .header.has-ma-header-actions:has(.match-info-row) .match-game-label,
+        .header.has-ma-header-actions:has(.match-info-row) #players-info {
+            padding-left: 80px;
             padding-right: 0;
             box-sizing: border-box;
         }
@@ -1824,6 +1840,7 @@ html {
             font-size: 14px;
         }
         .web-standalone-back:hover { text-decoration: underline; }
-        body.screenshot-mode .web-standalone-back {
+        body.screenshot-mode .web-standalone-back,
+        body.screenshot-mode .ma-header-actions {
             display: none !important;
         }
