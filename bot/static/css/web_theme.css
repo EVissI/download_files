@@ -381,19 +381,6 @@ html[data-theme="light"] .ma-audio-only-filter__mark {
     background: #fff;
     border-color: #b4b9c3;
 }
-html[data-theme="light"] .tile {
-    background: #fff;
-    border-color: #d0d4dc;
-    color: #1c1d21;
-}
-html[data-theme="light"] .tile--create {
-    background: transparent;
-    border-color: #b4b9c3;
-    color: #6b7280;
-}
-html[data-theme="light"] .tile--create:active {
-    color: #3f4650;
-}
 html[data-theme="light"] .link-modal__box,
 html[data-theme="light"] .shuffle-modal__box,
 html[data-theme="light"] .card-bg-modal__box {
