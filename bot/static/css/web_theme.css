@@ -75,30 +75,42 @@ html[data-theme="light"] {
 
 .web-cabinet-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
+    padding: 12px 20px;
     border-bottom: 1px solid var(--web-border-subtle);
     background: var(--web-bg-header);
-    gap: 12px;
-    flex-wrap: wrap;
     box-sizing: border-box;
     flex-shrink: 0;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color: var(--web-text);
 }
 .web-header-bar {
-    display: contents;
+    display: grid;
+    grid-template-columns: minmax(0, 65fr) minmax(0, 35fr);
+    column-gap: 8px;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
 }
 .web-cabinet-header .service-nav {
     display: flex;
+    flex-wrap: nowrap;
     gap: 4px;
     background: var(--web-bg-nav);
     padding: 4px;
     border-radius: 10px;
-    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+    scrollbar-width: thin;
 }
 .web-cabinet-header .service-nav a {
+    flex: 0 0 auto;
+    white-space: nowrap;
     color: var(--web-text-nav);
     text-decoration: none;
     padding: 8px 10px;
@@ -121,12 +133,18 @@ html[data-theme="light"] {
 .header-actions {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    overflow: hidden;
 }
 .header-actions form {
     margin: 0;
     display: flex;
     align-items: stretch;
+    flex-shrink: 0;
 }
 .web-cabinet-header .header-actions .btn,
 .web-cabinet-header .header-actions button,
@@ -155,6 +173,7 @@ header .header-actions button,
     cursor: pointer;
     background: var(--web-ghost-bg);
     color: var(--web-ghost-fg);
+    white-space: nowrap;
     transition: background-color 0.15s, color 0.15s;
 }
 .web-cabinet-header .header-actions .btn:hover,
@@ -404,44 +423,21 @@ html[data-theme="light"] .player-position-toggle {
 
 @media (max-width: 760px) {
     .web-cabinet-header {
-        flex-wrap: nowrap;
         padding: 8px 10px;
         padding-left: max(10px, env(safe-area-inset-left));
         padding-right: max(10px, env(safe-area-inset-right));
-        gap: 0;
     }
     .web-header-bar {
-        display: flex;
-        flex-wrap: nowrap;
-        align-items: center;
-        gap: 4px;
-        width: 100%;
-        min-width: 0;
-        background: var(--web-bg-nav);
-        padding: 3px;
-        border-radius: 10px;
-        box-sizing: border-box;
+        column-gap: 6px;
     }
     .web-cabinet-header .service-nav {
-        flex: 1 1 auto;
-        width: auto;
-        min-width: 0;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        overflow-y: hidden;
-        background: transparent;
-        padding: 0;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-x: contain;
-        touch-action: pan-x;
         scrollbar-width: none;
+        padding: 3px;
     }
     .web-cabinet-header .service-nav::-webkit-scrollbar {
         display: none;
     }
     .web-cabinet-header .service-nav a {
-        flex: 0 0 auto;
-        white-space: nowrap;
         min-height: 36px;
         padding: 8px 10px;
         display: inline-flex;
@@ -449,19 +445,15 @@ html[data-theme="light"] .player-position-toggle {
         font-size: 0.8rem;
     }
     .web-cabinet-header .header-actions {
-        width: auto;
-        flex: 0 0 auto;
-        justify-content: flex-end;
-        flex-wrap: nowrap;
         gap: 4px;
-        padding-left: 2px;
     }
     .web-cabinet-header .header-actions .btn,
     .web-cabinet-header .header-actions button {
         min-height: 36px;
         height: 36px;
-        padding: 0 10px;
-        font-size: 0.8rem;
+        padding: 0 8px;
+        font-size: 0.78rem;
+        white-space: nowrap;
     }
     .web-cabinet-header .header-actions .theme-toggle,
     .web-cabinet-header .header-actions .fullscreen-toggle,

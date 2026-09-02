@@ -18,46 +18,14 @@
             overflow-x: hidden;
             -webkit-text-size-adjust: 100%;
         }
-        header {
+        header.web-cabinet-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 16px 20px;
+            padding: 12px 20px;
             border-bottom: 1px solid var(--web-border-subtle);
             background: var(--web-bg-header);
-            gap: 12px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
-        .service-nav {
-            display: flex;
-            gap: 4px;
-            background: var(--web-bg-nav);
-            padding: 4px;
-            border-radius: 10px;
-            flex-wrap: wrap;
-        }
-        .service-nav a {
-            color: var(--web-text-nav);
-            text-decoration: none;
-            padding: 8px 10px;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.85rem;
-        }
-        .service-nav a.active {
-            background: var(--web-accent);
-            color: #fff;
-        }
-        .service-nav a:hover:not(.active) {
-            background: var(--web-nav-hover);
-            color: var(--web-text);
-        }
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .header-actions form { margin: 0; }
         h1 { margin: 0; font-size: 1.15rem; }
         .wrap {
             max-width: 860px;
@@ -263,15 +231,6 @@
         .history-item--nested:hover { border-color: var(--web-border); }
 
         @media (max-width: 720px) {
-            header.web-cabinet-header {
-                flex-wrap: nowrap;
-                padding: 8px 10px;
-            }
-            .service-nav {
-                flex-wrap: nowrap;
-                overflow-x: auto;
-                min-width: 0;
-            }
             .wrap {
                 padding: 12px;
                 padding-left: max(12px, env(safe-area-inset-left));
