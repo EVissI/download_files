@@ -474,7 +474,6 @@ async function ensureContentEditor() {
             const pipsDisplay = pipsEl ? pipsEl.style.display : '';
 
             matchInfoDiv.innerHTML =
-                `<div class="match-game-label">Игра ${currentGameNum}</div>` +
                 '<div class="match-info-row">' +
                 `<span class="match-length">Матч до ${matchLength}</span>` +
                 buildGameSelectHtml(currentGameNum) +

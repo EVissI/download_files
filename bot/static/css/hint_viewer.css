@@ -1223,21 +1223,17 @@ html {
             box-sizing: border-box;
         }
 
-        /* Матч: Игра n → игроки → Матч до / выбор / Счет / пипсы */
+        /* Матч: игроки → Матч до / выбор / Счет / пипсы */
         .header:has(.match-info-row) #match-info {
             display: contents;
         }
 
-        .header:has(.match-info-row) .match-game-label {
+        .header:has(.match-info-row) #players-info {
             order: 1;
         }
 
-        .header:has(.match-info-row) #players-info {
-            order: 2;
-        }
-
         .header:has(.match-info-row) .match-info-row {
-            order: 3;
+            order: 2;
             margin-bottom: 0;
         }
 
@@ -1276,7 +1272,6 @@ html {
             flex-shrink: 0;
         }
 
-        .header.has-ma-header-actions:has(.match-info-row) .match-game-label,
         .header.has-ma-header-actions:has(.match-info-row) #players-info {
             padding-left: 80px;
             padding-right: 0;
