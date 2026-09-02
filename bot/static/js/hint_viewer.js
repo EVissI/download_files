@@ -3497,9 +3497,7 @@ async function ensureContentEditor() {
 
         // Check admin status when page loads
         document.addEventListener('DOMContentLoaded', function() {
-            if (matchAnalysisMode) {
-                updateMatchAnalysisChromeUi();
-            }
+            updateMatchAnalysisChromeUi();
             checkAdminStatus();
         });
 
@@ -3796,15 +3794,31 @@ async function ensureContentEditor() {
                 });
         }
 
+        function isViewerHomeVisible() {
+            return !!matchAnalysisMode || isWebStandaloneMode();
+        }
+
         function isMatchAnalysisHeaderActionsVisible() {
-            return !!matchAnalysisMode;
+            return isViewerHomeVisible();
         }
 
         function updateMatchAnalysisChromeUi() {
             const headerEl = document.querySelector('.board-block .header');
-            const show = isMatchAnalysisHeaderActionsVisible();
+            const homeBtn = document.getElementById('matchAnalysisCabinetBackBtn');
+            const showHome = isViewerHomeVisible();
+            const showFav = !!matchAnalysisMode;
             if (headerEl) {
-                headerEl.classList.toggle('has-ma-header-actions', show);
+                headerEl.classList.toggle('has-ma-header-actions', showHome);
+                headerEl.classList.toggle('has-ma-favorite', showFav);
+            }
+            if (homeBtn) {
+                if (matchAnalysisMode) {
+                    homeBtn.title = 'В кабинет «Анализ матча»';
+                    homeBtn.setAttribute('aria-label', 'В кабинет «Анализ матча»');
+                } else {
+                    homeBtn.title = 'К загрузке матчей';
+                    homeBtn.setAttribute('aria-label', 'К загрузке матчей');
+                }
             }
             updateMatchAnalysisAudioUi();
         }
@@ -4276,9 +4290,16 @@ async function ensureContentEditor() {
         }
 
         function openMatchAnalysisCabinet() {
-            var meta = document.querySelector('meta[name="web-standalone-mode"]');
-            var web = meta && meta.getAttribute('content') === '1';
+            var web = isWebStandaloneMode();
             window.location.href = web ? '/web/match-analysis' : '/match-analysis-cabinet';
+        }
+
+        function openViewerHome() {
+            if (matchAnalysisMode) {
+                openMatchAnalysisCabinet();
+                return;
+            }
+            window.location.href = isWebStandaloneMode() ? '/web/hints' : '/hints';
         }
 
         // Функция открытия редактора контента

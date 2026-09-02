@@ -1218,9 +1218,17 @@ html {
         }
 
         .header.has-ma-header-actions #match-info {
-            padding-left: 80px;
+            padding-left: 42px;
             padding-right: 0;
             box-sizing: border-box;
+        }
+
+        .header.has-ma-header-actions.has-ma-favorite #match-info {
+            padding-left: 80px;
+        }
+
+        .header:not(.has-ma-favorite) .ma-status-btn {
+            display: none;
         }
 
         /* Матч: игроки → Матч до / выбор / Счет / пипсы */
@@ -1273,9 +1281,13 @@ html {
         }
 
         .header.has-ma-header-actions:has(.match-info-row) #players-info {
-            padding-left: 80px;
+            padding-left: 42px;
             padding-right: 0;
             box-sizing: border-box;
+        }
+
+        .header.has-ma-header-actions.has-ma-favorite:has(.match-info-row) #players-info {
+            padding-left: 80px;
         }
 
         #top-bar {
