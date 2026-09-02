@@ -164,12 +164,19 @@ header .header-actions button:hover,
     color: var(--web-text);
 }
 .theme-toggle,
+.fullscreen-toggle,
 .web-cabinet-header .theme-toggle,
+.web-cabinet-header .fullscreen-toggle,
 header .theme-toggle,
+header .fullscreen-toggle,
 .header-actions .theme-toggle,
+.header-actions .fullscreen-toggle,
 .header-actions button.theme-toggle,
+.header-actions button.fullscreen-toggle,
 .web-cabinet-header .header-actions button.theme-toggle,
-header .header-actions button.theme-toggle {
+.web-cabinet-header .header-actions button.fullscreen-toggle,
+header .header-actions button.theme-toggle,
+header .header-actions button.fullscreen-toggle {
     width: 40px;
     min-width: 40px;
     height: 40px;
@@ -177,7 +184,8 @@ header .header-actions button.theme-toggle {
     padding: 0;
     border-radius: 50%;
 }
-.theme-toggle svg {
+.theme-toggle svg,
+.fullscreen-toggle svg {
     width: 18px;
     height: 18px;
     flex-shrink: 0;
@@ -193,6 +201,46 @@ html[data-theme="light"] .theme-toggle .theme-toggle-sun {
 }
 html[data-theme="light"] .theme-toggle .theme-toggle-moon {
     display: none;
+}
+.fullscreen-toggle .fs-enter {
+    display: block;
+}
+.fullscreen-toggle .fs-exit {
+    display: none;
+}
+html.web-is-fullscreen .fullscreen-toggle .fs-enter {
+    display: none;
+}
+html.web-is-fullscreen .fullscreen-toggle .fs-exit {
+    display: block;
+}
+.web-cabinet-header .header-actions .fullscreen-toggle {
+    display: none;
+}
+@media (max-width: 760px), (hover: none) and (pointer: coarse) {
+    .web-cabinet-header .header-actions .fullscreen-toggle:not([hidden]):not(.is-unavailable) {
+        display: inline-flex;
+    }
+}
+:-webkit-full-screen {
+    width: 100%;
+    height: 100%;
+    background: var(--web-bg);
+}
+:-moz-full-screen {
+    width: 100%;
+    height: 100%;
+    background: var(--web-bg);
+}
+:fullscreen {
+    width: 100%;
+    height: 100%;
+    background: var(--web-bg);
+}
+html.web-is-fullscreen,
+html.web-is-fullscreen body {
+    background: var(--web-bg);
+    min-height: 100%;
 }
 
 html[data-theme="light"] body {
