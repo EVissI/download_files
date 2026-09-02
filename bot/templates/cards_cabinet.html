@@ -30,7 +30,9 @@
     {% include "includes/web_cabinet_header.html" %}
     {% endif %}
     <div class="wrap">
+        {% if not web_standalone_mode|default(false) %}
         <div class="cabinet-top-spacer" aria-hidden="true"></div>
+        {% endif %}
         <div class="cabinet-header">
             <div class="cabinet-header-actions">
                 <button id="cabinet-home-btn" class="cabinet-shuffle-btn" type="button"

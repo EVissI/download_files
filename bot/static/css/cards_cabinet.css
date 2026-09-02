@@ -18,6 +18,10 @@ html,
             max-width: 720px;
         }
 
+        body.web-standalone .cabinet-top-spacer {
+            display: none;
+        }
+
         /* Смартфоны: 7vh; планшеты: 5vh — блок над контентом (статус-бар / жесты) */
         @media (max-width: 600px) {
             .cabinet-top-spacer {
