@@ -142,16 +142,23 @@
             padding: 0;
             list-style: none;
             min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
         .job-file {
             display: flex;
             flex-direction: column;
             gap: 6px;
             min-width: 0;
-            padding: 10px 0;
-            border-top: 1px solid var(--web-border);
+            padding: 10px 12px;
+            border: 1px solid var(--web-border);
+            border-radius: 8px;
+            background: #101010;
         }
-        .job-file:first-child { border-top: 0; padding-top: 4px; }
+        html[data-theme="light"] .job-file {
+            background: #c8ccd4;
+        }
         .job-file-name {
             overflow-wrap: anywhere;
             word-break: break-word;
@@ -499,38 +506,54 @@
             return pdfLink(gameId) + hintsButton(gameId);
         }
 
+        function fileActionButtons(openLinks, gameId) {
+            const links = (openLinks || []).map((link) => {
+                return `<a class="btn ghost" href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a>`;
+            });
+            const extra = analyzeFileActions(gameId);
+            if (!links.length && !extra) return '';
+            return `<div class="actions open-modes job-file-actions">${links.join('')}${extra}</div>`;
+        }
+
         function renderJob(job) {
             const cls = job.status === 'done' ? 'done' : (job.status === 'error' ? 'error' : '');
             if (job.kind === 'batch') {
                 const files = (job.files || []).map((f) => {
-                    const open = openMatchButtons(f.open_links);
-                    const extra = f.status === 'done' ? analyzeFileActions(f.game_id) : '';
+                    const body = f.status === 'done'
+                        ? fileActionButtons(f.open_links, f.game_id)
+                        : `<div class="muted">${statusLabel(f.status)}</div>`;
                     const err = f.error ? `<div class="muted">${escapeHtml(f.error)}</div>` : '';
                     return `<li class="job-file">
                         <div class="job-file-name">${escapeHtml(f.filename)}</div>
-                        <div class="muted">${statusLabel(f.status)}</div>
-                        ${open}
-                        ${extra ? `<div class="actions job-file-actions">${extra}</div>` : ''}
+                        ${body}
                         ${err}
                     </li>`;
                 }).join('');
+                const batchMeta = job.status === 'done'
+                    ? ''
+                    : `<div class="muted">${statusLabel(job.status)}${job.ready_count != null ? ` (${job.ready_count}/${job.total_files || 0})` : ''}</div>`;
+                const progress = job.status === 'done' ? '' : progressHtml(job);
                 return `<div class="job ${cls}">
                     <strong>Пакет: ${(job.files || []).length} файл(ов)</strong>
-                    <div class="muted">${statusLabel(job.status)} ${job.ready_count != null ? `(готово ${job.ready_count}/${job.total_files || 0})` : ''}</div>
-                    ${progressHtml(job)}
+                    ${batchMeta}
+                    ${progress}
                     <ul class="sub">${files}</ul>
                     ${job.error ? `<div class="muted">${job.error}</div>` : ''}
                 </div>`;
             }
-            const open = openMatchButtons(job.open_links);
-            const extra = job.status === 'done' ? analyzeFileActions(job.game_id) : '';
+            const pending = job.status !== 'done';
+            const players = [job.red_player, job.black_player].filter(Boolean).join(' vs ');
+            const meta = pending
+                ? `<div class="muted">${escapeHtml(players)}${players ? ' · ' : ''}${statusLabel(job.status)}</div>`
+                : (players ? `<div class="muted">${escapeHtml(players)}</div>` : '');
+            const progress = pending ? progressHtml(job) : '';
+            const actions = pending ? '' : fileActionButtons(job.open_links, job.game_id);
             return `<div class="job ${cls}">
                 <strong>${escapeHtml(job.filename || 'Матч')}</strong>
-                <div class="muted">${escapeHtml(job.red_player || '')} vs ${escapeHtml(job.black_player || '')} · ${statusLabel(job.status)}</div>
-                ${progressHtml(job)}
+                ${meta}
+                ${progress}
                 ${job.error ? `<div class="muted">${escapeHtml(job.error)}</div>` : ''}
-                ${open}
-                ${extra ? `<div class="actions">${extra}</div>` : ''}
+                ${actions}
             </div>`;
         }
 
