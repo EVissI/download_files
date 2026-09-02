@@ -25,7 +25,7 @@
     <script src="/static/js/hint_viewer.js?t={{ cache_timestamp }}" defer></script>
 </head>
 
-<body class="{% if web_standalone_mode|default(false) %}web-standalone{% endif %}">
+<body class="{% if web_standalone_mode|default(false) %}web-standalone{% endif %}{% if match_analysis_mode|default(false) %} match-analysis-viewer{% endif %}">
     {% if web_standalone_mode|default(false) %}
     {% if match_analysis_mode|default(false) %}
     <a class="web-standalone-back" href="/web/match-analysis">← К кабинету «Анализ матча»</a>

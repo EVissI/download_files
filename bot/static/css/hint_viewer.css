@@ -255,20 +255,29 @@ html {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 8px 10px;
             width: 100%;
+            min-width: 0;
         }
 
         .left-controls {
             display: flex;
             align-items: center;
             flex-wrap: nowrap;
+            min-width: 0;
+            flex: 0 1 auto;
         }
 
         .right-controls {
             display: flex;
             align-items: center;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 8px;
             margin-left: auto;
+            min-width: 0;
+            flex: 1 1 auto;
         }
 
         /* По умолчанию (планшет/ПК): один ряд кнопок */
@@ -279,7 +288,6 @@ html {
             align-items: center;
             gap: 6px;
             justify-content: center;
-            transform: translateX(15%);
         }
 
         .screenshot-controls > div {
@@ -316,7 +324,7 @@ html {
         .ma-audio-controls__grid > div {
             display: flex;
             flex-direction: row;
-            gap: 15px;
+            gap: 6px;
         }
 
         .ma-audio-controls__buttons button {
@@ -433,7 +441,18 @@ html {
             height: auto;
             min-height: 42px;
             justify-content: center;
-            transform: translateX(-30%);
+            flex-shrink: 0;
+            gap: 4px;
+        }
+
+        body.match-analysis-viewer .screenshot-controls,
+        body.match-analysis-viewer .ma-audio-controls,
+        body.match-analysis-viewer .navigation-controls {
+            flex-shrink: 0;
+        }
+
+        body.match-analysis-viewer .right-controls {
+            justify-content: flex-end;
         }
 
         .turn-display {
@@ -695,8 +714,8 @@ html {
             #controls {
                 flex-direction: row;
                 align-items: center;
-                gap: 10px;
-                justify-content: center;
+                gap: 8px 10px;
+                justify-content: space-between;
                 width: 100%;
             }
 
@@ -975,7 +994,7 @@ html {
 
             #controls {
                 flex-wrap: wrap;
-                gap: 12px;
+                gap: 8px 12px;
             }
 
             .left-controls,
