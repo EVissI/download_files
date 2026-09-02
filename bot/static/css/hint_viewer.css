@@ -74,6 +74,7 @@ html {
         .board-block .header,
         .board-block .board-footer {
             width: 100%;
+            min-width: 0;
         }
 
         .board-panel {
@@ -512,7 +513,10 @@ html {
             align-items: center;
             column-gap: 0.6rem;
             width: 100%;
+            max-width: 100%;
+            min-width: 0;
             box-sizing: border-box;
+            padding-right: 4.75rem;
         }
 
         .match-info-row .match-length {
@@ -520,11 +524,14 @@ html {
             text-align: right;
             white-space: nowrap;
             min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .match-info-row .game-select {
             justify-self: center;
             grid-column: 2;
+            max-width: 100%;
         }
 
         .match-info-row .match-info-trailing {
@@ -534,11 +541,15 @@ html {
             gap: 0.5rem;
             width: 100%;
             min-width: 0;
+            overflow: hidden;
         }
 
         .match-info-row .match-score {
             white-space: nowrap;
             text-align: left;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .match-info-row .right-group {
@@ -689,9 +700,11 @@ html {
             }
 
             .pips-above-board,
-            .pips-below-board {
+            .pips-above-board-inverted,
+            .pips-below-board,
+            .pips-below-board-inverted {
                 font-size: 16px;
-                padding: 8px 16px;
+                padding: 3px 6px;
             }
 
             canvas {
@@ -1261,18 +1274,24 @@ html {
         }
 
         .header:has(.match-info-row) .match-info-row .right-group {
-            margin-left: auto;
-            flex: 0 0 auto;
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            margin: 0;
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .header:has(.match-info-row) .match-info-row .pips-above-board,
         .header:has(.match-info-row) .match-info-row .pips-above-board-inverted {
             margin: 0;
+            flex-shrink: 0;
         }
 
         .header.has-ma-cabinet-back:has(.match-info-row) .match-game-label,
-        .header.has-ma-cabinet-back:has(.match-info-row) #players-info,
-        .header.has-ma-cabinet-back:has(.match-info-row) .match-info-row {
+        .header.has-ma-cabinet-back:has(.match-info-row) #players-info {
             padding-left: 42px;
             padding-right: 42px;
             box-sizing: border-box;
@@ -1280,12 +1299,20 @@ html {
 
         #top-bar {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
+            gap: 6px;
+            min-width: 0;
+            width: 100%;
+        }
+
+        #top-bar #crawfordLabel {
+            margin-right: auto;
         }
 
         #hideInfoCheckbox {
-            margin-right: 10px;
+            margin: 0;
+            flex-shrink: 0;
         }
 
         .animation-controls {
@@ -1312,60 +1339,67 @@ html {
 
         #players-info {
             width: 100%;
+            min-width: 0;
             margin: 0 auto;
             text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pips-above-board,
+        .pips-above-board-inverted,
+        .pips-below-board,
+        .pips-below-board-inverted {
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: right;
+            display: block;
+            width: fit-content;
+            flex-shrink: 0;
+            box-sizing: border-box;
         }
 
         .pips-above-board {
             background-color: #000000;
             color: #ffffff;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: right;
-            display: block;
-            width: fit-content;
+            margin-left: auto;
         }
 
         .pips-above-board-inverted {
             background-color: #ffffff;
             color: #000000;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: right;
-            display: block;
-            width: fit-content;
+            margin-left: auto;
         }
 
         .pips-below-board-inverted {
             background-color: #000000;
             color: #ffffff;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: right;
-            display: block;
-            width: fit-content;
             position: absolute;
             right: 0;
             top: 0;
             margin: 0;
+            z-index: 1;
         }
 
         .pips-below-board {
             background-color: #ffffff;
             color: #000000;
-            padding: 3px 6px;
-            border-radius: 4px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: right;
-            display: block;
-            width: fit-content;
+            position: absolute;
+            right: 0;
+            top: 0;
+            margin: 0;
+            z-index: 1;
+        }
+
+        .board-footer .move-info {
+            padding-left: 3.25rem;
+            padding-right: 3.25rem;
+            box-sizing: border-box;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* Support Button and Modal */
@@ -1784,12 +1818,13 @@ html {
             /* Матч: выбор игры по центру, слева/справа лейблы, пипсы справа */
             .match-info-row {
                 margin: 0.25rem 0 0;
-                column-gap: 0.5rem;
+                column-gap: 0.35rem;
+                padding-right: 4.25rem;
             }
 
             .match-info-row .match-length,
             .match-info-row .match-score {
-                font-size: 0.95rem;
+                font-size: 0.85rem;
             }
 
             .match-game-label {
