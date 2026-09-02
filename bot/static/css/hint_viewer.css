@@ -10,8 +10,7 @@ html {
             color: var(--web-text, #eee);
             background-color: var(--web-bg, #1a1a1a);
             margin: 0;
-            padding: 20px;
-            padding-top: max(20px, env(safe-area-inset-top, 0px));
+            padding: 0 20px 20px;
             padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
             min-height: 100%;
             min-height: 100dvh;
@@ -24,6 +23,7 @@ html {
             width: 100%;
             margin: 0 auto;
             padding: 0 20px;
+            padding-top: 0;
             padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
             box-sizing: border-box;
             /* Мобильный столбец ≈ половине ширины; на десктопе переопределяется */
@@ -691,7 +691,7 @@ html {
 
         @media (max-width: 600px) {
             body {
-                padding: max(0px, env(safe-area-inset-top, 0px)) 10px 10px;
+                padding: 0 10px 10px;
                 padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
             }
 
@@ -763,9 +763,8 @@ html {
                 word-spacing: normal;
             }
 
-            /* Верхний отступ на смартфонах (как board_viewer / кабинет) */
             .container {
-                padding: calc(max(10vh, 24px) + env(safe-area-inset-top, 0px)) 10px 0 10px;
+                padding: 0 10px 0 10px;
             }
 
             .hints-table {
@@ -829,12 +828,12 @@ html {
         /* Планшеты: один ряд, крупнее для пальца */
         @media (min-width: 601px) and (max-width: 1024px) {
             body {
-                padding: max(0px, env(safe-area-inset-top, 0px)) 20px 20px;
+                padding: 0 20px 20px;
                 padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
             }
 
             .container {
-                padding: calc(max(5vh, 24px) + env(safe-area-inset-top, 0px)) 20px 0 20px;
+                padding: 0 20px 0 20px;
             }
 
             .screenshot-controls,
@@ -1722,7 +1721,7 @@ html {
         @media (min-width: 1025px) {
             .container {
                 max-width: 1400px;
-                padding: 1rem 1.5rem 1.5rem;
+                padding: 0 1.5rem 1.5rem;
             }
 
             .board-layout {
