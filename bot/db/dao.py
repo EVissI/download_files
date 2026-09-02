@@ -44,7 +44,7 @@ from bot.db.models import (
     HintViewerWebUploadStatus,
     WebUser,
 )
-from sqlalchemy import delete, func, insert, literal, not_, or_, select, text
+from sqlalchemy import String, cast, delete, func, insert, literal, not_, or_, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select
 from sqlalchemy.orm import load_only, selectinload
@@ -2925,6 +2925,122 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
             .where(*self._user_service_filter(user_id, service))
         )
         return int(result.scalar_one() or 0)
+
+    def _history_group_key(self):
+        return func.coalesce(
+            func.nullif(HintViewerWebUpload.batch_id, ""),
+            func.concat(literal("id:"), cast(HintViewerWebUpload.id, String)),
+        )
+
+    async def count_groups_for_user(
+        self, user_id: int, service: str | None = None
+    ) -> int:
+        grp = self._history_group_key()
+        sub = (
+            select(grp.label("grp"))
+            .where(*self._user_service_filter(user_id, service))
+            .group_by(grp)
+            .subquery()
+        )
+        result = await self._session.execute(select(func.count()).select_from(sub))
+        return int(result.scalar_one() or 0)
+
+    async def list_grouped_for_user(
+        self,
+        user_id: int,
+        limit: int = 10,
+        offset: int = 0,
+        service: str | None = None,
+    ) -> list[list[HintViewerWebUpload]]:
+        grp = self._history_group_key()
+        grouped = (
+            select(
+                grp.label("grp"),
+                func.max(HintViewerWebUpload.id).label("sort_id"),
+                func.max(HintViewerWebUpload.batch_id).label("batch_id"),
+            )
+            .where(*self._user_service_filter(user_id, service))
+            .group_by(grp)
+            .order_by(func.max(HintViewerWebUpload.id).desc())
+            .limit(max(1, int(limit or 10)))
+            .offset(max(0, int(offset or 0)))
+            .subquery()
+        )
+        keys_result = await self._session.execute(
+            select(grouped.c.grp, grouped.c.batch_id, grouped.c.sort_id).order_by(
+                grouped.c.sort_id.desc()
+            )
+        )
+        keys = list(keys_result.all())
+        if not keys:
+            return []
+        batch_ids = [row.batch_id for row in keys if row.batch_id]
+        single_ids: list[int] = []
+        for row in keys:
+            if row.batch_id:
+                continue
+            grp_val = str(row.grp or "")
+            if grp_val.startswith("id:"):
+                try:
+                    single_ids.append(int(grp_val[3:]))
+                except ValueError:
+                    continue
+        conditions = [*self._user_service_filter(user_id, service)]
+        id_filters = []
+        if batch_ids:
+            id_filters.append(HintViewerWebUpload.batch_id.in_(batch_ids))
+        if single_ids:
+            id_filters.append(HintViewerWebUpload.id.in_(single_ids))
+        if not id_filters:
+            return []
+        rows_result = await self._session.execute(
+            select(HintViewerWebUpload)
+            .where(*conditions, or_(*id_filters))
+            .order_by(HintViewerWebUpload.id.asc())
+        )
+        all_rows = list(rows_result.scalars().all())
+        by_batch: dict[str, list[HintViewerWebUpload]] = {}
+        by_id: dict[int, HintViewerWebUpload] = {}
+        for row in all_rows:
+            by_id[row.id] = row
+            if row.batch_id:
+                by_batch.setdefault(row.batch_id, []).append(row)
+        groups: list[list[HintViewerWebUpload]] = []
+        for key in keys:
+            if key.batch_id:
+                children = by_batch.get(key.batch_id) or []
+                if children:
+                    groups.append(children)
+                continue
+            grp_val = str(key.grp or "")
+            if grp_val.startswith("id:"):
+                try:
+                    sid = int(grp_val[3:])
+                except ValueError:
+                    continue
+                row = by_id.get(sid)
+                if row is not None:
+                    groups.append([row])
+        return groups
+
+    async def list_by_batch_id(
+        self,
+        user_id: int,
+        batch_id: str,
+        service: str | None = None,
+    ) -> list[HintViewerWebUpload]:
+        bid = (batch_id or "").strip()
+        if not bid:
+            return []
+        result = await self._session.execute(
+            select(HintViewerWebUpload)
+            .where(
+                *self._user_service_filter(user_id, service),
+                HintViewerWebUpload.batch_id == bid,
+            )
+            .order_by(HintViewerWebUpload.id.asc())
+        )
+        return list(result.scalars().all())
 
     async def list_for_session(
         self, session_id: str, limit: int = 50

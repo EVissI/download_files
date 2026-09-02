@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import json
 import os
 import shutil
@@ -24,6 +25,9 @@ from bot.common.func.func import format_detailed_analysis_html, get_analysis_dat
 from bot.common.func.generate_pdf import (
     analysis_pdf_filename,
     analysis_tables_to_pdf_bytes,
+    make_analysis_tables_page,
+    make_page,
+    merge_pages,
     pdf_content_disposition,
 )
 from bot.common.func.hint_viewer import extract_player_names
@@ -42,6 +46,7 @@ from bot.common.service.hint_viewer_web_service import (
     update_history_status,
     clear_finished_session_jobs,
     web_cabinet_page_vars,
+    _history_item,
 )
 from bot.common.utils.static_assets import get_static_asset_version
 from bot.config import translator_hub
@@ -763,6 +768,135 @@ async def web_analyze_history(request: Request, page: int = 1):
     return {"ok": True, **payload}
 
 
+def _snowie_rate(metrics: dict[str, Any] | None, player: str) -> float:
+    data = (metrics or {}).get(player) or {}
+    try:
+        return abs(float(data.get("snowie_error_rate") or 0))
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _batch_pr_values(file_metrics: list[dict[str, Any]]) -> dict[str, list[float]]:
+    pr_values: dict[str, list[float]] = {}
+    for metrics in file_metrics:
+        for player in metrics or {}:
+            pr_values.setdefault(str(player), []).append(_snowie_rate(metrics, str(player)))
+    return pr_values
+
+
+def _format_batch_summary_text(
+    pr_values: dict[str, list[float]],
+    count: int,
+    i18n,
+) -> str:
+    if not pr_values:
+        return ""
+    now = datetime.now()
+    header = str(
+        i18n.auto.batch.summary_pr_header(
+            count=count,
+            time=now.strftime("%H:%M"),
+            date=now.strftime("%d.%m.%y"),
+        )
+    )
+    players_avg = {
+        player: (sum(vals) / len(vals) if vals else 0.0)
+        for player, vals in pr_values.items()
+    }
+    parts = [f"<b>{header}</b>\n\n"]
+    for player, avg in sorted(players_avg.items(), key=lambda item: item[1]):
+        pr_list = ", ".join(f"{val:.2f}" for val in pr_values[player])
+        parts.append(
+            str(
+                i18n.auto.batch.summary_pr(
+                    player=html.escape(player),
+                    pr_list=html.escape(pr_list),
+                    average_pr=f"{avg:.2f}",
+                )
+            )
+            + "\n\n"
+        )
+    return "".join(parts)
+
+
+def _format_batch_summary_html(
+    pr_values: dict[str, list[float]],
+    count: int,
+    i18n,
+) -> str:
+    text = _format_batch_summary_text(pr_values, count, i18n)
+    if not text:
+        return ""
+    return '<div class="batch-summary">' + text.replace("\n", "<br>") + "</div>"
+
+
+def _batch_pdf_filename(pr_values: dict[str, list[float]]) -> str:
+    players_avg = {
+        player: (sum(vals) / len(vals) if vals else 0.0)
+        for player, vals in pr_values.items()
+    }
+    ordered = ",".join(
+        player for player, _avg in sorted(players_avg.items(), key=lambda item: item[1])
+    )
+    stamp = datetime.now().strftime("%d.%m.%y_%H;%M")
+    base = f"{ordered}({stamp}).pdf" if ordered else f"batch_{stamp}.pdf"
+    return base
+
+
+async def _load_batch_rows(user_id: int, batch_id: str):
+    bid = (batch_id or "").strip()
+    if not bid:
+        raise HTTPException(status_code=400, detail="Нужен batch_id")
+    from bot.db.database import async_session_maker
+    from bot.db.dao import HintViewerWebUploadDAO
+
+    async with async_session_maker() as db:
+        dao = HintViewerWebUploadDAO(db)
+        rows = await dao.list_by_batch_id(int(user_id), bid, WEB_SERVICE_ANALYZE)
+    if not rows:
+        raise HTTPException(status_code=404, detail="Пакет не найден")
+    return rows
+
+
+async def _load_batch_analyses(user_id: int, batch_id: str):
+    rows = await _load_batch_rows(user_id, batch_id)
+    s3 = HintS3Storage.from_settings()
+    i18n = translator_hub.get_translator_by_locale("ru")
+    items = []
+    metrics_list: list[dict[str, Any]] = []
+    for row in rows:
+        item = _history_item(row)
+        table_html = ""
+        metrics = None
+        gid = row.game_id
+        if row.status == HintViewerWebUploadStatus.DONE.value and gid:
+            payload = await asyncio.to_thread(s3.get_autoanalyze_json, gid)
+            if payload:
+                metrics = payload.get("players") or payload
+                if isinstance(metrics, dict):
+                    metrics_list.append(metrics)
+                    table_html = format_detailed_analysis_html(metrics, i18n)
+                    item["filename"] = (payload or {}).get("filename") or row.original_filename
+        item["table_html"] = table_html
+        items.append(item)
+    summary_html = _format_batch_summary_html(
+        _batch_pr_values(metrics_list), len(metrics_list), i18n
+    )
+    return rows, items, metrics_list, summary_html, i18n
+
+
+@autoanalize_web_api_router.get("/web/analyze/api/batch")
+async def web_analyze_batch(request: Request, batch_id: str = ""):
+    _token, session = await _require_session(request)
+    user_id = session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Нужна авторизация")
+    _rows, items, _metrics_list, summary_html, _i18n = await _load_batch_analyses(
+        int(user_id), batch_id
+    )
+    return {"ok": True, "batch_id": batch_id, "summary_html": summary_html, "files": items}
+
+
 async def _load_analyze_for_user(user_id: int, game_id: str):
     gid = (game_id or "").strip()
     if not gid:
@@ -807,16 +941,46 @@ async def web_analyze_table(request: Request, game_id: str = ""):
 
 
 @autoanalize_web_api_router.get("/web/analyze/api/pdf")
-async def web_analyze_pdf(request: Request, game_id: str = ""):
+async def web_analyze_pdf(request: Request, game_id: str = "", batch_id: str = ""):
     _token, session = await _require_session(request)
     user_id = session.get("user_id")
     if not user_id:
         raise HTTPException(status_code=401, detail="Нужна авторизация")
+    if (batch_id or "").strip():
+        _rows, items, metrics_list, _summary_html, i18n = await _load_batch_analyses(
+            int(user_id), batch_id
+        )
+        pr_values = _batch_pr_values(metrics_list)
+        pages = []
+        summary_text = _format_batch_summary_text(pr_values, len(metrics_list), i18n)
+        if summary_text:
+            pages.append(make_page(summary_text, 22))
+        for item in items:
+            table_html = item.get("table_html") or ""
+            if not table_html:
+                continue
+            heading = html.escape(str(item.get("original_filename") or "Матч"))
+            pages.append(
+                make_analysis_tables_page(f"<h2>{heading}</h2>{table_html}")
+            )
+        if not pages:
+            raise HTTPException(status_code=404, detail="В пакете нет готовых таблиц")
+        try:
+            pdf_bytes = await asyncio.to_thread(merge_pages, pages)
+        except Exception as exc:
+            logger.exception("web analyze batch pdf failed batch_id={}: {}", batch_id, exc)
+            raise HTTPException(status_code=500, detail="Не удалось собрать PDF") from exc
+        filename = _batch_pdf_filename(pr_values)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": pdf_content_disposition(filename)},
+        )
     metrics, payload, original_filename = await _load_analyze_for_user(int(user_id), game_id)
     i18n = translator_hub.get_translator_by_locale("ru")
-    html = format_detailed_analysis_html(metrics, i18n)
+    html_text = format_detailed_analysis_html(metrics, i18n)
     try:
-        pdf_bytes = await asyncio.to_thread(analysis_tables_to_pdf_bytes, html)
+        pdf_bytes = await asyncio.to_thread(analysis_tables_to_pdf_bytes, html_text)
     except Exception as exc:
         logger.exception("web analyze pdf failed game_id={}: {}", game_id, exc)
         raise HTTPException(status_code=500, detail="Не удалось собрать PDF") from exc

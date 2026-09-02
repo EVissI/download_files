@@ -223,6 +223,20 @@
         .analyze-table td { background: var(--web-table-td); }
         .history-item-actions { display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
         .history-pdf-btn { font-size: 0.8rem; padding: 6px 10px; white-space: nowrap; }
+        .history-item--batch > .history-item-head strong::before { content: "📁 "; }
+        .batch-summary {
+            margin: 0 0 12px;
+            padding: 10px 12px;
+            border: 1px solid var(--web-border);
+            border-radius: 10px;
+            background: var(--web-bg-card);
+        }
+        .batch-summary-head { font-weight: 600; margin-bottom: 8px; white-space: pre-line; }
+        .batch-pr { margin: 6px 0; }
+        .batch-files { margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+        .batch-files .history-item { margin-bottom: 0; }
+        .history-item--nested { cursor: default; }
+        .history-item--nested:hover { border-color: var(--web-border); }
     </style>
     <script src="/static/js/web_theme.js?t={{ cache_timestamp }}" defer></script>
 </head>
@@ -562,7 +576,9 @@
         const historyPagerEl = document.getElementById('historyPager');
         let historyPage = 1;
         const loadedTables = {};
+        const loadedBatches = {};
         const openGameIds = new Set();
+        const openBatchIds = new Set();
 
         function historyStatusLabel(status) {
             if (status === 'done') return 'Готово';
@@ -594,6 +610,67 @@
             historyPagerEl.innerHTML = buttons.join('');
         }
 
+        function pdfBatchLink(batchId) {
+            if (!pdfDownload || !batchId) return '';
+            const url = apiBase + '/api/pdf?batch_id=' + encodeURIComponent(batchId);
+            return `<a class="btn ghost history-pdf-btn" href="${escapeHtml(url)}">Скачать PDF</a>`;
+        }
+
+        function cacheBatchPayload(batchId, data) {
+            loadedBatches[batchId] = {
+                summary_html: data.summary_html || '',
+                files: data.files || [],
+            };
+            (data.files || []).forEach((file) => {
+                if (file.game_id && file.table_html) {
+                    loadedTables[String(file.game_id)] = file.table_html;
+                }
+            });
+        }
+
+        function renderHistoryFile(item, nested) {
+            const players = [item.red_player, item.black_player].filter(Boolean).join(' vs ');
+            const open = historyExpandable ? '' : openMatchButtons(item.open_links);
+            const err = item.error_message ? `<div class="muted">${escapeHtml(item.error_message)}</div>` : '';
+            const gameId = item.game_id ? String(item.game_id) : '';
+            const expandable = !nested && !!(historyExpandable && item.expandable && gameId);
+            const isOpen = expandable && openGameIds.has(gameId);
+            const extraClass = [
+                expandable ? ('history-item--expandable' + (isOpen ? ' is-open' : '')) : '',
+                nested ? 'history-item--nested' : '',
+            ].filter(Boolean).join(' ');
+            const chevron = expandable ? `<span class="chevron">${isOpen ? '▴' : '▾'}</span>` : '';
+            const pdf = (item.status === 'done' && gameId) ? analyzeFileActions(gameId) : '';
+            const cachedTable = gameId && loadedTables[gameId]
+                ? loadedTables[gameId]
+                : (item.table_html || '');
+            let table = '';
+            if (nested && item.status === 'done' && gameId) {
+                table = `<div class="history-table-wrap">${cachedTable || '<div class="muted">Нет данных</div>'}</div>`;
+            } else if (expandable) {
+                table = `<div class="history-table-wrap"${isOpen ? '' : ' hidden'}>${isOpen ? (cachedTable || '<div class="muted">Загрузка таблицы…</div>') : ''}</div>`;
+            }
+            return `<div class="history-item ${extraClass}"${expandable ? ` data-game-id="${escapeHtml(gameId)}"` : ''}>
+                <div class="history-item-head">
+                    <div>
+                        <strong>${escapeHtml(item.original_filename || 'Матч')}</strong>
+                        <div class="muted">${escapeHtml(players || '—')} · ${historyStatusLabel(item.status)}</div>
+                        ${err}
+                        ${open}
+                    </div>
+                    <div class="history-item-actions">${pdf}${chevron}</div>
+                </div>
+                ${table}
+            </div>`;
+        }
+
+        function renderBatchBody(batchId, files, summaryHtml) {
+            const summary = summaryHtml
+                || '<div class="batch-summary"><div class="muted">Сводка появится, когда будут готовые анализы.</div></div>';
+            const nested = (files || []).map((file) => renderHistoryFile(file, true)).join('');
+            return `${summary}<div class="batch-files">${nested}</div>`;
+        }
+
         function renderHistory(data) {
             if (!historyEl) return;
             const items = data.items || [];
@@ -603,57 +680,113 @@
                 return;
             }
             historyEl.innerHTML = items.map((item) => {
-                const players = [item.red_player, item.black_player].filter(Boolean).join(' vs ');
-                const open = historyExpandable ? '' : openMatchButtons(item.open_links);
-                const err = item.error_message ? `<div class="muted">${escapeHtml(item.error_message)}</div>` : '';
-                const expandable = !!(historyExpandable && item.expandable && item.game_id);
-                const gameId = expandable ? String(item.game_id) : '';
-                const isOpen = expandable && openGameIds.has(gameId);
-                const extraClass = expandable
-                    ? ('history-item--expandable' + (isOpen ? ' is-open' : ''))
-                    : '';
-                const chevron = expandable ? `<span class="chevron">${isOpen ? '▴' : '▾'}</span>` : '';
-                const pdf = (item.status === 'done' && item.game_id) ? analyzeFileActions(item.game_id) : '';
-                const cached = gameId && loadedTables[gameId]
-                    ? loadedTables[gameId]
-                    : '<div class="muted">Загрузка таблицы…</div>';
-                const table = expandable
-                    ? `<div class="history-table-wrap"${isOpen ? '' : ' hidden'}>${isOpen ? cached : ''}</div>`
-                    : '';
-                return `<div class="history-item ${extraClass}"${expandable ? ` data-game-id="${escapeHtml(gameId)}"` : ''}>
-                    <div class="history-item-head">
-                        <div>
-                            <strong>${escapeHtml(item.original_filename || 'Матч')}</strong>
-                            <div class="muted">${escapeHtml(players || '—')} · ${historyStatusLabel(item.status)}</div>
-                            ${err}
-                            ${open}
+                if (item.kind === 'batch') {
+                    const batchId = String(item.batch_id || '');
+                    const expandable = !!(historyExpandable && item.expandable && batchId);
+                    const isOpen = expandable && openBatchIds.has(batchId);
+                    const extraClass = 'history-item--batch' + (expandable
+                        ? (' history-item--expandable' + (isOpen ? ' is-open' : ''))
+                        : '');
+                    const chevron = expandable ? `<span class="chevron">${isOpen ? '▴' : '▾'}</span>` : '';
+                    const pdf = (item.ready_count > 0 && batchId) ? pdfBatchLink(batchId) : '';
+                    const cached = loadedBatches[batchId];
+                    const body = cached
+                        ? renderBatchBody(batchId, cached.files, cached.summary_html)
+                        : '<div class="muted">Загрузка пакета…</div>';
+                    const table = expandable
+                        ? `<div class="history-table-wrap"${isOpen ? '' : ' hidden'}>${isOpen ? body : ''}</div>`
+                        : '';
+                    const countLabel = item.ready_count != null
+                        ? `готово ${item.ready_count}/${item.total_files || 0}`
+                        : '';
+                    return `<div class="history-item ${extraClass}"${expandable ? ` data-batch-id="${escapeHtml(batchId)}"` : ''}>
+                        <div class="history-item-head">
+                            <div>
+                                <strong>${escapeHtml(item.original_filename || 'Пакет')}</strong>
+                                <div class="muted">${escapeHtml(countLabel || '—')} · ${historyStatusLabel(item.status)}</div>
+                            </div>
+                            <div class="history-item-actions">${pdf}${chevron}</div>
                         </div>
-                        <div class="history-item-actions">${pdf}${chevron}</div>
-                    </div>
-                    ${table}
-                </div>`;
+                        ${table}
+                    </div>`;
+                }
+                return renderHistoryFile(item, false);
             }).join('');
             historyPage = data.page || historyPage;
             renderHistoryPager(data.page || 1, data.pages || 1, data.total || 0);
         }
 
+        function setItemChevron(itemEl, open) {
+            const chevron = itemEl.querySelector(':scope > .history-item-head .chevron');
+            if (chevron) chevron.textContent = open ? '▴' : '▾';
+        }
+
+        async function fetchBatch(batchId) {
+            const res = await fetch(apiBase + '/api/batch?batch_id=' + encodeURIComponent(batchId));
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.detail || 'Не удалось загрузить пакет');
+            }
+            cacheBatchPayload(batchId, data);
+            return data;
+        }
+
+        function fillBatchWrap(itemEl, batchId) {
+            const wrap = itemEl.querySelector(':scope > .history-table-wrap');
+            if (!wrap) return;
+            const cached = loadedBatches[batchId];
+            wrap.innerHTML = cached
+                ? renderBatchBody(batchId, cached.files, cached.summary_html)
+                : '<div class="muted">Загрузка пакета…</div>';
+        }
+
+        async function toggleHistoryBatch(itemEl, batchId) {
+            const wrap = itemEl.querySelector(':scope > .history-table-wrap');
+            if (!wrap) return;
+            if (openBatchIds.has(batchId)) {
+                openBatchIds.delete(batchId);
+                wrap.hidden = true;
+                itemEl.classList.remove('is-open');
+                setItemChevron(itemEl, false);
+                return;
+            }
+            openBatchIds.add(batchId);
+            itemEl.classList.add('is-open');
+            wrap.hidden = false;
+            setItemChevron(itemEl, true);
+            if (!loadedBatches[batchId]) {
+                wrap.innerHTML = '<div class="muted">Загрузка пакета…</div>';
+                try {
+                    await fetchBatch(batchId);
+                } catch (e) {
+                    wrap.innerHTML = '<div class="muted">' + escapeHtml(e.message || 'Не удалось загрузить пакет') + '</div>';
+                    return;
+                }
+            }
+            const current = historyEl.querySelector('.history-item[data-batch-id="' + batchId.replace(/"/g, '') + '"]') || itemEl;
+            fillBatchWrap(current, batchId);
+        }
+
         async function toggleHistoryTable(itemEl) {
+            const batchId = itemEl.getAttribute('data-batch-id');
+            if (batchId) {
+                await toggleHistoryBatch(itemEl, batchId);
+                return;
+            }
             const gameId = itemEl.getAttribute('data-game-id');
-            const wrap = itemEl.querySelector('.history-table-wrap');
+            const wrap = itemEl.querySelector(':scope > .history-table-wrap');
             if (!gameId || !wrap) return;
             if (openGameIds.has(gameId)) {
                 openGameIds.delete(gameId);
                 wrap.hidden = true;
                 itemEl.classList.remove('is-open');
-                const chevron = itemEl.querySelector('.chevron');
-                if (chevron) chevron.textContent = '▾';
+                setItemChevron(itemEl, false);
                 return;
             }
             openGameIds.add(gameId);
             itemEl.classList.add('is-open');
             wrap.hidden = false;
-            const chevron = itemEl.querySelector('.chevron');
-            if (chevron) chevron.textContent = '▴';
+            setItemChevron(itemEl, true);
             if (!loadedTables[gameId]) {
                 wrap.innerHTML = '<div class="muted">Загрузка таблицы…</div>';
                 try {
@@ -672,6 +805,43 @@
             wrap.innerHTML = loadedTables[gameId];
         }
 
+        function historyItemIsOpen(item) {
+            if (item.status === 'queued' || item.status === 'processing') return true;
+            if (item.kind === 'batch') {
+                return (item.files || []).some((file) => (
+                    file.status === 'queued' || file.status === 'processing'
+                ));
+            }
+            return false;
+        }
+
+        async function refreshOpenBatches(items) {
+            if (!historyEl || !openBatchIds.size) return;
+            const byId = {};
+            (items || []).forEach((item) => {
+                if (item.kind === 'batch' && item.batch_id) {
+                    byId[String(item.batch_id)] = item;
+                }
+            });
+            for (const batchId of [...openBatchIds]) {
+                const itemEl = historyEl.querySelector('.history-item[data-batch-id="' + batchId.replace(/"/g, '') + '"]');
+                if (!itemEl || !itemEl.classList.contains('is-open')) continue;
+                const item = byId[batchId];
+                const cached = loadedBatches[batchId];
+                const cachedReady = cached
+                    ? (cached.files || []).filter((file) => file.status === 'done' && file.table_html).length
+                    : 0;
+                const needsRefresh = !cached
+                    || (item && cachedReady < (item.ready_count || 0))
+                    || (item && historyItemIsOpen(item));
+                if (!needsRefresh) continue;
+                try {
+                    await fetchBatch(batchId);
+                    fillBatchWrap(itemEl, batchId);
+                } catch (e) {}
+            }
+        }
+
         let lastHistoryOpen = false;
 
         async function pollHistory() {
@@ -683,8 +853,9 @@
                     historyPage = data.page;
                 }
                 const items = data.items || [];
-                lastHistoryOpen = items.some((item) => item.status === 'queued' || item.status === 'processing');
+                lastHistoryOpen = items.some(historyItemIsOpen);
                 renderHistory(data);
+                await refreshOpenBatches(items);
             } catch (e) {}
         }
 
@@ -731,8 +902,10 @@
         if (historyEl && historyExpandable) {
             historyEl.addEventListener('click', (event) => {
                 if (event.target.closest('a, button')) return;
-                const item = event.target.closest('.history-item--expandable');
-                if (!item) return;
+                const head = event.target.closest('.history-item-head');
+                if (!head) return;
+                const item = head.parentElement;
+                if (!item || !item.classList.contains('history-item--expandable')) return;
                 toggleHistoryTable(item);
             });
         }

@@ -708,6 +708,8 @@ def _history_item(row) -> dict[str, Any]:
     )
     return {
         "id": row.id,
+        "kind": "single",
+        "batch_id": row.batch_id,
         "original_filename": row.original_filename,
         "red_player": row.red_player,
         "black_player": row.black_player,
@@ -719,6 +721,50 @@ def _history_item(row) -> dict[str, Any]:
         "expandable": bool(is_analyze and row.status == "done" and game_id),
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+    }
+
+
+def _batch_group_status(rows: list[Any]) -> str:
+    statuses = {row.status for row in rows}
+    if statuses & {"queued", "processing"}:
+        return "processing" if statuses & {"processing", "done"} else "queued"
+    if statuses and statuses <= {"error"}:
+        return "error"
+    if any(row.status == "done" for row in rows):
+        return "done"
+    return "queued"
+
+
+def _history_batch_item(rows: list[Any]) -> dict[str, Any]:
+    children = sorted(rows, key=lambda row: row.id or 0)
+    first = children[0]
+    n = len(children)
+    done_n = sum(1 for row in children if row.status == "done")
+    status = _batch_group_status(children)
+    created = max((row.created_at for row in children if row.created_at), default=None)
+    finished = None
+    if status in {"done", "error"}:
+        finished = max(
+            (row.finished_at for row in children if row.finished_at), default=None
+        )
+    return {
+        "id": first.id,
+        "kind": "batch",
+        "batch_id": first.batch_id,
+        "original_filename": f"Пакет: {n} файл(ов)",
+        "red_player": None,
+        "black_player": None,
+        "status": status,
+        "error_message": None,
+        "game_id": None,
+        "view_url": None,
+        "open_links": [],
+        "expandable": n > 0,
+        "files": [_history_item(row) for row in children],
+        "total_files": n,
+        "ready_count": done_n,
+        "created_at": created.isoformat() if created else None,
+        "finished_at": finished.isoformat() if finished else None,
     }
 
 
@@ -743,17 +789,33 @@ async def list_history_for_user(
     size = max(1, min(int(page_size or HISTORY_PAGE_SIZE), 50))
     async with async_session_maker() as session:
         dao = HintViewerWebUploadDAO(session)
-        total = await dao.count_for_user(user_id, service=service)
+        group_batches = service == WEB_SERVICE_ANALYZE
+        if group_batches:
+            total = await dao.count_groups_for_user(user_id, service=service)
+        else:
+            total = await dao.count_for_user(user_id, service=service)
         pages = max(1, (total + size - 1) // size) if total else 1
         current = max(1, int(page or 1))
         if current > pages:
             current = pages
         offset = (current - 1) * size
-        rows = await dao.list_for_user(
-            user_id, limit=size, offset=offset, service=service
-        )
+        if group_batches:
+            groups = await dao.list_grouped_for_user(
+                user_id, limit=size, offset=offset, service=service
+            )
+            items = []
+            for rows in groups:
+                if len(rows) > 1 or (rows and rows[0].batch_id):
+                    items.append(_history_batch_item(rows))
+                elif rows:
+                    items.append(_history_item(rows[0]))
+        else:
+            rows = await dao.list_for_user(
+                user_id, limit=size, offset=offset, service=service
+            )
+            items = [_history_item(row) for row in rows]
         return {
-            "items": [_history_item(row) for row in rows],
+            "items": items,
             "page": current,
             "pages": pages,
             "page_size": size,
