@@ -83,16 +83,16 @@
                         <div class="ma-audio-controls__buttons">
                             <div class="ma-audio-controls__grid">
                                 <div>
-                                    <button type="button" id="matchAnalysisAudioPlayBtn" onclick="toggleMatchAnalysisAudioPlay()" disabled title="Слушать"><i class="fa fa-play" aria-hidden="true"></i></button>
-                                    <button type="button" id="matchAnalysisAudioAttachBtn" onclick="matchAnalysisPickAudioFile()" title="Прикрепить файл"><i class="fa fa-paperclip" aria-hidden="true"></i></button>
+                                    <button type="button" id="matchAnalysisAudioPlayBtn" class="viewer-icon-btn" onclick="toggleMatchAnalysisAudioPlay()" disabled title="Слушать" aria-label="Слушать"><i class="fa fa-play" aria-hidden="true"></i></button>
+                                    <button type="button" id="matchAnalysisAudioAttachBtn" class="viewer-icon-btn" onclick="matchAnalysisPickAudioFile()" title="Прикрепить файл" aria-label="Прикрепить файл"><i class="fa fa-paperclip" aria-hidden="true"></i></button>
                                     <label id="matchAnalysisAudioAutoplayLabel" class="ma-audio-autoplay" style="display:none;" title="Автовоспроизведение">
                                         <input type="checkbox" id="matchAnalysisAudioAutoplayChk" onchange="onMatchAnalysisAutoplayChange()">
                                         <span>авто</span>
                                     </label>
                                 </div>
                                 <div id="matchAnalysisAudioEditRow">
-                                    <button type="button" id="matchAnalysisAudioRecordBtn" onclick="startMatchAnalysisRecording()" title="Записать"><i class="fa fa-microphone" aria-hidden="true"></i></button>
-                                    <button type="button" id="matchAnalysisAudioDeleteBtn" onclick="deleteMatchAnalysisAudio()" disabled title="Удалить"><i class="fa fa-trash" aria-hidden="true"></i></button>
+                                    <button type="button" id="matchAnalysisAudioRecordBtn" class="viewer-icon-btn" onclick="startMatchAnalysisRecording()" title="Записать" aria-label="Записать"><i class="fa fa-microphone" aria-hidden="true"></i></button>
+                                    <button type="button" id="matchAnalysisAudioDeleteBtn" class="viewer-icon-btn" onclick="deleteMatchAnalysisAudio()" disabled title="Удалить" aria-label="Удалить"><i class="fa fa-trash" aria-hidden="true"></i></button>
                                 </div>
                             </div>
                         </div>
