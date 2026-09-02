@@ -388,6 +388,7 @@
             window.CardsCabinetMatchAudioApi = {
                 getInitData: function () { return initData || ''; },
                 getFabToken: function () { return fabToken || ''; },
+                isWebStandalone: function () { return !!WEB_STANDALONE; },
                 showNotice: function (message, title) {
                     return showCabinetNotice(message, title);
                 },

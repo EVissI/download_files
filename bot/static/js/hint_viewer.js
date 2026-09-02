@@ -265,6 +265,28 @@ async function ensureContentEditor() {
             }
         }
 
+        function isWebStandaloneMode() {
+            try {
+                const meta = document.querySelector('meta[name="web-standalone-mode"]');
+                return !!(meta && meta.getAttribute('content') === '1');
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function getMatchAnalysisAuthFields() {
+            const initData = getTelegramInitData();
+            if (initData) return { init_data: initData };
+            if (isWebStandaloneMode()) return {};
+            return null;
+        }
+
+        function appendMatchAnalysisAuthToFormData(fd) {
+            const auth = getMatchAnalysisAuthFields();
+            if (auth && auth.init_data) fd.append('init_data', auth.init_data);
+            return auth !== null;
+        }
+
         function resolveHintViewerChatId(fallback) {
             try {
                 const tgUser =
@@ -561,10 +583,10 @@ async function ensureContentEditor() {
             ? fetch('/api/match_analysis/fetch', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      init_data: getTelegramInitData(),
-                      id: matchAnalysisId,
-                  }),
+                  body: JSON.stringify(Object.assign(
+                      { id: matchAnalysisId },
+                      getMatchAnalysisAuthFields() || { init_data: getTelegramInitData() }
+                  )),
               }).then(async (response) => {
                   if (!response.ok) {
                       const err = await response.json().catch(() => ({}));
@@ -3840,11 +3862,13 @@ async function ensureContentEditor() {
                 fetch('/api/match_analysis/set_status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        init_data: getTelegramInitData(),
-                        id: matchAnalysisId,
-                        status: nextStatus,
-                    }),
+                    body: JSON.stringify(Object.assign(
+                        {
+                            id: matchAnalysisId,
+                            status: nextStatus,
+                        },
+                        getMatchAnalysisAuthFields() || { init_data: getTelegramInitData() }
+                    )),
                 }).then(function (r) {
                     if (!r.ok) {
                         return r.json().then(function (j) {
@@ -4020,9 +4044,13 @@ async function ensureContentEditor() {
         }
 
         const postMatchAnalysisAudioUpload = withFetchRetry({ retries: 3, delayMs: 700, factor: 2 })(
-            async function postMatchAnalysisAudioUpload(blob, filename, initData, meta, durationSec) {
+            async function postMatchAnalysisAudioUpload(blob, filename, meta, durationSec) {
                 const fd = new FormData();
-                fd.append('init_data', initData);
+                if (!appendMatchAnalysisAuthToFormData(fd)) {
+                    const err = new Error('Нет данных авторизации');
+                    err.status = 401;
+                    throw err;
+                }
                 fd.append('match_analysis_id', String(matchAnalysisId));
                 fd.append('game_number', String(currentGameNum));
                 fd.append('move_index', String(meta.moveIndex));
@@ -4033,6 +4061,7 @@ async function ensureContentEditor() {
                 const resp = await fetch('/api/match_analysis/audio/upload', {
                     method: 'POST',
                     body: fd,
+                    credentials: 'same-origin',
                 });
                 const payload = await resp.json().catch(() => ({}));
                 if (!resp.ok) {
@@ -4129,14 +4158,13 @@ async function ensureContentEditor() {
         }
 
         async function uploadMatchAnalysisAudioBlob(blob, filename, preferredDurationSec) {
-            const initData = getTelegramInitData();
             const meta = getCurrentMoveAudioMeta();
             if (!matchAnalysisId || meta.moveIndex == null) {
                 showMessageModal('Не выбран ход для аудио', 'error');
                 return;
             }
-            if (!initData) {
-                showMessageModal('Нет Telegram initData', 'error');
+            if (getMatchAnalysisAuthFields() === null) {
+                showMessageModal('Нет данных авторизации', 'error');
                 return;
             }
             try {
@@ -4147,7 +4175,6 @@ async function ensureContentEditor() {
                 const payload = await postMatchAnalysisAudioUpload(
                     blob,
                     filename,
-                    initData,
                     meta,
                     durationSec
                 );
@@ -4169,20 +4196,24 @@ async function ensureContentEditor() {
         }
 
         async function deleteMatchAnalysisAudio() {
-            const initData = getTelegramInitData();
             const meta = getCurrentMoveAudioMeta();
             if (!matchAnalysisId || meta.moveIndex == null || !meta.audioS3Key) return;
+            const auth = getMatchAnalysisAuthFields();
+            if (auth === null) {
+                showMessageModal('Нет данных авторизации', 'error');
+                return;
+            }
             try {
                 const resp = await fetch('/api/match_analysis/audio/delete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        init_data: initData,
+                    credentials: 'same-origin',
+                    body: JSON.stringify(Object.assign({
                         id: matchAnalysisId,
                         game_number: currentGameNum,
                         move_index: meta.moveIndex,
                         delete_s3: true,
-                    }),
+                    }, auth)),
                 });
                 const payload = await resp.json().catch(() => ({}));
                 if (!resp.ok) {

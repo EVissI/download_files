@@ -190,7 +190,7 @@ async def _resolve_ma_user_id(
     init_data: str | None = None,
     fab_token: str | None = None,
 ) -> int:
-    """Telegram init_data или FAB-токен (как у content cards)."""
+    """Telegram init_data, FAB-токен или cookie веб-логина (теневой User)."""
     if init_data and str(init_data).strip():
         return _resolve_user_id(str(init_data).strip())
     if fab_token and str(fab_token).strip():
@@ -203,7 +203,10 @@ async def _resolve_ma_user_id(
     web_uid = get_web_grant_uid()
     if web_uid:
         return int(web_uid)
-    raise HTTPException(status_code=401, detail="Требуется init_data или fab_token")
+    raise HTTPException(
+        status_code=401,
+        detail="Требуется вход в веб-кабинет или Telegram init_data",
+    )
 
 
 def _resolve_admin_user_id(init_data: str) -> int:
@@ -217,6 +220,15 @@ async def _resolve_ma_admin_user_id(
     fab_token: str | None = None,
 ) -> int:
     uid = await _resolve_ma_user_id(init_data, fab_token)
+    from bot.common.service.web_grant_user import get_web_grant_is_admin, get_web_grant_uid
+
+    if get_web_grant_uid() == uid:
+        if not get_web_grant_is_admin():
+            raise HTTPException(
+                status_code=403,
+                detail="Действие доступно только администраторам",
+            )
+        return uid
     _require_match_analysis_admin(uid)
     return uid
 

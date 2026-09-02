@@ -413,8 +413,24 @@
         return base;
     }
 
+    function isWebStandalone() {
+        if (typeof api().isWebStandalone === 'function') {
+            return !!api().isWebStandalone();
+        }
+        try {
+            var meta = document.querySelector('meta[name="web-standalone-mode"]');
+            return !!(meta && meta.getAttribute('content') === '1');
+        } catch (_e) {
+            return false;
+        }
+    }
+
+    function hasAuth() {
+        return !!(getInitData() || getFabToken() || isWebStandalone());
+    }
+
     function requireAuth() {
-        if (getInitData() || getFabToken()) return true;
+        if (hasAuth()) return true;
         showNotice('Нет Telegram initData / FAB-токена', 'Ошибка');
         return false;
     }
@@ -1270,8 +1286,7 @@
         if (!missing.length) {
             return Promise.resolve(false);
         }
-        var initData = getInitData();
-        if ((!initData && !getFabToken()) || !state.matchId) {
+        if (!hasAuth() || !state.matchId) {
             return Promise.resolve(false);
         }
         return Promise.all(
@@ -1372,8 +1387,7 @@
     }
 
     function ensureAllCardMinutes(cards) {
-        var initData = getInitData();
-        if (!initData) return Promise.resolve();
+        if (!hasAuth()) return Promise.resolve();
         var ids = [];
         var seen = {};
         (cards || []).forEach(function (row) {
@@ -1590,8 +1604,12 @@
     function uploadBlob(blob, filename, preferredDurationSec) {
         var item = state.editItem;
         var initData = getInitData();
-        if (!item || !initData || !state.matchId) {
-            setEditMsg('Не выбран кадр или нет initData', true);
+        if (!item || !state.matchId) {
+            setEditMsg('Не выбран кадр', true);
+            return Promise.resolve();
+        }
+        if (!hasAuth()) {
+            setEditMsg('Нет данных авторизации', true);
             return Promise.resolve();
         }
         state.busy = true;
@@ -1606,7 +1624,7 @@
 
         return durationPromise.then(function (durationSec) {
             var fd = new FormData();
-            fd.append('init_data', initData || '');
+            if (initData) fd.append('init_data', initData);
             if (getFabToken()) fd.append('fab_token', getFabToken());
             fd.append('match_analysis_id', String(state.matchId));
             fd.append('game_number', String(item.game_number));
