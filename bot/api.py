@@ -991,9 +991,10 @@ def _notification_pool_from_assigned_cards(
 
 
 class ContentCardSaveBody(BaseModel):
-    """Сохранение карточки редактора (hint viewer): проверка через Telegram init_data."""
+    """Сохранение карточки редактора (hint viewer): Telegram, FAB или веб-сессия админа."""
 
-    init_data: str = Field(..., min_length=1)
+    init_data: str | None = None
+    fab_token: str | None = None
     file_name: str = Field(..., max_length=255)
     frames: dict[str, Any]
     labels: list[str] | None = None
@@ -1004,14 +1005,16 @@ class ContentCardSaveBody(BaseModel):
 class ContentCardFileNameCheckBody(BaseModel):
     """Проверка, есть ли уже карточка с тем же исходным именем файла (file_name)."""
 
-    init_data: str = Field(..., min_length=1)
+    init_data: str | None = None
+    fab_token: str | None = None
     file_name: str = Field(..., max_length=255)
 
 
 class ContentCardBoardXgidCheckBody(BaseModel):
     """Проверка, есть ли карточка с той же строкой позиции (board_xgid), что и у снимка доски."""
 
-    init_data: str = Field(..., min_length=1)
+    init_data: str | None = None
+    fab_token: str | None = None
     board_xgid: str = Field(..., min_length=1, max_length=8000)
 
 
@@ -1524,14 +1527,7 @@ async def check_content_card_file_name(body: ContentCardFileNameCheckBody):
     """
     Возвращает, существует ли карточка с таким же file_name (как при сохранении — basename, обрезка).
     """
-    user_data = verify_telegram_webapp_data(body.init_data)
-    if not user_data:
-        raise HTTPException(status_code=401, detail="Недействительные данные Telegram")
-    tg_user = user_data.get("user") or {}
-    user_id = tg_user.get("id")
-    if user_id is None:
-        raise HTTPException(status_code=401, detail="В init_data нет user")
-    user_id = int(user_id)
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
 
     safe_name = os.path.basename(body.file_name.strip())[:255] or "card"
@@ -1548,14 +1544,7 @@ async def check_content_card_board_xgid(body: ContentCardBoardXgidCheckBody):
     """
     Есть ли карточка с таким же board_xgid (колонка в content_cards, из снимка доски).
     """
-    user_data = verify_telegram_webapp_data(body.init_data)
-    if not user_data:
-        raise HTTPException(status_code=401, detail="Недействительные данные Telegram")
-    tg_user = user_data.get("user") or {}
-    user_id = tg_user.get("id")
-    if user_id is None:
-        raise HTTPException(status_code=401, detail="В init_data нет user")
-    user_id = int(user_id)
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
 
     normalized = str(body.board_xgid or "").strip()[:8000]
@@ -1577,20 +1566,17 @@ async def check_content_card_board_xgid(body: ContentCardBoardXgidCheckBody):
 @app.post("/api/content_cards/save")
 async def save_content_card(body: ContentCardSaveBody):
     """
-    Создаёт новую карточку (JSON кадров). Доступно только Telegram-пользователям из ROOT_ADMIN_IDS.
+    Создаёт новую карточку (JSON кадров). Только администраторы кабинета
+    (Telegram ROOT_ADMIN, FAB или веб-сессия с is_admin).
     """
-    user_data = verify_telegram_webapp_data(body.init_data)
-    if not user_data:
-        raise HTTPException(status_code=401, detail="Недействительные данные Telegram")
-
-    tg_user = user_data.get("user") or {}
-    user_id = tg_user.get("id")
-    if user_id is None:
-        raise HTTPException(status_code=401, detail="В init_data нет user")
-
-    user_id = int(user_id)
+    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
-    if body.chat_id is not None and int(body.chat_id) != user_id:
+    if (
+        body.init_data
+        and str(body.init_data).strip()
+        and body.chat_id is not None
+        and int(body.chat_id) != user_id
+    ):
         raise HTTPException(status_code=403, detail="chat_id не совпадает с пользователем")
 
     frames_inner = body.frames.get("frames")
@@ -1599,6 +1585,11 @@ async def save_content_card(body: ContentCardSaveBody):
             status_code=400,
             detail="Поле frames.frames должно быть непустым массивом",
         )
+
+    if user_id < 0:
+        from bot.common.service.web_grant_user import ensure_web_grant_user_async
+
+        await ensure_web_grant_user_async(-user_id)
 
     safe_name = os.path.basename(body.file_name.strip())[:255] or "card"
     labels = _normalize_content_card_labels(body.labels)

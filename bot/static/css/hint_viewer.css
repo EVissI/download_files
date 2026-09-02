@@ -1852,8 +1852,7 @@ html {
             }
         }
 
-        body.web-standalone .support-container,
-        body.web-standalone #adminButtonContainer {
+        body.web-standalone .support-container {
             display: none !important;
         }
         .web-standalone-back {

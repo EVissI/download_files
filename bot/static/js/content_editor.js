@@ -14,12 +14,10 @@ const [
     contentCardViewBootstrap,
     contentCardViewAdmin,
     textResize,
-    storageTelegramBridge,
 ] = await Promise.all([
     import(_editorFeatureUrl('./content-editor/features/content_card_view_bootstrap.js')),
     import(_editorFeatureUrl('./content-editor/features/content_card_view_admin.js')),
     import(_editorFeatureUrl('./content-editor/features/text_resize.js')),
-    import(_editorFeatureUrl('./content-editor/infra/storage_telegram_bridge.js')),
 ]);
 
 const {
@@ -53,8 +51,6 @@ const {
     beginTextBlockHeightDragImpl,
     setupTextEditingImpl,
 } = textResize;
-
-const { waitForTelegramWebAppInitData } = storageTelegramBridge;
 
 const {
     appendCardPreviewBoardOverlayImpl,
@@ -1235,9 +1231,12 @@ export class ContentEditor {
             pool = String(window.__CONTENT_CARD_POOL__);
         }
         const isPip = pool === 'pip_count';
+        const web = this.isWebStandaloneEditor();
         return {
             pool,
-            basePath: isPip ? '/pip-count-cabinet' : '/cards-cabinet',
+            basePath: isPip
+                ? (web ? '/web/pip-count' : '/pip-count-cabinet')
+                : (web ? '/web/cards' : '/cards-cabinet'),
             label: isPip ? 'Кабинет «Подсчёт пипсов»' : 'Кабинет карточек',
         };
     }
@@ -3750,9 +3749,9 @@ export class ContentEditor {
             this.showNotification('Файл больше 30 МБ', 'error');
             return;
         }
-        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
-        if (!initData) {
-            this.showNotification('Загрузка доступна из Telegram WebApp (нужен init_data)', 'warning');
+        const auth = this.getContentCardApiAuthPayload();
+        if (!auth) {
+            this.showNotification('Загрузка недоступна: нет авторизации редактора', 'warning');
             return;
         }
         try {
@@ -6777,18 +6776,15 @@ export class ContentEditor {
     }
 
     async checkDuplicateSourceFileOnServer() {
-        let initData = '';
-        if (window.Telegram && window.Telegram.WebApp) {
-            initData = await waitForTelegramWebAppInitData(5000, 50);
-        }
-        if (!initData) {
+        const auth = this.getContentCardApiAuthPayload();
+        if (!auth) {
             return { exists: false, content_card_id: null, file_name: '' };
         }
         const file_name = this.buildContentCardFileNameForCloud();
         const checkRes = await fetch('/api/content_cards/check_file_name', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ init_data: initData, file_name }),
+            body: JSON.stringify({ ...auth, file_name }),
         });
         let checkData = {};
         try {
@@ -6813,11 +6809,8 @@ export class ContentEditor {
     }
 
     async checkDuplicateBoardXgidOnServer(boardXgid) {
-        let initData = '';
-        if (window.Telegram && window.Telegram.WebApp) {
-            initData = await waitForTelegramWebAppInitData(5000, 50);
-        }
-        if (!initData) {
+        const auth = this.getContentCardApiAuthPayload();
+        if (!auth) {
             return { exists: false, content_card_id: null };
         }
         const s = String(boardXgid || '').trim();
@@ -6827,7 +6820,7 @@ export class ContentEditor {
         const checkRes = await fetch('/api/content_cards/check_board_xgid', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ init_data: initData, board_xgid: s }),
+            body: JSON.stringify({ ...auth, board_xgid: s }),
         });
         let checkData = {};
         try {
@@ -7019,14 +7012,14 @@ export class ContentEditor {
     }
 
     async uploadBinaryToContentCardMedia(blob, filenameHint, contentType) {
-        const initData = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
-        if (!initData) {
-            throw new Error('Нет init_data для загрузки файла');
+        const auth = this.getContentCardApiAuthPayload();
+        if (!auth) {
+            throw new Error('Нет авторизации для загрузки файла');
         }
         const ext = this._guessExtFromMime(blob.type || contentType, filenameHint);
         const fname = (filenameHint && filenameHint.replace(/[\\/]/g, '_')) || `file.${ext}`;
         const fd = new FormData();
-        fd.append('init_data', initData);
+        this.appendContentCardAuthToFormData(fd, auth);
         fd.append('file', blob, fname.includes('.') ? fname : `${fname}.${ext}`);
         const r = await fetch('/api/content_cards/media/upload', { method: 'POST', body: fd });
         const data = await r.json().catch(() => ({}));
@@ -7042,16 +7035,14 @@ export class ContentEditor {
 
     /**
      * Перед сохранением кадра/карточки: заливает тяжёлые медиа в S3, в JSON остаются s3_key.
-     * Требуется Telegram WebApp init_data и права контент-админа — иначе upload не вызывается,
+     * Нужна авторизация контент-админа (Telegram, FAB или веб-сессия) — иначе upload не вызывается,
      * в JSON остаются data/blob URL (см. uploadBinaryToContentCardMedia).
      */
     async uploadPayloadMediaToS3(payload) {
         if (!payload || typeof payload !== 'object') {
             return;
         }
-        const initData =
-            (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
-        if (!initData) {
+        if (!this.getContentCardApiAuthPayload()) {
             return;
         }
         const bgPattern = payload.editor && payload.editor.canvasBackgroundPattern;
@@ -7290,16 +7281,13 @@ export class ContentEditor {
             this.showNotification('Нет сохранённых кадров для этой игры', 'warning');
             return false;
         }
-        let initData = '';
-        if (window.Telegram && window.Telegram.WebApp) {
-            initData = window.Telegram.WebApp.initData || '';
-        }
-        if (!initData) {
-            this.showNotification('Откройте страницу из Telegram, чтобы сохранить на сервер', 'warning');
+        const auth = this.getContentCardApiAuthPayload();
+        if (!auth) {
+            this.showNotification('Нет авторизации для сохранения на сервер', 'warning');
             return false;
         }
         const chatIdStr = this.getHintViewerChatIdForApi();
-        if (!chatIdStr) {
+        if (auth.init_data && !chatIdStr) {
             this.showNotification('Не найден идентификатор пользователя (chat_id)', 'warning');
             return false;
         }
@@ -7382,23 +7370,26 @@ export class ContentEditor {
             return false;
         }
         const labels = this.loadCardLabelsFromStorage();
-        const chat_id = parseInt(chatIdStr, 10);
-        if (Number.isNaN(chat_id)) {
-            this.showNotification('Некорректный chat_id', 'error');
-            return false;
+        const saveBody = {
+            ...auth,
+            file_name,
+            frames: framesWrapper,
+            labels: labels.length ? labels : null,
+            pool: this._saveCardPool || 'cards',
+        };
+        if (chatIdStr) {
+            const chat_id = parseInt(chatIdStr, 10);
+            if (Number.isNaN(chat_id)) {
+                this.showNotification('Некорректный chat_id', 'error');
+                return false;
+            }
+            saveBody.chat_id = chat_id;
         }
         try {
             const response = await fetch('/api/content_cards/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    init_data: initData,
-                    file_name,
-                    frames: framesWrapper,
-                    labels: labels.length ? labels : null,
-                    chat_id,
-                    pool: this._saveCardPool || 'cards',
-                }),
+                body: JSON.stringify(saveBody),
             });
             let data = {};
             try {
@@ -7794,6 +7785,15 @@ export class ContentEditor {
         this.labelPresetsModal.setAttribute('aria-hidden', 'true');
     }
 
+    isWebStandaloneEditor() {
+        try {
+            const meta = document.querySelector('meta[name="web-standalone-mode"]');
+            return !!(meta && meta.getAttribute('content') === '1');
+        } catch (_e) {
+            return false;
+        }
+    }
+
     getContentCardApiAuthPayload() {
         const initData = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData;
         const params = new URLSearchParams(window.location.search || '');
@@ -7802,13 +7802,17 @@ export class ContentEditor {
         if (initData) return { init_data: initData, ...extra };
         const fabToken = String(params.get('fab_token') || '');
         if (fabToken) return { fab_token: fabToken, ...extra };
-        try {
-            const meta = document.querySelector('meta[name="web-standalone-mode"]');
-            if (meta && meta.getAttribute('content') === '1') {
-                return extra;
-            }
-        } catch (_e) {}
+        if (this.isWebStandaloneEditor()) {
+            return extra;
+        }
         return null;
+    }
+
+    appendContentCardAuthToFormData(fd, auth) {
+        const payload = auth || this.getContentCardApiAuthPayload() || {};
+        if (payload.init_data) fd.append('init_data', payload.init_data);
+        if (payload.fab_token) fd.append('fab_token', payload.fab_token);
+        if (payload.folder_token) fd.append('folder_token', payload.folder_token);
     }
 
     getLabelPresetsApiPayload(extra = {}) {
