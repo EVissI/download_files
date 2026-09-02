@@ -187,18 +187,25 @@ header .header-actions button:hover,
 }
 .theme-toggle,
 .fullscreen-toggle,
+.admin-toggle,
 .web-cabinet-header .theme-toggle,
 .web-cabinet-header .fullscreen-toggle,
+.web-cabinet-header .admin-toggle,
 header .theme-toggle,
 header .fullscreen-toggle,
+header .admin-toggle,
 .header-actions .theme-toggle,
 .header-actions .fullscreen-toggle,
+.header-actions .admin-toggle,
 .header-actions button.theme-toggle,
 .header-actions button.fullscreen-toggle,
+.header-actions a.admin-toggle,
 .web-cabinet-header .header-actions button.theme-toggle,
 .web-cabinet-header .header-actions button.fullscreen-toggle,
+.web-cabinet-header .header-actions a.admin-toggle,
 header .header-actions button.theme-toggle,
-header .header-actions button.fullscreen-toggle {
+header .header-actions button.fullscreen-toggle,
+header .header-actions a.admin-toggle {
     width: 40px;
     min-width: 40px;
     height: 40px;
@@ -207,7 +214,8 @@ header .header-actions button.fullscreen-toggle {
     border-radius: 50%;
 }
 .theme-toggle svg,
-.fullscreen-toggle svg {
+.fullscreen-toggle svg,
+.admin-toggle svg {
     width: 18px;
     height: 18px;
     flex-shrink: 0;
@@ -457,8 +465,10 @@ html[data-theme="light"] .player-position-toggle {
     }
     .web-cabinet-header .header-actions .theme-toggle,
     .web-cabinet-header .header-actions .fullscreen-toggle,
+    .web-cabinet-header .header-actions .admin-toggle,
     .web-cabinet-header .header-actions button.theme-toggle,
-    .web-cabinet-header .header-actions button.fullscreen-toggle {
+    .web-cabinet-header .header-actions button.fullscreen-toggle,
+    .web-cabinet-header .header-actions a.admin-toggle {
         width: 36px;
         min-width: 36px;
         height: 36px;
