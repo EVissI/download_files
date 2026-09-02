@@ -242,6 +242,28 @@ html.web-is-fullscreen body {
     background: var(--web-bg);
     min-height: 100%;
 }
+html.web-fs-embedded .web-cabinet-header {
+    display: none !important;
+}
+body.web-fs-shell > *:not(.web-cabinet-header):not(.web-fs-frame):not(script) {
+    display: none !important;
+}
+body.web-fs-shell .web-cabinet-header {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+}
+iframe.web-fs-frame {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    border: 0;
+    z-index: 3;
+    background: var(--web-bg);
+    display: block !important;
+}
 
 html[data-theme="light"] body {
     background: var(--web-bg);

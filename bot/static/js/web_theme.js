@@ -25,6 +25,13 @@
             localStorage.setItem(KEY, theme);
         } catch (e) {}
         syncButtons();
+        if (window === window.top) {
+            document.querySelectorAll('iframe.web-fs-frame').forEach(function (f) {
+                try {
+                    f.contentWindow.postMessage({ type: 'web-theme', theme: theme }, location.origin);
+                } catch (err) {}
+            });
+        }
     }
 
     document.addEventListener('click', function (e) {
@@ -32,6 +39,17 @@
         if (!btn) return;
         e.preventDefault();
         apply(current() === 'light' ? 'dark' : 'light');
+    });
+
+    window.addEventListener('storage', function (e) {
+        if (e.key !== KEY) return;
+        apply(e.newValue === 'light' ? 'light' : 'dark');
+    });
+
+    window.addEventListener('message', function (e) {
+        if (e.origin !== location.origin) return;
+        if (!e.data || e.data.type !== 'web-theme') return;
+        apply(e.data.theme === 'light' ? 'light' : 'dark');
     });
 
     if (document.readyState === 'loading') {
@@ -42,8 +60,11 @@
 })();
 
 (function () {
+    if (window !== window.top) return;
+
     var WANT_KEY = 'web_want_fullscreen';
     var leavingPage = false;
+    var frame = null;
 
     function fullscreenElement() {
         return document.fullscreenElement
@@ -108,6 +129,108 @@
         return Promise.reject(new Error('Fullscreen API is not supported'));
     }
 
+    function headerEl() {
+        return document.querySelector('.web-cabinet-header');
+    }
+
+    function layoutFrame() {
+        if (!frame) return;
+        var header = headerEl();
+        var top = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+        frame.style.top = top + 'px';
+        frame.style.height = 'calc(100dvh - ' + top + 'px)';
+    }
+
+    function syncNav(pathname) {
+        var cur = String(pathname || '').replace(/\/$/, '') || '/';
+        document.querySelectorAll('.web-cabinet-header .service-nav a[href]').forEach(function (a) {
+            var path = '';
+            try {
+                path = new URL(a.href, location.href).pathname.replace(/\/$/, '') || '/';
+            } catch (err) {
+                return;
+            }
+            a.classList.toggle('active', cur === path || cur.indexOf(path + '/') === 0);
+        });
+    }
+
+    function currentFrameHref() {
+        try {
+            if (frame && frame.contentWindow && frame.contentWindow.location) {
+                return frame.contentWindow.location.href;
+            }
+        } catch (e) {}
+        return location.href;
+    }
+
+    function onFrameLoad() {
+        var doc = null;
+        try {
+            doc = frame.contentDocument;
+        } catch (e) {
+            return;
+        }
+        if (!doc) return;
+        var embeddedHeader = doc.querySelector('.web-cabinet-header');
+        if (embeddedHeader) embeddedHeader.style.display = 'none';
+        try {
+            var loc = frame.contentWindow.location;
+            if (loc.origin === location.origin) {
+                history.replaceState({ webFsShell: true }, '', loc.pathname + loc.search + loc.hash);
+                syncNav(loc.pathname);
+            }
+        } catch (e) {}
+        layoutFrame();
+    }
+
+    function ensureFrame() {
+        if (frame) return frame;
+        frame = document.createElement('iframe');
+        frame.className = 'web-fs-frame';
+        frame.title = 'Сервис';
+        frame.addEventListener('load', onFrameLoad);
+        document.body.appendChild(frame);
+        document.body.classList.add('web-fs-shell');
+        window.addEventListener('resize', layoutFrame);
+        if (window.ResizeObserver && headerEl()) {
+            var observer = new ResizeObserver(layoutFrame);
+            observer.observe(headerEl());
+        }
+        layoutFrame();
+        return frame;
+    }
+
+    function openInShell(href) {
+        var url;
+        try {
+            url = new URL(href, location.href);
+        } catch (e) {
+            location.href = href;
+            return;
+        }
+        if (url.origin !== location.origin) {
+            markLeaving();
+            location.href = url.href;
+            return;
+        }
+        ensureFrame();
+        frame.src = url.pathname + url.search + url.hash;
+    }
+
+    function flattenShell() {
+        if (!frame) return;
+        markLeaving();
+        location.replace(currentFrameHref());
+    }
+
+    function pathOf(href, fallbackPath) {
+        try {
+            return new URL(href, location.href).pathname.replace(/\/$/, '') || '/';
+        } catch (e) {
+            return fallbackPath || '/';
+        }
+    }
+
     function syncButtons() {
         var on = !!fullscreenElement();
         document.documentElement.classList.toggle('web-is-fullscreen', on);
@@ -132,11 +255,15 @@
     document.addEventListener('click', function (e) {
         var link = e.target.closest('.service-nav a[href]');
         if (!link) return;
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
         if (link.target && link.target !== '_self') return;
-        if (fullscreenElement() || getWant()) {
-            setWant(true);
-            markLeaving();
-        }
+        if (!fullscreenElement() && !frame) return;
+        e.preventDefault();
+        var nextPath = pathOf(link.href);
+        var nowPath = frame ? pathOf(currentFrameHref(), location.pathname) : pathOf(location.href, location.pathname);
+        if (nextPath === nowPath && frame) return;
+        if (nextPath === nowPath && !frame) return;
+        openInShell(link.href);
     }, true);
 
     document.addEventListener('click', function (e) {
@@ -145,6 +272,10 @@
         e.preventDefault();
         if (fullscreenElement()) {
             setWant(false);
+            if (frame) {
+                flattenShell();
+                return;
+            }
             Promise.resolve(exitFullscreen()).catch(function () {});
             return;
         }
@@ -161,6 +292,7 @@
         setTimeout(function () {
             if (leavingPage) return;
             setWant(false);
+            if (frame) flattenShell();
         }, 0);
     }
 

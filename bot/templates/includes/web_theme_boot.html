@@ -1,5 +1,8 @@
 <script>
 (function () {
+    if (window !== window.top) {
+        document.documentElement.classList.add('web-fs-embedded');
+    }
     var meta = document.querySelector('meta[name="web-standalone-mode"]');
     if (meta && meta.getAttribute('content') !== '1') return;
     try {
