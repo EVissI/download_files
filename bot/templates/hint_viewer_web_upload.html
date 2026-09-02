@@ -263,6 +263,15 @@
         .history-item--nested:hover { border-color: var(--web-border); }
 
         @media (max-width: 720px) {
+            header.web-cabinet-header {
+                flex-wrap: nowrap;
+                padding: 8px 10px;
+            }
+            .service-nav {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                min-width: 0;
+            }
             .wrap {
                 padding: 12px;
                 padding-left: max(12px, env(safe-area-inset-left));
