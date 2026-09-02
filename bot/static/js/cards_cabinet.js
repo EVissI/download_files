@@ -3753,6 +3753,9 @@
                 }
 
                 function loadAllLabelsFilter() {
+                    if (!isRootAdminUser || IS_MATCH_ANALYSIS || !FEATURES.enable_labels) {
+                        return;
+                    }
                     fetch('/api/content_cards/all_labels', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -3786,12 +3789,13 @@
                         });
                 }
 
-                reloadCabinet().catch(function (e) {
-                    showErr(e.message || String(e));
-                });
-                if (!IS_MATCH_ANALYSIS && FEATURES.enable_labels) {
-                    loadAllLabelsFilter();
-                }
+                reloadCabinet()
+                    .then(function () {
+                        loadAllLabelsFilter();
+                    })
+                    .catch(function (e) {
+                        showErr(e.message || String(e));
+                    });
 
                 if (matchRenameModalOverlay) {
                     matchRenameModalOverlay.addEventListener('click', closeMatchRenameModal);
@@ -4040,7 +4044,7 @@
                 }
 
                 function ensureCabinetAllLabelsLoaded() {
-                    if (IS_MATCH_ANALYSIS) {
+                    if (IS_MATCH_ANALYSIS || !isRootAdminUser) {
                         cabinetAllLabels = [];
                         return Promise.resolve(cabinetAllLabels);
                     }

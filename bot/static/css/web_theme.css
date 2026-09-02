@@ -86,7 +86,7 @@ html[data-theme="light"] {
 }
 .web-header-bar {
     display: grid;
-    grid-template-columns: minmax(0, 65fr) minmax(0, 35fr);
+    grid-template-columns: minmax(0, 60fr) minmax(0, 40fr);
     column-gap: 8px;
     align-items: center;
     width: 100%;
