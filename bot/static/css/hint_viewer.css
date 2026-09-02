@@ -532,7 +532,12 @@ html {
         .match-info-row .game-select {
             justify-self: center;
             grid-column: 2;
-            max-width: 100%;
+            width: max-content;
+            min-width: 8.5em;
+            max-width: none;
+            flex-shrink: 0;
+            box-sizing: border-box;
+            white-space: nowrap;
         }
 
         .match-info-row .match-info-trailing {
@@ -1247,19 +1252,6 @@ html {
             pointer-events: none;
         }
 
-        .header.has-ma-header-actions #match-info,
-        body.web-standalone .board-block .header #match-info,
-        body.match-analysis-viewer .board-block .header #match-info {
-            padding-left: 42px;
-            padding-right: 0;
-            box-sizing: border-box;
-        }
-
-        .header.has-ma-header-actions.has-ma-favorite #match-info,
-        body.match-analysis-viewer .board-block .header #match-info {
-            padding-left: 80px;
-        }
-
         .header:not(.has-ma-favorite) .ma-status-btn,
         body.web-standalone:not(.match-analysis-viewer) .ma-status-btn {
             display: none;
@@ -1312,19 +1304,6 @@ html {
         .header:has(.match-info-row) .match-info-row .pips-above-board-inverted {
             margin: 0;
             flex-shrink: 0;
-        }
-
-        .header.has-ma-header-actions:has(.match-info-row) #players-info,
-        body.web-standalone .board-block .header:has(.match-info-row) #players-info,
-        body.match-analysis-viewer .board-block .header:has(.match-info-row) #players-info {
-            padding-left: 42px;
-            padding-right: 0;
-            box-sizing: border-box;
-        }
-
-        .header.has-ma-header-actions.has-ma-favorite:has(.match-info-row) #players-info,
-        body.match-analysis-viewer .board-block .header:has(.match-info-row) #players-info {
-            padding-left: 80px;
         }
 
         #top-bar {
@@ -1863,11 +1842,13 @@ html {
 
             .match-info-row .game-select {
                 font-size: 0.95rem;
-                padding: 4px 6px;
-                width: 5em;
-                max-width: 5em;
-                min-width: 0;
+                padding: 4px 1.75em 4px 6px;
+                width: max-content;
+                min-width: 8.5em;
+                max-width: none;
+                flex-shrink: 0;
                 box-sizing: border-box;
+                white-space: nowrap;
             }
         }
 
@@ -1886,8 +1867,4 @@ html {
         body.screenshot-mode .web-standalone-back,
         body.screenshot-mode .ma-header-actions {
             display: none !important;
-        }
-        body.screenshot-mode .board-block .header #match-info,
-        body.screenshot-mode .board-block .header #players-info {
-            padding-left: 0 !important;
         }
