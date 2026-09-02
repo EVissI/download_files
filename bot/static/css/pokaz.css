@@ -279,7 +279,7 @@ body {
             text-align: center;
         }
 
-        .container button {
+        .container button:not(.checker-toggle-btn) {
             background-color: #007bff;
             color: white;
             border: none;
@@ -288,7 +288,7 @@ body {
             transition: background-color 0.3s;
         }
 
-        .container button:hover {
+        .container button:not(.checker-toggle-btn):hover {
             background-color: #0056b3;
         }
 
@@ -893,7 +893,8 @@ body {
             display: none;
         }
 
-        .checker-toggle-btn {
+        .checker-toggle-btn,
+        .container button.checker-toggle-btn {
             width: clamp(2em, 6vw, 3em);
             height: clamp(2em, 6vw, 3em);
             border-radius: 50%;
