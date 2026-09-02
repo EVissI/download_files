@@ -152,6 +152,10 @@
             }
             a.classList.toggle('active', cur === path || cur.indexOf(path + '/') === 0);
         });
+        var active = document.querySelector('.web-cabinet-header .service-nav a.active');
+        if (active && active.scrollIntoView) {
+            active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+        }
     }
 
     function currentFrameHref() {
@@ -249,6 +253,31 @@
         Promise.resolve(requestFullscreen(document.documentElement)).catch(function () {});
     }
 
+    function goToService(href) {
+        if (!href) return;
+        if (fullscreenElement() || frame) {
+            var nextPath = pathOf(href);
+            var nowPath = frame
+                ? pathOf(currentFrameHref(), location.pathname)
+                : pathOf(location.href, location.pathname);
+            if (nextPath === nowPath) return;
+            openInShell(href);
+            return;
+        }
+        var here = pathOf(location.href, location.pathname);
+        if (pathOf(href, here) === here) return;
+        markLeaving();
+        location.href = href;
+    }
+
+    window.addEventListener('web-go-service', function (e) {
+        goToService(e.detail && e.detail.href);
+    });
+    window.addEventListener('message', function (e) {
+        if (e.origin !== location.origin) return;
+        if (!e.data || e.data.type !== 'web-service-nav') return;
+        goToService(e.data.href);
+    });
     window.addEventListener('pagehide', markLeaving);
     window.addEventListener('beforeunload', markLeaving);
 
@@ -259,11 +288,7 @@
         if (link.target && link.target !== '_self') return;
         if (!fullscreenElement() && !frame) return;
         e.preventDefault();
-        var nextPath = pathOf(link.href);
-        var nowPath = frame ? pathOf(currentFrameHref(), location.pathname) : pathOf(location.href, location.pathname);
-        if (nextPath === nowPath && frame) return;
-        if (nextPath === nowPath && !frame) return;
-        openInShell(link.href);
+        goToService(link.href);
     }, true);
 
     document.addEventListener('click', function (e) {
@@ -320,4 +345,145 @@
         syncButtons();
         tryRestore();
     }
+})();
+
+(function () {
+    var MIN_DX = 72;
+    var MAX_OFF_AXIS = 0.6;
+    var MAX_MS = 700;
+    var startX = 0;
+    var startY = 0;
+    var startT = 0;
+    var tracking = false;
+
+    function isMobile() {
+        try {
+            return window.matchMedia('(max-width: 760px), (hover: none) and (pointer: coarse)').matches;
+        } catch (e) {
+            return window.innerWidth <= 760;
+        }
+    }
+
+    function serviceLinks() {
+        var nav = document.querySelector('.service-nav');
+        if (!nav) return [];
+        return Array.prototype.slice.call(nav.querySelectorAll('a[href]'));
+    }
+
+    function currentIndex(links) {
+        var path = (location.pathname || '/').replace(/\/$/, '') || '/';
+        var best = -1;
+        var bestLen = -1;
+        links.forEach(function (a, i) {
+            var p = '';
+            try {
+                p = new URL(a.href, location.href).pathname.replace(/\/$/, '') || '/';
+            } catch (err) {
+                return;
+            }
+            if (path === p || path.indexOf(p + '/') === 0) {
+                if (p.length > bestLen) {
+                    bestLen = p.length;
+                    best = i;
+                }
+            }
+        });
+        return best;
+    }
+
+    function isHScrollable(node) {
+        if (!node || node === document.body || node === document.documentElement) return false;
+        if (node.scrollWidth <= node.clientWidth + 8) return false;
+        try {
+            var ox = window.getComputedStyle(node).overflowX;
+            return ox === 'auto' || ox === 'scroll';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function ignoreTarget(el) {
+        if (!el || !el.closest) return true;
+        if (el.closest('canvas, input, textarea, select, option, [contenteditable="true"]')) return true;
+        if (el.closest('.web-cabinet-header, .service-nav, .header-actions')) return true;
+        if (el.closest('.history-table-wrap, .analyze-table, .ma-audio-modal, .card-preview-modal, .link-modal, .shuffle-modal')) return true;
+        var node = el;
+        while (node && node !== document.body) {
+            if (isHScrollable(node)) return true;
+            node = node.parentElement;
+        }
+        return false;
+    }
+
+    function navigate(href) {
+        if (!href) return;
+        try {
+            if (navigator.vibrate) navigator.vibrate(8);
+        } catch (e) {}
+        if (window !== window.top) {
+            window.top.postMessage({ type: 'web-service-nav', href: href }, location.origin);
+            return;
+        }
+        window.dispatchEvent(new CustomEvent('web-go-service', { detail: { href: href } }));
+    }
+
+    function point(e) {
+        if (e.changedTouches && e.changedTouches[0]) return e.changedTouches[0];
+        if (e.touches && e.touches[0]) return e.touches[0];
+        return e;
+    }
+
+    function onStart(e) {
+        if (!isMobile()) return;
+        if (e.touches && e.touches.length !== 1) {
+            tracking = false;
+            return;
+        }
+        if (ignoreTarget(e.target)) {
+            tracking = false;
+            return;
+        }
+        var t = point(e);
+        startX = t.clientX;
+        startY = t.clientY;
+        startT = Date.now();
+        tracking = true;
+    }
+
+    function onMove(e) {
+        if (!tracking) return;
+        if (e.touches && e.touches.length !== 1) {
+            tracking = false;
+            return;
+        }
+        var t = point(e);
+        var dx = t.clientX - startX;
+        var dy = t.clientY - startY;
+        if (Math.abs(dy) > 28 && Math.abs(dy) > Math.abs(dx)) tracking = false;
+    }
+
+    function onEnd(e) {
+        if (!tracking) return;
+        tracking = false;
+        if (!isMobile()) return;
+        var t = point(e);
+        var dx = t.clientX - startX;
+        var dy = t.clientY - startY;
+        if (Math.abs(dx) < MIN_DX) return;
+        if (Math.abs(dy) > Math.abs(dx) * MAX_OFF_AXIS) return;
+        if (Date.now() - startT > MAX_MS) return;
+        var links = serviceLinks();
+        if (links.length < 2) return;
+        var i = currentIndex(links);
+        if (i < 0) return;
+        var next = dx < 0
+            ? (i + 1) % links.length
+            : (i - 1 + links.length) % links.length;
+        navigate(links[next].href);
+    }
+
+    document.addEventListener('touchstart', onStart, { passive: true, capture: true });
+    document.addEventListener('touchmove', onMove, { passive: true, capture: true });
+    document.addEventListener('touchend', onEnd, { passive: true, capture: true });
+    document.addEventListener('touchcancel', function () { tracking = false; }, { passive: true });
 })();
