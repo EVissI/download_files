@@ -600,6 +600,15 @@ html {
             cursor: pointer;
             flex-shrink: 0;
             filter: none;
+            box-sizing: border-box;
+        }
+
+        #prevBtn,
+        #nextBtn {
+            width: 60px;
+            min-width: 60px;
+            height: 40px;
+            min-height: 40px;
         }
 
         .viewer-icon-btn i,
@@ -774,8 +783,10 @@ html {
 
             #prevBtn,
             #nextBtn {
-                width: 48px;
-                height: 48px;
+                width: 54px;
+                min-width: 54px;
+                height: 36px;
+                min-height: 36px;
             }
 
 
@@ -846,8 +857,10 @@ html {
 
             #prevBtn,
             #nextBtn {
-                width: 56px;
-                height: 56px;
+                width: 66px;
+                min-width: 66px;
+                height: 44px;
+                min-height: 44px;
             }
 
             #invertBtn,
@@ -905,8 +918,10 @@ html {
 
             #prevBtn,
             #nextBtn {
-                width: 37px;
-                height: 37px;
+                width: 42px;
+                min-width: 42px;
+                height: 28px;
+                min-height: 28px;
             }
 
 
@@ -954,8 +969,10 @@ html {
         @media (min-width: 1025px) {
             #prevBtn,
             #nextBtn {
-                width: 56px;
-                height: 56px;
+                width: 60px;
+                min-width: 60px;
+                height: 40px;
+                min-height: 40px;
             }
 
             #invertBtn,
@@ -1028,8 +1045,10 @@ html {
         @media (min-width: 1200px) {
             #prevBtn,
             #nextBtn {
-                width: 64px;
-                height: 64px;
+                width: 66px;
+                min-width: 66px;
+                height: 44px;
+                min-height: 44px;
             }
 
             #invertBtn,
@@ -1099,6 +1118,13 @@ html {
             border-radius: 8px;
             box-sizing: border-box;
             font-size: 18px;
+        }
+        body.match-analysis-viewer #controls #prevBtn,
+        body.match-analysis-viewer #controls #nextBtn {
+            width: calc(var(--ma-btn) * 1.5);
+            min-width: calc(var(--ma-btn) * 1.5);
+            height: var(--ma-btn);
+            min-height: var(--ma-btn);
         }
         body.match-analysis-viewer #controls .ma-audio-autoplay {
             height: var(--ma-btn);
