@@ -270,7 +270,8 @@ async function ensureContentEditor() {
         function isWebStandaloneMode() {
             try {
                 const meta = document.querySelector('meta[name="web-standalone-mode"]');
-                return !!(meta && meta.getAttribute('content') === '1');
+                if (meta && String(meta.getAttribute('content') || '').trim() === '1') return true;
+                return !!(document.body && document.body.classList.contains('web-standalone'));
             } catch (e) {
                 return false;
             }
@@ -3823,6 +3824,8 @@ async function ensureContentEditor() {
             updateMatchAnalysisAudioUi();
         }
 
+        updateMatchAnalysisChromeUi();
+
         function setMatchAnalysisCabinetBackVisibleForScreenshot(visible) {
             const headerEl = document.querySelector('.board-block .header');
             if (headerEl && isMatchAnalysisHeaderActionsVisible()) {
@@ -4390,6 +4393,7 @@ window.openPokazEditor = openPokazEditor;
 window.openPipCountCardEditor = openPipCountCardEditor;
 window.openCardEditor = openCardEditor;
 window.openMatchAnalysisCabinet = openMatchAnalysisCabinet;
+window.openViewerHome = openViewerHome;
 window.toggleMatchAnalysisAudioPlay = toggleMatchAnalysisAudioPlay;
 window.matchAnalysisPickAudioFile = matchAnalysisPickAudioFile;
 window.startMatchAnalysisRecording = startMatchAnalysisRecording;

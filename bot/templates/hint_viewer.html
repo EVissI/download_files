@@ -30,7 +30,7 @@
         <h1>Backgammon Game Analysis</h1>
         <div class="board-layout">
         <div class="board-block">
-            <div class="header">
+            <div class="header{% if web_standalone_mode|default(false) or match_analysis_mode|default(false) %} has-ma-header-actions{% endif %}{% if match_analysis_mode|default(false) %} has-ma-favorite{% endif %}">
                 <div class="ma-header-actions" id="matchAnalysisHeaderActions">
                     <button type="button" id="matchAnalysisCabinetBackBtn" class="ma-home-btn" onclick="openViewerHome()" title="К загрузке матчей" aria-label="К загрузке матчей">
                         <i class="fa fa-home" aria-hidden="true"></i>

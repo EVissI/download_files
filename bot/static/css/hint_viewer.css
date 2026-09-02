@@ -75,6 +75,7 @@ html {
         .board-block .board-footer {
             width: 100%;
             min-width: 0;
+            overflow: visible;
         }
 
         .board-panel {
@@ -1160,14 +1161,17 @@ html {
             position: absolute;
             left: 0;
             top: 0;
-            z-index: 3;
+            z-index: 20;
             display: none;
             flex-direction: row;
             align-items: center;
             gap: 6px;
+            pointer-events: auto;
         }
 
-        .header.has-ma-header-actions .ma-header-actions {
+        .header.has-ma-header-actions .ma-header-actions,
+        body.web-standalone .board-block .header .ma-header-actions,
+        body.match-analysis-viewer .board-block .header .ma-header-actions {
             display: inline-flex;
         }
 
@@ -1217,17 +1221,21 @@ html {
             pointer-events: none;
         }
 
-        .header.has-ma-header-actions #match-info {
+        .header.has-ma-header-actions #match-info,
+        body.web-standalone .board-block .header #match-info,
+        body.match-analysis-viewer .board-block .header #match-info {
             padding-left: 42px;
             padding-right: 0;
             box-sizing: border-box;
         }
 
-        .header.has-ma-header-actions.has-ma-favorite #match-info {
+        .header.has-ma-header-actions.has-ma-favorite #match-info,
+        body.match-analysis-viewer .board-block .header #match-info {
             padding-left: 80px;
         }
 
-        .header:not(.has-ma-favorite) .ma-status-btn {
+        .header:not(.has-ma-favorite) .ma-status-btn,
+        body.web-standalone:not(.match-analysis-viewer) .ma-status-btn {
             display: none;
         }
 
@@ -1280,13 +1288,16 @@ html {
             flex-shrink: 0;
         }
 
-        .header.has-ma-header-actions:has(.match-info-row) #players-info {
+        .header.has-ma-header-actions:has(.match-info-row) #players-info,
+        body.web-standalone .board-block .header:has(.match-info-row) #players-info,
+        body.match-analysis-viewer .board-block .header:has(.match-info-row) #players-info {
             padding-left: 42px;
             padding-right: 0;
             box-sizing: border-box;
         }
 
-        .header.has-ma-header-actions.has-ma-favorite:has(.match-info-row) #players-info {
+        .header.has-ma-header-actions.has-ma-favorite:has(.match-info-row) #players-info,
+        body.match-analysis-viewer .board-block .header:has(.match-info-row) #players-info {
             padding-left: 80px;
         }
 
@@ -1849,4 +1860,8 @@ html {
         body.screenshot-mode .web-standalone-back,
         body.screenshot-mode .ma-header-actions {
             display: none !important;
+        }
+        body.screenshot-mode .board-block .header #match-info,
+        body.screenshot-mode .board-block .header #players-info {
+            padding-left: 0 !important;
         }
