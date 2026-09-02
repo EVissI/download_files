@@ -3796,7 +3796,7 @@ async function ensureContentEditor() {
         }
 
         function isMatchAnalysisFavoriteVisible() {
-            return !!matchAnalysisMode && !window.hintViewerIsAdmin;
+            return !!matchAnalysisMode;
         }
 
         function updateMatchAnalysisChromeUi() {
