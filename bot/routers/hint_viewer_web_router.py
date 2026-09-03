@@ -64,6 +64,7 @@ from bot.common.service.webapp_settings_service import (
     get_hint_viewer_screenshot_font_scale_percent,
 )
 from bot.common.service.web_support_service import (
+    ORDER_ANALYSIS_CHAT_TEXT,
     add_message,
     check_rate_limit,
     get_or_create_thread,
@@ -102,7 +103,6 @@ batch_queue = Queue(
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
 MAX_MAT_FILES = 40
 WEB_JOB_TTL = 86400
-ORDER_ANALYSIS_CHAT_TEXT = "Здравствуйте, хочу заказать анализ"
 
 
 def _login_redirect() -> RedirectResponse:

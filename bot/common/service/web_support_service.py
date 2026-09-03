@@ -25,6 +25,7 @@ from bot.db.redis import redis_client
 
 MAX_BODY_LEN = 4000
 MAX_FILES = 5
+ORDER_ANALYSIS_CHAT_TEXT = "Здравствуйте, хочу заказать анализ"
 MAX_FILE_BYTES = 15 * 1024 * 1024
 MAX_TOTAL_BYTES = 30 * 1024 * 1024
 RATE_LIMIT_MAX = 20

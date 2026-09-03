@@ -48,9 +48,16 @@ from bot.common.service.hint_viewer_web_service import (
     web_cabinet_page_vars,
     _history_item,
 )
+from bot.common.service.web_support_service import (
+    ALLOWED_EXT,
+    ORDER_ANALYSIS_CHAT_TEXT,
+    add_message,
+    check_rate_limit,
+    get_or_create_thread,
+)
 from bot.common.utils.static_assets import get_static_asset_version
 from bot.config import translator_hub
-from bot.db.models import HintViewerWebUploadStatus
+from bot.db.models import HintViewerWebUploadStatus, WebSupportAuthorRole, WebUser
 from bot.db.redis import redis_client
 
 autoanalize_web_api_router = APIRouter()
@@ -1042,3 +1049,83 @@ async def web_analyze_send_to_hints(request: Request, game_id: str = ""):
             status_code=500, detail="Не удалось отправить файл на анализ ошибок"
         ) from exc
     return JSONResponse({"ok": True, "redirect": "/web/hints", "job": job})
+
+
+@autoanalize_web_api_router.post("/web/analyze/api/order-analysis")
+async def web_analyze_order_analysis(request: Request, game_id: str = ""):
+    _token, session = await _require_session(request)
+    user_id = session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Нужна авторизация")
+    uid = int(user_id)
+    gid = (game_id or "").strip()
+    if not gid:
+        raise HTTPException(status_code=400, detail="Нужен game_id")
+
+    allowed, wait_sec = await check_rate_limit(uid)
+    if not allowed:
+        minutes = wait_sec // 60
+        seconds = wait_sec % 60
+        wait_text = (
+            f"{minutes} мин {seconds} сек" if minutes > 0 else f"{seconds} сек"
+        )
+        raise HTTPException(
+            status_code=429,
+            detail={"message": "Слишком много сообщений", "wait_text": wait_text},
+        )
+
+    from sqlalchemy import select
+
+    from bot.db.database import async_session_maker
+    from bot.db.models import HintViewerWebUpload
+
+    async with async_session_maker() as db:
+        result = await db.execute(
+            select(HintViewerWebUpload).where(
+                HintViewerWebUpload.user_id == uid,
+                HintViewerWebUpload.game_id == gid,
+                HintViewerWebUpload.service == WEB_SERVICE_ANALYZE,
+            )
+        )
+        row = result.scalar_one_or_none()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Анализ не найден")
+        original_filename = row.original_filename
+
+    src = _find_analyze_source(gid, original_filename)
+    if src is None or not src.is_file():
+        raise HTTPException(status_code=404, detail="Исходный файл не найден")
+    try:
+        file_bytes = await asyncio.to_thread(src.read_bytes)
+    except Exception:
+        logger.exception("order analysis read failed game_id={}", gid)
+        raise HTTPException(status_code=404, detail="Исходный файл не найден") from None
+    if not file_bytes:
+        raise HTTPException(status_code=404, detail="Исходный файл не найден")
+
+    filename = original_filename or src.name
+    ext = Path(filename).suffix.lower()
+    if ext not in ALLOWED_EXT:
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr(Path(filename).name or src.name, file_bytes)
+        file_bytes = buf.getvalue()
+        filename = f"{Path(filename).stem or 'match'}.zip"
+
+    async with async_session_maker() as db:
+        thread = await get_or_create_thread(db, uid)
+        login_row = await db.get(WebUser, uid)
+        try:
+            payload = await add_message(
+                db,
+                thread=thread,
+                author_user_id=uid,
+                author_role=WebSupportAuthorRole.USER.value,
+                author_login=getattr(login_row, "login", None),
+                body=ORDER_ANALYSIS_CHAT_TEXT,
+                source_path="/web/analyze",
+                files=[(filename, file_bytes, "application/octet-stream")],
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse({"ok": True, "message": payload})

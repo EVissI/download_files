@@ -620,20 +620,23 @@
         }
 
         function orderAnalysisButton(gameId) {
-            if (!sendToAnalyzeEnabled || !gameId) return '';
+            if (!gameId) return '';
+            if (!sendToAnalyzeEnabled && !sendToHintsEnabled) return '';
             return `<button type="button" class="btn ghost history-pdf-btn" data-order-analysis="${escapeHtml(gameId)}">Заказать анализ</button>`;
         }
 
         function analyzeFileActions(gameId) {
             if (!gameId) return '';
-            return pdfLink(gameId) + hintsButton(gameId);
+            const orderNextToHints = sendToHintsEnabled ? orderAnalysisButton(gameId) : '';
+            return pdfLink(gameId) + hintsButton(gameId) + orderNextToHints;
         }
 
         function fileActionButtons(openLinks, gameId) {
             const links = (openLinks || []).map((link) => {
                 return `<a class="btn ghost" href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a>`;
             });
-            const extra = analyzeFileActions(gameId) + statsButton(gameId) + orderAnalysisButton(gameId);
+            const extra = analyzeFileActions(gameId) + statsButton(gameId)
+                + (sendToAnalyzeEnabled ? orderAnalysisButton(gameId) : '');
             if (!links.length && !extra) return '';
             return `<div class="actions open-modes job-file-actions">${links.join('')}${extra}</div>`;
         }
