@@ -1987,6 +1987,14 @@ html,
             min-width: 0;
         }
 
+        .folder-node:not(.folder-node--pick) .folder-node__name {
+            cursor: pointer;
+        }
+
+        .folder-node:not(.folder-node--pick) .folder-node__row {
+            cursor: pointer;
+        }
+
         .folder-node__rename {
             flex: 0 0 auto;
             display: inline-flex;

@@ -479,6 +479,13 @@
         actions.appendChild(delBtn);
         right.appendChild(actions);
         row.appendChild(right);
+        row.addEventListener('click', function (ev) {
+            if (ev.target.closest('.hw-folder-node__toggle, .hw-folder-node__rename, .hw-folder-node__actions')) {
+                return;
+            }
+            closeManageModal();
+            navigateToFolder(node.id);
+        });
         wrap.appendChild(row);
         appendChildren(wrap, node, expandedManageIds, buildManageNode);
         return wrap;

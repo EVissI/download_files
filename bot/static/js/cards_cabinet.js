@@ -4617,6 +4617,13 @@
                         refreshFolderManageList();
                     });
 
+                    row.addEventListener('click', function (ev) {
+                        if (ev.target.closest('.folder-node__toggle, .folder-node__rename, .folder-node__actions')) {
+                            return;
+                        }
+                        navigateToFolder(node.id);
+                    });
+
                     wrap.appendChild(row);
                     if (hasChildren) {
                         var childrenWrap = document.createElement('div');

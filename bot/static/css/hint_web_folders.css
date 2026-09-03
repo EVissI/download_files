@@ -416,6 +416,12 @@ html[data-theme="light"] .hw-hint__arrow {
     white-space: nowrap;
     min-width: 0;
 }
+.hw-folder-node:not(.hw-folder-node--pick) .hw-folder-node__name {
+    cursor: pointer;
+}
+.hw-folder-node:not(.hw-folder-node--pick) .hw-folder-node__row {
+    cursor: pointer;
+}
 .hw-folder-node__rename {
     flex: 0 0 auto;
     display: inline-flex;
