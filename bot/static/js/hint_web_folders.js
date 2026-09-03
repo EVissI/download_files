@@ -427,20 +427,81 @@
         folderActionUploadIds = [];
     }
 
-    function showHint(text) {
-        if (historyApi.showToast) {
-            historyApi.showToast(text);
-            return;
+    var hintEl = null;
+    var hintTimer = null;
+
+    function hideHint() {
+        if (hintTimer) {
+            clearTimeout(hintTimer);
+            hintTimer = null;
         }
-        window.alert(text);
+        if (hintEl) hintEl.classList.remove('is-visible');
     }
 
-    function openActionModal() {
+    function ensureHintEl() {
+        if (hintEl) return hintEl;
+        hintEl = document.createElement('div');
+        hintEl.className = 'hw-hint';
+        hintEl.setAttribute('role', 'status');
+        hintEl.innerHTML =
+            '<svg class="hw-hint__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+            '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.7"/>' +
+            '<path d="M12 11v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>' +
+            '<circle cx="12" cy="8" r="1" fill="currentColor"/>' +
+            '</svg>' +
+            '<span class="hw-hint__text"></span>' +
+            '<span class="hw-hint__arrow" aria-hidden="true"></span>';
+        document.body.appendChild(hintEl);
+        return hintEl;
+    }
+
+    function showHint(text, anchor) {
+        var el = ensureHintEl();
+        var textEl = el.querySelector('.hw-hint__text');
+        var arrow = el.querySelector('.hw-hint__arrow');
+        if (textEl) textEl.textContent = text;
+        el.classList.remove('is-visible', 'is-above', 'is-below');
+        el.style.left = '0px';
+        el.style.top = '0px';
+        el.style.visibility = 'hidden';
+        el.style.opacity = '0';
+
+        var rect = (anchor && anchor.getBoundingClientRect)
+            ? anchor.getBoundingClientRect()
+            : { left: 16, right: 16, top: 16, bottom: 16, width: 0, height: 0 };
+        var gap = 10;
+        var width = el.offsetWidth || 240;
+        var height = el.offsetHeight || 48;
+        var vw = window.innerWidth;
+        var vh = window.innerHeight;
+        var placeAbove = rect.bottom + gap + height > vh - 8 && rect.top - gap - height > 8;
+        var left = rect.right - width;
+        left = Math.max(12, Math.min(left, vw - width - 12));
+        var top = placeAbove ? (rect.top - gap - height) : (rect.bottom + gap);
+        top = Math.max(8, Math.min(top, vh - height - 8));
+        el.style.left = Math.round(left) + 'px';
+        el.style.top = Math.round(top) + 'px';
+        el.classList.add(placeAbove ? 'is-above' : 'is-below');
+        if (arrow) {
+            var arrowLeft = rect.left + rect.width / 2 - left - 5;
+            arrow.style.left = Math.max(12, Math.min(arrowLeft, width - 22)) + 'px';
+        }
+        el.style.visibility = '';
+        el.style.opacity = '';
+        requestAnimationFrame(function () {
+            el.classList.add('is-visible');
+        });
+        if (hintTimer) clearTimeout(hintTimer);
+        hintTimer = setTimeout(hideHint, 2800);
+    }
+
+    function openActionModal(ev) {
         var ids = historyApi.getSelectedUploadIds();
         if (!ids.length) {
-            showHint('Сначала выберите матчи');
+            showHint('Сначала выберите матчи', (ev && ev.currentTarget) || foldersBtn);
             return;
         }
+        hideHint();
         folderActionUploadIds = ids.slice();
         if (actionSubtitle) {
             actionSubtitle.textContent = 'Выбрано файлов: ' + ids.length;
@@ -675,6 +736,13 @@
     if (manageBtn) manageBtn.addEventListener('click', openManageModal);
     if (foldersBtn) foldersBtn.addEventListener('click', openActionModal);
     if (removeBtn) removeBtn.addEventListener('click', removeSelectedFromFolder);
+    document.addEventListener('click', function (ev) {
+        if (!hintEl || !hintEl.classList.contains('is-visible')) return;
+        if (foldersBtn && foldersBtn.contains(ev.target)) return;
+        hideHint();
+    });
+    window.addEventListener('scroll', hideHint, true);
+    window.addEventListener('resize', hideHint);
     if (folderViewUpBtn) {
         folderViewUpBtn.addEventListener('click', function () {
             var parent = currentFolderMeta && currentFolderMeta.parent;

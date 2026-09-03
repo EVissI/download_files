@@ -17,6 +17,72 @@
 #historyRemoveFromFolderBtn[hidden] {
     display: none !important;
 }
+.hw-hint {
+    position: fixed;
+    z-index: 120;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    max-width: min(260px, calc(100vw - 24px));
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--web-bg-header);
+    color: var(--web-text);
+    border: 1px solid var(--web-border);
+    font-size: 0.82rem;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(6px);
+    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+}
+.hw-hint.is-visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+.hw-hint.is-above {
+    transform: translateY(-6px);
+}
+.hw-hint.is-above.is-visible {
+    transform: translateY(0);
+}
+.hw-hint__icon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    color: var(--web-accent);
+}
+.hw-hint__text {
+    min-width: 0;
+}
+.hw-hint__arrow {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: var(--web-bg-header);
+    border-left: 1px solid var(--web-border);
+    border-top: 1px solid var(--web-border);
+}
+.hw-hint.is-below .hw-hint__arrow {
+    top: -5px;
+    transform: rotate(45deg);
+}
+.hw-hint.is-above .hw-hint__arrow {
+    bottom: -5px;
+    transform: rotate(-135deg);
+}
+html[data-theme="light"] .hw-hint {
+    background: #fff;
+    border-color: #cfd3db;
+}
+html[data-theme="light"] .hw-hint__arrow {
+    background: #fff;
+    border-color: #cfd3db;
+}
 .history-item-select {
     display: flex;
     align-items: flex-start;
