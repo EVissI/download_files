@@ -150,7 +150,6 @@ def serialize_message(
         "role": message.author_role,
         "author_login": author_login or "",
         "body": message.body or "",
-        "source_path": message.source_path,
         "created_at": created.isoformat() if created else None,
         "attachments": [serialize_attachment(att) for att in raw_attachments],
     }
@@ -364,7 +363,6 @@ async def add_message(
         "role": author_role,
         "author_login": author_login or "",
         "body": text,
-        "source_path": source_path,
         "created_at": created_at.isoformat(),
         "attachments": [serialize_attachment(att) for att in attachments],
     }
@@ -413,6 +411,42 @@ async def admin_unread_count(session) -> int:
         )
     )
     return int(result.scalar_one() or 0)
+
+
+async def admin_unread_payload(session) -> dict[str, Any]:
+    unread = await admin_unread_count(session)
+    result = await session.execute(
+        select(
+            WebSupportMessage.id,
+            WebSupportMessage.body,
+            WebSupportThread.id,
+            WebUser.login,
+        )
+        .join(WebSupportThread, WebSupportThread.id == WebSupportMessage.thread_id)
+        .join(WebUser, WebUser.id == WebSupportThread.user_id)
+        .where(WebSupportMessage.author_role == WebSupportAuthorRole.USER.value)
+        .order_by(WebSupportMessage.id.desc())
+        .limit(1)
+    )
+    row = result.first()
+    preview = ""
+    latest_id = 0
+    thread_id = 0
+    login = ""
+    if row:
+        latest_id = int(row[0] or 0)
+        preview = " ".join((row[1] or "").split())[:120]
+        thread_id = int(row[2] or 0)
+        login = row[3] or ""
+        if not preview:
+            preview = "Новое сообщение"
+    return {
+        "unread": unread,
+        "latest_message_id": latest_id,
+        "latest_thread_id": thread_id,
+        "latest_login": login,
+        "latest_preview": preview,
+    }
 
 
 async def list_inbox(

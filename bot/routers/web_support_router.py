@@ -22,6 +22,7 @@ from bot.common.service.hint_viewer_web_service import (
 from bot.common.service.web_support_service import (
     add_message,
     admin_unread_count,
+    admin_unread_payload,
     check_rate_limit,
     get_attachment,
     get_or_create_thread,
@@ -29,7 +30,6 @@ from bot.common.service.web_support_service import (
     get_thread_by_user,
     list_inbox,
     mark_read,
-    sanitize_source_path,
     serialize_thread_messages,
     serialize_thread_meta,
     user_unread,
@@ -106,10 +106,10 @@ async def web_support_unread(request: Request):
     _token, session = await _require_session(request)
     async with async_session_maker() as db:
         if session.get("is_admin"):
-            count = await admin_unread_count(db)
-        else:
-            count = await user_unread(db, _user_id(session))
-    return {"ok": True, "unread": count, "admin": bool(session.get("is_admin"))}
+            payload = await admin_unread_payload(db)
+            return {"ok": True, "admin": True, **payload}
+        count = await user_unread(db, _user_id(session))
+    return {"ok": True, "unread": count, "admin": False}
 
 
 @web_support_api_router.get("/web/support/api/thread")
@@ -141,7 +141,6 @@ async def web_support_own_thread(
 async def web_support_own_send(
     request: Request,
     text: str = Form(""),
-    source_path: str = Form(""),
     files: list[UploadFile] | None = File(None),
 ):
     _token, session = await _require_session(request)
@@ -169,7 +168,7 @@ async def web_support_own_send(
                 author_role=WebSupportAuthorRole.USER.value,
                 author_login=getattr(login_row, "login", None),
                 body=text,
-                source_path=sanitize_source_path(source_path),
+                source_path=None,
                 files=uploads,
             )
         except ValueError as exc:

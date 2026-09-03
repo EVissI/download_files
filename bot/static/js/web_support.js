@@ -42,10 +42,9 @@
                 escapeHtml(att.filename) + '</a>';
         }).join('');
         var body = msg.body ? '<div class="support-msg-body">' + escapeHtml(msg.body) + '</div>' : '';
-        var source = msg.source_path ? '<div class="support-msg-meta">' + escapeHtml(msg.source_path) + '</div>' : '';
         return '<div class="support-msg ' + (mine ? 'is-mine' : 'is-admin') + '" data-id="' + msg.id + '">' +
             '<div class="support-msg-meta">' + escapeHtml(who) + ' · ' + escapeHtml(formatTime(msg.created_at)) + '</div>' +
-            source + body +
+            body +
             (files ? '<div class="support-files">' + files + '</div>' : '') +
             '</div>';
     }
@@ -67,13 +66,73 @@
     function setBadge(el, count) {
         if (!el) return;
         var n = Number(count || 0);
-        if (n > 0) {
-            el.hidden = false;
-            el.textContent = n > 99 ? '99+' : String(n);
-        } else {
-            el.hidden = true;
-            el.textContent = '0';
+        var show = n > 0;
+        var isDot = el.hasAttribute('data-support-nav-badge');
+        if (isDot) {
+            if (el.classList.contains('is-on') === show) return;
+            el.classList.toggle('is-on', show);
+            return;
         }
+        var label = show ? (n > 99 ? '99+' : String(n)) : '';
+        if (el.hidden === !show && el.textContent === label) return;
+        el.hidden = !show;
+        el.textContent = label;
+    }
+
+    var NOTIFY_KEY = 'web_support_last_msg_id';
+    var notifyGestureBound = false;
+
+    function isTopWindow() {
+        try { return window === window.top; } catch (e) { return false; }
+    }
+
+    function onSupportPage() {
+        return (location.pathname.replace(/\/$/, '') || '/') === '/web/support';
+    }
+
+    function bindAdminNotifyGesture() {
+        if (notifyGestureBound || !isTopWindow()) return;
+        notifyGestureBound = true;
+        function ask() {
+            document.removeEventListener('pointerdown', ask, true);
+            if (!window.Notification || Notification.permission !== 'default') return;
+            Notification.requestPermission().catch(function () {});
+        }
+        document.addEventListener('pointerdown', ask, true);
+    }
+
+    function notifyAdminNewMessage(data) {
+        if (!isTopWindow()) return;
+        if (!data || !data.admin) return;
+        var msgId = Number(data.latest_message_id || 0);
+        if (!msgId) return;
+        var last = 0;
+        try { last = Number(localStorage.getItem(NOTIFY_KEY) || 0); } catch (e) {}
+        if (!last) {
+            try { localStorage.setItem(NOTIFY_KEY, String(msgId)); } catch (e) {}
+            return;
+        }
+        if (msgId <= last) return;
+        try { localStorage.setItem(NOTIFY_KEY, String(msgId)); } catch (e) {}
+        if (!data.unread) return;
+        if (onSupportPage()) return;
+        if (!window.Notification || Notification.permission !== 'granted') return;
+        var body = (data.latest_login ? data.latest_login + ': ' : '') +
+            (data.latest_preview || 'Новое сообщение');
+        try {
+            var n = new Notification('Поддержка', {
+                body: body,
+                tag: 'web-support',
+                renotify: true,
+            });
+            n.onclick = function () {
+                n.close();
+                window.focus();
+                var href = '/web/support';
+                if (data.latest_thread_id) href += '?thread=' + data.latest_thread_id;
+                location.href = href;
+            };
+        } catch (e) {}
     }
 
     async function api(url, options) {
@@ -170,6 +229,10 @@
     async function pollUnread() {
         try {
             var data = await api('/web/support/api/unread');
+            if (data && data.admin) {
+                bindAdminNotifyGesture();
+                notifyAdminNewMessage(data);
+            }
             document.querySelectorAll('[data-support-nav-badge]').forEach(function (el) {
                 setBadge(el, data.admin ? data.unread : 0);
             });
@@ -212,7 +275,6 @@
             sendBtn: $('#supportSend'),
             attachBtn: $('#supportAttach'),
             url: '/web/support/api/thread/messages',
-            extra: function () { return { source_path: location.pathname }; },
             onSent: function (message) {
                 if (!box) return;
                 appendMessages(box, [message], 'user');
@@ -356,8 +418,15 @@
         setInterval(function () { pollThread(false); }, 4000);
     }
 
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-support-nav]')) return;
+        if (!isTopWindow()) return;
+        if (!window.Notification || Notification.permission !== 'default') return;
+        Notification.requestPermission().catch(function () {});
+    });
+
     pollUnread();
-    setInterval(pollUnread, 15000);
+    setInterval(pollUnread, 8000);
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () {
             initWidget();

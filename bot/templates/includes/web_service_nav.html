@@ -9,7 +9,7 @@
     {% if is_admin %}
     <a href="/web/support" class="{% if web_service|default('') == 'support' %}active{% endif %}" data-support-nav>
         Поддержка
-        <span class="support-nav-badge" data-support-nav-badge hidden>0</span>
+        <span class="support-nav-badge" data-support-nav-badge></span>
     </a>
     {% endif %}
 </nav>

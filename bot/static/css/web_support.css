@@ -1,23 +1,29 @@
 .web-cabinet-header .service-nav a[data-support-nav] {
     display: inline-flex;
     align-items: center;
+    gap: 6px;
 }
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 1.1rem;
-    height: 1.1rem;
-    margin-left: 6px;
-    padding: 0 4px;
-    border-radius: 999px;
-    background: #c62828;
-    color: #fff;
-    font-size: 0.7rem;
-    font-weight: 700;
-    line-height: 1;
-    vertical-align: middle;
+.support-nav-badge {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    margin: 0;
+    padding: 0;
+    border-radius: 50%;
+    background: #e53935;
+    font-size: 0;
+    line-height: 0;
+    overflow: hidden;
+    flex-shrink: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
-.support-nav-badge[hidden] { display: none !important; }
+.support-nav-badge.is-on {
+    opacity: 1;
+    visibility: visible;
+}
 
 .support-fab {
     position: fixed;
