@@ -176,8 +176,17 @@
         }
     }
 
+    function getCurrentParentId() {
+        var meta = currentFolderMeta;
+        if (!meta) return null;
+        if (meta.parent && meta.parent.id) return normalizeFolderId(meta.parent.id);
+        if (meta.folder && meta.folder.parent_id) return normalizeFolderId(meta.folder.parent_id);
+        return null;
+    }
+
     function updateNavButtons() {
         var inFolder = !!historyApi.getFolderId();
+        var parentId = getCurrentParentId();
         if (folderViewBackBtn) {
             folderViewBackBtn.disabled = folderNavStack.length === 0;
         }
@@ -185,13 +194,8 @@
             folderViewHomeBtn.disabled = !inFolder;
         }
         if (folderViewUpBtn) {
-            folderViewUpBtn.disabled = !inFolder;
-            if (inFolder) {
-                var hasParent = !!(currentFolderMeta && currentFolderMeta.parent && currentFolderMeta.parent.id);
-                folderViewUpBtn.title = hasParent ? 'В родительскую папку' : 'Ко всем загрузкам';
-            } else {
-                folderViewUpBtn.title = 'На уровень выше';
-            }
+            folderViewUpBtn.disabled = !parentId;
+            folderViewUpBtn.title = parentId ? 'В родительскую папку' : 'На уровень выше';
             folderViewUpBtn.setAttribute('aria-label', folderViewUpBtn.title);
         }
     }
@@ -812,12 +816,9 @@
     }
     if (folderViewUpBtn) {
         folderViewUpBtn.addEventListener('click', function () {
-            var parent = currentFolderMeta && currentFolderMeta.parent;
-            if (parent && parent.id) {
-                navigateToFolder(parent.id);
-                return;
-            }
-            if (historyApi.getFolderId()) goHome(false);
+            var parentId = getCurrentParentId();
+            if (!parentId) return;
+            navigateToFolder(parentId);
         });
     }
 
