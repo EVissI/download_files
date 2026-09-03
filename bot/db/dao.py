@@ -44,6 +44,7 @@ from bot.db.models import (
     HintViewerWebUploadStatus,
     HintWebFolder,
     HintWebFolderItem,
+    HintWebFolderSchedule,
     HintWebLabelPreset,
     HintWebUploadLabel,
     WebUser,
@@ -2986,6 +2987,32 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         found = {int(x) for x in result.scalars().all()}
         return [uid for uid in ids if uid in found]
 
+    async def list_ids_for_schedule(
+        self,
+        user_id: int,
+        service: str,
+        labels: list[str] | None = None,
+    ) -> list[int]:
+        query = (
+            select(HintViewerWebUpload.id)
+            .where(*self._user_service_filter(user_id, service))
+            .order_by(HintViewerWebUpload.id.asc())
+        )
+        filter_labels = [
+            str(item).strip() for item in (labels or []) if str(item).strip()
+        ]
+        if filter_labels:
+            query = query.where(
+                HintViewerWebUpload.id.in_(
+                    select(HintWebUploadLabel.upload_id).where(
+                        HintWebUploadLabel.user_id == user_id,
+                        HintWebUploadLabel.labels.overlap(filter_labels),
+                    )
+                )
+            )
+        result = await self._session.execute(query)
+        return [int(uid) for uid in result.scalars().all() if uid is not None]
+
     def _history_group_key(self):
         return func.coalesce(
             func.nullif(HintViewerWebUpload.batch_id, ""),
@@ -3357,6 +3384,24 @@ class HintWebFolderDAO(BaseDAO[HintWebFolder]):
             result.append(current)
             queue.extend(children_map.get(current, []))
         return result
+
+    async def collect_subtree_folder_ids(
+        self, folder_id: int, user_id: int, service: str = "hints"
+    ) -> list[int]:
+        descendants = await self._collect_descendant_folder_ids(
+            folder_id, user_id, service
+        )
+        return descendants + [folder_id]
+
+    async def get_schedules_by_folder_id(
+        self, user_id: int, service: str = "hints"
+    ) -> dict[int, HintWebFolderSchedule]:
+        result = await self._session.execute(
+            select(HintWebFolderSchedule)
+            .join(HintWebFolder, HintWebFolder.id == HintWebFolderSchedule.folder_id)
+            .where(*self._scope(user_id, service))
+        )
+        return {int(row.folder_id): row for row in result.scalars().all()}
 
     async def delete_folder(
         self, folder_id: int, user_id: int, service: str = "hints"

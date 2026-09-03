@@ -1778,6 +1778,12 @@ class HintWebFolder(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    schedule: Mapped[Optional["HintWebFolderSchedule"]] = relationship(
+        "HintWebFolderSchedule",
+        back_populates="folder",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
 
 class HintWebFolderItem(Base):
@@ -1816,6 +1822,49 @@ class HintWebFolderItem(Base):
         "HintViewerWebUpload",
         back_populates="folder_items",
         passive_deletes=True,
+    )
+
+
+class HintWebFolderSchedule(Base):
+    """Расписание автодобавления файлов пользователя в папку (ошибки / плеер, по МСК)."""
+
+    __tablename__ = "hint_web_folder_schedules"
+    __table_args__ = (
+        UniqueConstraint("folder_id", name="uq_hint_web_folder_schedules_folder_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    folder_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("hint_web_folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    files_per_run: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    weekdays: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    issue_time_msk: Mapped[str] = mapped_column(String(5), nullable=False)
+    labels: Mapped[list[str]] = mapped_column(
+        ARRAY[str](String(255)),
+        nullable=False,
+        default=list,
+        server_default="{}",
+    )
+    scheduler_job_id: Mapped[str | None] = mapped_column(
+        String(128), unique=True, nullable=True
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    folder: Mapped["HintWebFolder"] = relationship(
+        "HintWebFolder",
+        back_populates="schedule",
     )
 
 

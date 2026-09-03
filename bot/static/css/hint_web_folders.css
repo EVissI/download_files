@@ -406,7 +406,7 @@ html[data-theme="light"] .hw-hint__arrow {
     align-items: center;
     gap: 2px;
     min-width: 0;
-    max-width: 55%;
+    max-width: 48%;
 }
 .hw-folder-node__name {
     flex: 0 1 auto;
@@ -507,4 +507,93 @@ html[data-theme="light"] .hw-hint__arrow {
         height: 28px;
         min-width: 28px;
     }
+}
+
+.hw-folder-node__action--schedule-active {
+    background: color-mix(in srgb, var(--web-accent) 28%, transparent);
+    color: var(--web-accent);
+}
+.hw-link-modal.hw-folder-schedule-modal {
+    z-index: 90;
+}
+.hw-folder-schedule-modal .hw-link-modal__box {
+    max-height: min(88dvh, 640px);
+    overflow-y: auto;
+}
+.hw-folder-schedule-modal__label {
+    display: block;
+    margin: 0 0 6px;
+    font-size: 0.8rem;
+    color: var(--web-text-muted);
+}
+.hw-folder-schedule-modal__weekdays {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.hw-folder-schedule-modal__weekday-btn {
+    border: 1px solid var(--web-border);
+    border-radius: 16px;
+    background: var(--web-ghost-bg);
+    color: var(--web-text);
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+.hw-folder-schedule-modal__weekday-btn.is-active {
+    border-color: var(--web-accent);
+    background: var(--web-accent);
+    color: #fff;
+}
+.hw-folder-schedule-modal__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.hw-folder-schedule-modal__toolbar-btn {
+    border: 1px solid var(--web-border);
+    border-radius: 8px;
+    background: var(--web-ghost-bg);
+    color: var(--web-text-muted);
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    cursor: pointer;
+}
+.hw-folder-schedule-modal__toolbar-btn:hover {
+    background: var(--web-ghost-hover);
+    color: var(--web-text);
+}
+.hw-folder-schedule-modal__labels {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border: 1px solid var(--web-border);
+    border-radius: 10px;
+    background: var(--web-input-bg);
+}
+.hw-folder-schedule-modal__label-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: var(--web-text);
+}
+.hw-folder-schedule-modal__toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+    color: var(--web-text);
+}
+.hw-folder-schedule-modal__meta {
+    font-size: 0.75rem;
+    color: var(--web-text-muted);
+    margin: 0 0 10px;
 }

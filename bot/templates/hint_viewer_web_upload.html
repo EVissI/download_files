@@ -492,6 +492,36 @@
             </div>
         </div>
     </div>
+    <div id="folderScheduleModal" class="hw-link-modal hw-folder-schedule-modal" aria-hidden="true">
+        <div id="folderScheduleModalOverlay" class="hw-link-modal__overlay"></div>
+        <div class="hw-link-modal__box" role="dialog" aria-modal="true" aria-labelledby="folderScheduleModalTitle">
+            <h3 id="folderScheduleModalTitle" class="hw-link-modal__title">Расписание папки</h3>
+            <p id="folderScheduleModalSubtitle" class="hw-link-modal__subtitle"></p>
+            <p id="folderScheduleModalMeta" class="hw-folder-schedule-modal__meta"></p>
+            <div class="hw-folder-schedule-modal__label">Дни недели (МСК)</div>
+            <div id="folderScheduleWeekdayToolbar" class="hw-folder-schedule-modal__toolbar"></div>
+            <div id="folderScheduleWeekdays" class="hw-folder-schedule-modal__weekdays"></div>
+            <label for="folderScheduleTimeInput" class="hw-folder-schedule-modal__label">Время (МСК)</label>
+            <input id="folderScheduleTimeInput" class="hw-link-modal__input" type="time" step="60">
+            <label for="folderScheduleCountInput" class="hw-folder-schedule-modal__label">Файлов за запуск</label>
+            <input id="folderScheduleCountInput" class="hw-link-modal__input" type="number" min="1" max="3000"
+                step="1" inputmode="numeric" value="1">
+            {% if enable_user_labels|default(false) %}
+            <div class="hw-folder-schedule-modal__label">Метки (необязательно; без выбора — все файлы)</div>
+            <div id="folderScheduleLabels" class="hw-folder-schedule-modal__labels"></div>
+            {% endif %}
+            <label class="hw-folder-schedule-modal__toggle-row">
+                <input id="folderScheduleActiveInput" type="checkbox" checked>
+                <span>Расписание активно</span>
+            </label>
+            <p id="folderScheduleModalMsg" class="hw-link-modal__msg"></p>
+            <div class="hw-link-modal__actions">
+                <button type="button" id="folderScheduleDeleteBtn" class="hw-link-modal__btn">Удалить</button>
+                <button type="button" id="folderScheduleCancelBtn" class="hw-link-modal__btn">Отмена</button>
+                <button type="button" id="folderScheduleSaveBtn" class="hw-link-modal__btn hw-link-modal__btn--primary">Сохранить</button>
+            </div>
+        </div>
+    </div>
     {% endif %}
     {% if enable_user_labels|default(false) %}
     <div id="fileLabelsModal" class="hw-link-modal" aria-hidden="true">
