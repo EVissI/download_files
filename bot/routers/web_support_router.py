@@ -19,6 +19,7 @@ from bot.common.service.hint_viewer_web_service import (
     resolve_web_session,
     web_cabinet_page_vars,
 )
+from bot.common.utils.http_security import cookies_should_be_secure
 from bot.common.service.web_support_service import (
     add_message,
     admin_unread_count,
@@ -98,7 +99,11 @@ async def web_support_inbox_page(request: Request):
             "web_service": "support",
         },
     )
-    attach_device_cookie(response, device_id_from_request(request))
+    attach_device_cookie(
+        response,
+        device_id_from_request(request),
+        secure=cookies_should_be_secure(request),
+    )
     return response
 
 

@@ -18,17 +18,17 @@
   fastapi:
     build: .
     container_name: backgammon_api
-    command: uvicorn bot.api:app --host 0.0.0.0 --port 8000 
+    command: uvicorn bot.api:app --host 0.0.0.0 --port 8000 --no-server-header --proxy-headers --forwarded-allow-ips=127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
     ports:
-      - "8000:8000"  
+      # Если перед API стоит nginx на хосте — лучше 127.0.0.1:8000:8000,
+      # чтобы сканеры не ходили в uvicorn напрямую.
+      - "8000:8000" 
     environment:
       - POSTGRES_HOST=db
       - REDIS_HOST=redis
       - DB_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://${REDIS_USER}:${REDIS_USER_PASSWORD}@redis:6379/0
     volumes:
-      - ./bot:/app/templates
-      - ./bot:/app/static
       - ./bot:/app/bot
       - ./log:/app/log
       - ./files:/app/files

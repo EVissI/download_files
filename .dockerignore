@@ -1,4 +1,12 @@
-﻿# Git
+﻿# Secrets and local data
+.env
+.env.*
+!.env.example
+files/
+log/
+redisdata/
+
+# Git
 .git
 .gitignore
 .gitattributes

@@ -34,6 +34,7 @@ from bot.config import bot
 from bot.common.func.game_parser import parse_file, get_names
 from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.service.webapp_settings_service import get_webapp_fullscreen_enabled
+from bot.common.utils.http_security import require_game_num, require_public_id
 
 # FastAPI imports
 from fastapi import APIRouter, Request, HTTPException
@@ -221,16 +222,19 @@ def take_games_json_info(game_id: str, game_num: str = None):
     """
     Загружает и возвращает JSON с играми из game_parser для указанного game_id и номера игры.
     """
-    path = f"files/{game_id}/games.json"
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"JSON файл для {game_id} не найден")
+    game_id = require_public_id(game_id, name="game")
+    game_num = require_game_num(game_num)
+    files_root = Path("files").resolve()
+    path = (files_root / game_id / "games.json").resolve()
+    if files_root not in path.parents or not path.is_file():
+        raise FileNotFoundError("JSON файл не найден")
 
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
         logger.error(f"Invalid JSON in {path}: {e}")
-        raise HTTPException(status_code=500, detail=f"Invalid JSON file: {e}")
+        raise HTTPException(status_code=500, detail="Invalid JSON file")
 
 
     if game_num:
@@ -259,6 +263,7 @@ async def get_board_viewer_web(request: Request, game_id: str = None):
     """
     if not game_id:
         raise HTTPException(status_code=400, detail="game_id parameter is required")
+    game_id = require_public_id(game_id, name="game")
 
     webapp_fullscreen_enabled = await get_webapp_fullscreen_enabled("player")
     from bot.common.utils.static_assets import get_static_asset_version
@@ -291,8 +296,8 @@ async def get_games_data(game_id: str, game_num: str = None):
     try:
         data = take_games_json_info(game_id, game_num)
         return data
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Game not found")
     except Exception as e:
         logger.error(f"Error fetching games data for {game_id}: {e}")
         raise HTTPException(status_code=500, detail="Error generating games data")

@@ -30,6 +30,7 @@ from bot.common.service.webapp_settings_service import (
     get_board_viewer_screenshot_font_scale_percent,
 )
 from bot.common.utils.static_assets import get_static_asset_version
+from bot.common.utils.http_security import require_public_id
 from bot.db.models import HintViewerWebUploadStatus
 
 board_viewer_web_api_router = APIRouter()
@@ -211,8 +212,10 @@ async def web_board_view(request: Request, game_id: str | None = None):
         return _login_redirect()
     if not game_id:
         raise HTTPException(status_code=400, detail="Нужен параметр game_id")
-    json_path = os.path.join("files", game_id, "games.json")
-    if not os.path.isfile(json_path):
+    game_id = require_public_id(game_id, name="game")
+    files_root = Path("files").resolve()
+    json_path = (files_root / game_id / "games.json").resolve()
+    if files_root not in json_path.parents or not json_path.is_file():
         raise HTTPException(status_code=404, detail="Игра не найдена")
     font_scale = await get_board_viewer_screenshot_font_scale_percent()
     response = templates.TemplateResponse(

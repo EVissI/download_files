@@ -79,6 +79,7 @@ from bot.common.utils.i18n import get_all_locales_for_key
 from bot.config import settings, bot, SUPPORT_TG_ID
 from bot.config import translator_hub
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
+from bot.common.utils.http_security import require_game_num, require_public_id
 from typing import TYPE_CHECKING
 
 from bot.db.dao import UserDAO, DetailedAnalysisDAO, MessagesTextsDAO
@@ -990,6 +991,8 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
     if not game_id:
         raise HTTPException(status_code=400, detail="game_id parameter is required")
 
+    game_id = require_public_id(game_id, name="game")
+
     # Стабильный bust для /static (не time.time — иначе кэш браузера бесполезен)
     from bot.common.utils.static_assets import get_static_asset_version
 
@@ -1026,10 +1029,14 @@ async def get_analysis_data(game_id: str, game_num: str = None):
     Если game_num не указан, возвращает список всех игр.
     """
     try:
+        game_id = require_public_id(game_id, name="game")
+        game_num = require_game_num(game_num)
         data = await asyncio.to_thread(load_analysis_json_from_s3, game_id, game_num)
         return data
+    except HTTPException:
+        raise
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail=f"Game {game_id} not found")
+        raise HTTPException(status_code=404, detail="Game not found")
     except Exception as e:
         logger.error(f"Error fetching analysis data for {game_id}: {e}")
         raise HTTPException(status_code=500, detail="Error generating analysis data")

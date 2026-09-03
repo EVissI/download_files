@@ -4,7 +4,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, Request, Response, HTTPException, File, Form, UploadFile, Query
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,6 +48,12 @@ from bot.common.service.webapp_settings_service import (
     clamp_hint_viewer_screenshot_font_scale_percent,
 )
 from bot.common.utils.static_assets import get_static_asset_version
+from bot.common.utils.http_security import (
+    SecurityHeadersMiddleware,
+    client_ip,
+    is_secret_probe,
+    rate_limit_exceeded,
+)
 from bot.config import settings
 from bot.config import bot, scheduler, SUPPORT_TG_ID, translator_hub
 from bot.common.utils.i18n import get_text_for_locale
@@ -125,6 +131,14 @@ class CachedStaticFiles(StaticFiles):
     """Долгий кэш браузера; bust через ?t=cache_timestamp в HTML/JS."""
 
     async def get_response(self, path: str, scope):
+        normalized = (path or "").replace("\\", "/")
+        if (
+            not normalized
+            or normalized.startswith(".")
+            or "/." in normalized
+            or ".." in normalized
+        ):
+            return Response(status_code=404)
         response = await super().get_response(path, scope)
         # 7 дней + stale-while-revalidate; смена файла → новый ?t= после рестарта/STATIC_ASSET_VERSION
         response.headers["Cache-Control"] = (
@@ -133,7 +147,13 @@ class CachedStaticFiles(StaticFiles):
         return response
 
 
-app = FastAPI(title="Backgammon Hint Viewer API", version="1.0.0")
+app = FastAPI(
+    title="Backgammon Hint Viewer API",
+    version="1.0.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 
 class _SkipHintWebPollAccessLogFilter(logging.Filter):
@@ -163,6 +183,8 @@ class _SkipHintWebPollAccessLogFilter(logging.Filter):
                 path = record.getMessage()
             except Exception:
                 path = ""
+        if is_secret_probe(path):
+            return False
         return not any(skip in path for skip in self._SKIP)
 
 
@@ -205,22 +227,23 @@ async def start_web_analyze_worker():
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Global exception caught: {exc}")
     logger.error(traceback.format_exc())
-    return Response(
-        content=json.dumps({"detail": str(exc), "traceback": traceback.format_exc()}),
+    return JSONResponse(
         status_code=500,
-        media_type="application/json",
+        content={"detail": "Internal server error"},
     )
 
 
-# CORS middleware for web app integration
+# CORS: Mini App на том же origin. credentials+* невалидны по спецификации,
+# но оставляем отражение Origin — иначе ломается downloadFile в Telegram Web.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify allowed origins
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "HEAD", "OPTIONS"],
     allow_headers=["*"],
 )
 app.add_middleware(GZipMiddleware, minimum_size=500)
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 _fab_session_app = Flask("fab_session_probe")
@@ -645,12 +668,16 @@ async def _render_content_cards_cabinet_page(
 
 
 @app.get("/pokaz/hints")
-async def get_pokaz_hints(xgid: str, chat_id: Optional[int] = None):
+async def get_pokaz_hints(request: Request, xgid: str, chat_id: Optional[int] = None):
     """
     Возвращает подсказки для заданной позиции XGID.
     Проверяет баланс пользователя и списывает при успешной обработке.
     """
     try:
+        if await rate_limit_exceeded(
+            f"rate_limit:pokaz_hints:{client_ip(request)}", 40, 60
+        ):
+            raise HTTPException(status_code=429, detail="Too many requests")
         logger.info(
             f"Получен запрос /pokaz/hints с параметрами: xgid={xgid}, chat_id={chat_id}"
         )
@@ -704,7 +731,7 @@ async def get_pokaz_hints(xgid: str, chat_id: Optional[int] = None):
     except Exception as e:
         logger.error(f"Ошибка при обработке запроса pokaz/hints: {e}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Ошибка сервера: {str(e)}")
+        raise HTTPException(status_code=500, detail="Ошибка сервера")
 
 
 @app.post("/api/send_to_admin")
@@ -721,6 +748,11 @@ async def send_to_admin(request: Request):
         if not chat_id:
             logger.warning("Admin comment request received without chat_id")
             raise HTTPException(status_code=400, detail="No chat_id provided")
+
+        if await rate_limit_exceeded(
+            f"rate_limit:admin_comment_ip:{client_ip(request)}", 10, 600
+        ):
+            raise HTTPException(status_code=429, detail="Too many requests")
 
         if not photo:
             logger.warning("Admin comment request received without photo")

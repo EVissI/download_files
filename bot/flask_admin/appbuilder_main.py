@@ -127,6 +127,7 @@ def create_app():
     app.config["SESSION_COOKIE_PATH"] = "/"
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = str(settings.MINI_APP_URL).startswith("https://")
     try:
         from flask_appbuilder.const import AUTH_DB
     except ImportError:
@@ -250,4 +251,4 @@ def create_app_for_flask_cli():
 
 if __name__ == "__main__":
     app, appbuilder = create_app()
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="127.0.0.1", port=5000)

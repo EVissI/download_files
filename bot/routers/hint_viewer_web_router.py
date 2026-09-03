@@ -63,6 +63,14 @@ from bot.common.service.webapp_settings_service import (
     get_hint_viewer_screenshot_font_scale_percent,
 )
 from bot.common.utils.static_assets import get_static_asset_version
+from bot.common.utils.http_security import (
+    client_ip,
+    cookies_should_be_secure,
+    has_forwarded_client_ip,
+    rate_limit_blocked,
+    rate_limit_hit,
+    require_public_id,
+)
 from bot.config import settings
 from bot.db.models import HintViewerWebUploadStatus
 from bot.db.redis import redis_client
@@ -548,7 +556,7 @@ async def web_hints_login_page(request: Request, next: str = "/web/hints"):
             "cache_timestamp": get_static_asset_version(),
         },
     )
-    attach_device_cookie(response, device_id_from_request(request))
+    attach_device_cookie(response, device_id_from_request(request), secure=cookies_should_be_secure(request))
     return response
 
 
@@ -560,8 +568,38 @@ async def web_hints_login(
     next: str = Form("/web/hints"),
 ):
     next_path = safe_web_next(next)
+    ip = client_ip(request)
+    login_key = (login or "").strip().lower()[:80]
+    ip_limit_key = (
+        f"rate_limit:web_login:ip:{ip}" if has_forwarded_client_ip(request) else ""
+    )
+    name_limit_key = f"rate_limit:web_login:name:{login_key}" if login_key else ""
+    if (ip_limit_key and await rate_limit_blocked(ip_limit_key, 15)) or (
+        name_limit_key and await rate_limit_blocked(name_limit_key, 10)
+    ):
+        response = templates.TemplateResponse(
+            "hint_viewer_web_login.html",
+            {
+                "request": request,
+                "error": "Слишком много попыток входа. Подождите 15 минут.",
+                "login_value": (login or "").strip(),
+                "next_path": next_path,
+                "cache_timestamp": get_static_asset_version(),
+            },
+            status_code=429,
+        )
+        attach_device_cookie(
+            response,
+            device_id_from_request(request),
+            secure=cookies_should_be_secure(request),
+        )
+        return response
     user, auth_error = await authenticate_web_user(login, password)
     if not user:
+        if ip_limit_key:
+            await rate_limit_hit(ip_limit_key, 900)
+        if name_limit_key:
+            await rate_limit_hit(name_limit_key, 900)
         message = (
             "Срок действия аккаунта истёк"
             if auth_error == "expired"
@@ -578,7 +616,7 @@ async def web_hints_login(
             },
             status_code=200,
         )
-        attach_device_cookie(response, device_id_from_request(request))
+        attach_device_cookie(response, device_id_from_request(request), secure=cookies_should_be_secure(request))
         return response
     device_id = device_id_from_request(request)
     created = await create_session(user, device_id=device_id)
@@ -594,7 +632,11 @@ async def web_hints_login(
             },
             status_code=200,
         )
-        attach_device_cookie(response, created.get("device_id") or device_id)
+        attach_device_cookie(
+            response,
+            created.get("device_id") or device_id,
+            secure=cookies_should_be_secure(request),
+        )
         return response
     response = RedirectResponse(url=next_path, status_code=303)
     response.set_cookie(
@@ -604,8 +646,13 @@ async def web_hints_login(
         httponly=True,
         samesite="lax",
         path="/",
+        secure=cookies_should_be_secure(request),
     )
-    attach_device_cookie(response, created.get("device_id") or device_id)
+    attach_device_cookie(
+        response,
+        created.get("device_id") or device_id,
+        secure=cookies_should_be_secure(request),
+    )
     return response
 
 
@@ -1052,6 +1099,7 @@ async def web_hints_view(request: Request, game_id: str | None = None):
         return _login_redirect()
     if not game_id:
         raise HTTPException(status_code=400, detail="Нужен параметр game_id")
+    game_id = require_public_id(game_id, name="game")
     cache_timestamp = get_static_asset_version()
     font_scale = await get_hint_viewer_screenshot_font_scale_percent()
     response = templates.TemplateResponse(

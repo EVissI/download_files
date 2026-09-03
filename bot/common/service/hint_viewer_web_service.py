@@ -73,7 +73,7 @@ def device_id_from_request(request) -> str:
     return normalize_device_id(request.cookies.get(DEVICE_COOKIE_NAME)) or new_device_id()
 
 
-def attach_device_cookie(response, device_id: str) -> None:
+def attach_device_cookie(response, device_id: str, *, secure: bool = False) -> None:
     response.set_cookie(
         key=DEVICE_COOKIE_NAME,
         value=device_id,
@@ -81,6 +81,7 @@ def attach_device_cookie(response, device_id: str) -> None:
         httponly=True,
         samesite="lax",
         path="/",
+        secure=secure,
     )
 
 
