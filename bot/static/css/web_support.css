@@ -136,8 +136,11 @@ body.screenshot-mode .support-panel {
     padding: 4px 6px;
 }
 .support-messages {
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 12px;
     display: flex;
     flex-direction: column;
@@ -193,15 +196,19 @@ html[data-theme="light"] .support-msg.is-mine {
 .support-file-link {
     color: inherit;
     font-size: 0.85rem;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 .support-file-thumb {
     display: block;
-    max-width: 220px;
+    max-width: min(220px, 100%);
     max-height: 160px;
+    height: auto;
     border-radius: 8px;
     object-fit: cover;
 }
 .support-composer {
+    flex: none;
     border-top: 1px solid var(--web-border);
     padding: 10px;
     background: var(--web-bg-header);
@@ -300,9 +307,12 @@ html[data-theme="light"] .support-msg.is-mine {
 
 .support-inbox {
     display: grid;
-    grid-template-columns: minmax(240px, 320px) 1fr;
+    grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     gap: 0;
-    min-height: calc(100dvh - 72px);
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
     border: 1px solid var(--web-border);
     border-radius: 12px;
     overflow: hidden;
@@ -313,9 +323,12 @@ html[data-theme="light"] .support-msg.is-mine {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
+    overflow: hidden;
     background: var(--web-bg-sunken);
 }
 .support-inbox-search {
+    flex: none;
     padding: 10px;
     border-bottom: 1px solid var(--web-border);
 }
@@ -330,7 +343,9 @@ html[data-theme="light"] .support-msg.is-mine {
 }
 .support-thread-list {
     overflow-y: auto;
-    flex: 1;
+    overscroll-behavior: contain;
+    flex: 1 1 auto;
+    min-height: 0;
 }
 .support-thread-item {
     display: block;
@@ -362,8 +377,15 @@ html[data-theme="light"] .support-msg.is-mine {
     flex-direction: column;
     min-width: 0;
     min-height: 0;
+    height: 100%;
+    overflow: hidden;
 }
-.support-inbox-chat .support-messages { flex: 1; }
+.support-inbox-head { flex: none; }
+.support-inbox-chat .support-messages {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
 .support-inbox-placeholder {
     margin: auto;
     color: var(--web-text-muted);
@@ -380,8 +402,10 @@ html[data-theme="light"] .support-msg.is-mine {
         border-radius: 12px 12px 0 0;
     }
     .support-inbox {
-        grid-template-columns: 1fr;
-        min-height: calc(100dvh - 64px);
+        grid-template-columns: minmax(0, 1fr);
+        height: 100%;
+        max-height: 100%;
+        min-height: 0;
     }
     .support-inbox.is-chat .support-inbox-list { display: none; }
     .support-inbox:not(.is-chat) .support-inbox-chat { display: none; }

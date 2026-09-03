@@ -8,21 +8,38 @@
     <link rel="stylesheet" href="/static/css/web_theme.css?t={{ cache_timestamp }}">
     <style>
         * { box-sizing: border-box; }
-        html { overflow-x: hidden; }
+        html, body {
+            height: 100%;
+            max-height: 100dvh;
+            overflow: hidden;
+        }
         body {
             margin: 0;
             font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
             background: var(--web-bg);
             color: var(--web-text);
-            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
+        .web-cabinet-header { flex: none; }
         .wrap {
+            flex: 1 1 auto;
+            min-height: 0;
             max-width: 1100px;
+            width: 100%;
             margin: 0 auto;
             padding: 16px;
             padding-left: max(16px, env(safe-area-inset-left));
             padding-right: max(16px, env(safe-area-inset-right));
             padding-bottom: max(16px, env(safe-area-inset-bottom));
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .wrap .support-inbox {
+            flex: 1 1 auto;
+            min-height: 0;
+            height: 100%;
         }
         .support-inbox-head {
             display: flex;
