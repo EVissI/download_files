@@ -350,7 +350,7 @@ async def _enqueue_batch(
 
 
 _JOB_NOT_FOUND_ERROR = "Задача не найдена"
-_CURRENT_JOB_KEEP_AFTER_FINISH = timedelta(minutes=20)
+_CURRENT_JOB_KEEP_AFTER_FINISH = timedelta(minutes=10)
 
 
 def _rq_status(job: Job) -> str:
@@ -402,6 +402,20 @@ def _is_stale_current_job(item: dict[str, Any]) -> bool:
     if not finished:
         return False
     return datetime.now(timezone.utc) - finished >= _CURRENT_JOB_KEEP_AFTER_FINISH
+
+
+def _collect_file_finished_stamps(files: list[dict[str, Any]]) -> dict[str, str]:
+    stamps: dict[str, str] = {}
+    for entry in files:
+        stamp = entry.get("finished_at")
+        idx = entry.get("index")
+        if stamp and idx is not None:
+            stamps[str(idx)] = stamp
+    return stamps
+
+
+def _visible_current_files(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [entry for entry in files if not _is_stale_current_job(entry)]
 
 
 def _enrich_single_job(stored: dict[str, Any]) -> dict[str, Any]:
@@ -478,6 +492,9 @@ def _enrich_batch_job(stored: dict[str, Any]) -> dict[str, Any]:
                     entry["open_links"][0]["url"] if entry["open_links"] else None
                 )
                 ready += 1
+            if payload.get("finished_at") and not _parse_dt(entry.get("finished_at")):
+                entry["finished_at"] = payload["finished_at"]
+            _stamp_finished_at(entry)
         files_out.append(entry)
     item["files"] = files_out
     item["ready_count"] = ready
@@ -510,6 +527,7 @@ def _enrich_batch_job(stored: dict[str, Any]) -> dict[str, Any]:
             entry["status"] = "error"
             entry["error"] = "Файл не был обработан"
             errors += 1
+        _stamp_finished_at(entry)
     item["error_count"] = errors
     _stamp_finished_at(item, job)
     return item
@@ -664,6 +682,7 @@ async def web_hints_jobs(request: Request):
     jobs = []
     drop_ids: set[str] = set()
     finished_at_by_id: dict[str, str] = {}
+    file_finished_by_job: dict[str, dict[str, str]] = {}
     for item in stored:
         enriched = (
             _enrich_batch_job(item)
@@ -671,19 +690,32 @@ async def web_hints_jobs(request: Request):
             else _enrich_single_job(item)
         )
         await sync_history_from_job(enriched)
-        if _is_missing_job(enriched) or _is_stale_current_job(enriched):
-            jid = item.get("job_id")
+        jid = item.get("job_id")
+        if enriched.get("kind") == "batch":
+            batch_files = list(enriched.get("files") or [])
+            file_stamps = _collect_file_finished_stamps(batch_files)
+            if file_stamps and jid:
+                file_finished_by_job[jid] = file_stamps
+            visible_files = _visible_current_files(batch_files)
+            enriched["files"] = visible_files
+            job_stale = _is_stale_current_job(enriched) or (
+                bool(batch_files) and not visible_files
+            )
+        else:
+            job_stale = _is_stale_current_job(enriched)
+        if _is_missing_job(enriched) or job_stale:
             if jid:
                 drop_ids.add(jid)
             continue
         stamp = enriched.get("finished_at")
-        if stamp and item.get("job_id"):
-            finished_at_by_id[item["job_id"]] = stamp
+        if stamp and jid:
+            finished_at_by_id[jid] = stamp
         jobs.append(enriched)
     await prune_session_jobs(
         token,
         drop_job_ids=drop_ids,
         finished_at_by_id=finished_at_by_id,
+        file_finished_by_job=file_finished_by_job,
     )
     return {"ok": True, "jobs": jobs}
 

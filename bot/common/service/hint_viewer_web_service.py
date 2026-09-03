@@ -526,11 +526,13 @@ async def prune_session_jobs(
     *,
     drop_job_ids: set[str] | None = None,
     finished_at_by_id: dict[str, str] | None = None,
+    file_finished_by_job: dict[str, dict[str, str]] | None = None,
     service: str = WEB_SERVICE_HINTS,
 ) -> None:
     drop_job_ids = {jid for jid in (drop_job_ids or set()) if jid}
     finished_at_by_id = finished_at_by_id or {}
-    if not drop_job_ids and not finished_at_by_id:
+    file_finished_by_job = file_finished_by_job or {}
+    if not drop_job_ids and not finished_at_by_id and not file_finished_by_job:
         return
     async with _session_jobs_lock(token, service):
         jobs = await _read_session_jobs(token, service)
@@ -542,6 +544,13 @@ async def prune_session_jobs(
             stamp = finished_at_by_id.get(jid)
             if stamp and not job.get("finished_at"):
                 job["finished_at"] = stamp
+            file_stamps = file_finished_by_job.get(jid) or {}
+            if file_stamps:
+                for entry in job.get("files") or []:
+                    idx = str(entry.get("index"))
+                    file_stamp = file_stamps.get(idx)
+                    if file_stamp and not entry.get("finished_at"):
+                        entry["finished_at"] = file_stamp
             kept.append(job)
         await _write_session_jobs(token, kept, service)
 

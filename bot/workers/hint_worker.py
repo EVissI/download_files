@@ -4,6 +4,7 @@ import socket
 import sys
 import logging
 import tempfile
+from datetime import datetime, timezone
 from redis import Redis
 from rq import Worker, Queue
 from bot.common.func.hint_viewer import process_mat_file, extract_player_names
@@ -256,6 +257,7 @@ def analyze_backgammon_batch_job(
                     "has_games": has_games,
                     "red_player": red_player,
                     "black_player": black_player,
+                    "finished_at": datetime.now(timezone.utc).isoformat(),
                 },
                 ttl=status_ttl,
             )
@@ -284,6 +286,7 @@ def analyze_backgammon_batch_job(
                     "file_index": idx + 1,
                     "total_files": total_files,
                     "error": str(e)[:200],
+                    "finished_at": datetime.now(timezone.utc).isoformat(),
                 },
                 ttl=status_ttl,
             )
