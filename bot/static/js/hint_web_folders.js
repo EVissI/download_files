@@ -21,8 +21,7 @@
     var titleEl = document.getElementById('historyCardTitle');
     var folderViewBar = document.getElementById('folderViewBar');
     var folderViewSubfolders = document.getElementById('folderViewSubfolders');
-    var folderViewHomeBtn = document.getElementById('folderViewHomeBtn');
-    var folderViewParentBtn = document.getElementById('folderViewParentBtn');
+    var folderViewUpBtn = document.getElementById('folderViewUpBtn');
 
     var actionModal = document.getElementById('folderActionModal');
     var actionSubtitle = document.getElementById('folderActionModalSubtitle');
@@ -141,6 +140,7 @@
         var inFolder = !!historyApi.getFolderId();
         if (removeBtn) {
             removeBtn.hidden = !inFolder;
+            removeBtn.setAttribute('aria-hidden', inFolder ? 'false' : 'true');
             removeBtn.disabled = !inFolder || !ids.length;
         }
     }
@@ -168,6 +168,7 @@
             folderViewBar.classList.remove('is-visible');
             folderViewBar.setAttribute('aria-hidden', 'true');
             if (titleEl) titleEl.textContent = 'История загрузок';
+            updateSelectionUi();
             return;
         }
         if (titleEl) titleEl.textContent = meta.folder.name || 'Папка';
@@ -183,14 +184,14 @@
             });
             folderViewSubfolders.appendChild(chip);
         });
-        if (folderViewParentBtn) {
-            folderViewParentBtn.hidden = !meta.parent;
-            folderViewParentBtn.onclick = function () {
-                if (meta.parent) navigateToFolder(meta.parent.id);
-            };
+        if (folderViewUpBtn) {
+            var hasParent = !!(meta.parent && meta.parent.id);
+            folderViewUpBtn.title = hasParent ? 'В родительскую папку' : 'Ко всем загрузкам';
+            folderViewUpBtn.setAttribute('aria-label', folderViewUpBtn.title);
         }
         folderViewBar.classList.add('is-visible');
         folderViewBar.setAttribute('aria-hidden', 'false');
+        updateSelectionUi();
     }
 
     function loadCurrentFolderView() {
@@ -664,7 +665,16 @@
     if (manageBtn) manageBtn.addEventListener('click', openManageModal);
     if (foldersBtn) foldersBtn.addEventListener('click', openActionModal);
     if (removeBtn) removeBtn.addEventListener('click', removeSelectedFromFolder);
-    if (folderViewHomeBtn) folderViewHomeBtn.addEventListener('click', function () { goHome(false); });
+    if (folderViewUpBtn) {
+        folderViewUpBtn.addEventListener('click', function () {
+            var parent = currentFolderMeta && currentFolderMeta.parent;
+            if (parent && parent.id) {
+                navigateToFolder(parent.id);
+                return;
+            }
+            goHome(false);
+        });
+    }
 
     var actionCancel = document.getElementById('folderActionModalCancelBtn');
     var actionCreate = document.getElementById('folderActionCreateBtn');

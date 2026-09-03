@@ -14,6 +14,9 @@
     align-items: center;
     justify-content: flex-end;
 }
+#historyRemoveFromFolderBtn[hidden] {
+    display: none !important;
+}
 .history-item-select {
     display: flex;
     align-items: flex-start;
@@ -61,6 +64,13 @@
     padding: 6px 10px;
     font-size: 0.85rem;
     cursor: pointer;
+}
+.folder-view-bar__nav {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0;
+    flex-shrink: 0;
 }
 .folder-view-bar__chip:hover,
 .folder-view-bar__nav:hover {

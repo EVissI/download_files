@@ -82,6 +82,7 @@
             line-height: 1.2;
             touch-action: manipulation;
         }
+        [hidden] { display: none !important; }
         .primary { background: var(--web-accent); color: #fff; }
         .primary:disabled {
             background: var(--web-accent);
@@ -375,8 +376,11 @@
             </div>
             {% if enable_user_folders|default(false) %}
             <div id="folderViewBar" class="folder-view-bar" aria-hidden="true">
-                <button type="button" class="ghost folder-view-bar__nav" id="folderViewHomeBtn">Все загрузки</button>
-                <button type="button" class="ghost folder-view-bar__nav" id="folderViewParentBtn" hidden>Вверх</button>
+                <button type="button" class="ghost folder-view-bar__nav" id="folderViewUpBtn" title="На уровень выше" aria-label="На уровень выше">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M12 19V6M12 6l-6 6M12 6l6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
                 <div id="folderViewSubfolders" class="folder-view-bar__subfolders"></div>
             </div>
             {% endif %}
