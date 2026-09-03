@@ -39,7 +39,7 @@ from bot.common.service.web_support_service import (
     sanitize_source_path,
     serialize_thread_messages,
     serialize_thread_meta,
-    user_unread,
+    user_unread_payload,
     INBOX_PAGE_SIZE,
     MAX_FILES,
     ALLOWED_EXT,
@@ -124,8 +124,8 @@ async def web_support_unread(request: Request):
         if session.get("is_admin"):
             payload = await admin_unread_payload(db)
             return {"ok": True, "admin": True, **payload}
-        count = await user_unread(db, _user_id(session))
-    return {"ok": True, "unread": count, "admin": False}
+        count_payload = await user_unread_payload(db, _user_id(session))
+    return {"ok": True, "admin": False, **count_payload}
 
 
 @web_support_api_router.get("/web/support/api/thread")

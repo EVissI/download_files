@@ -488,6 +488,32 @@ async def user_unread(session, user_id: int) -> int:
     return 1 if _is_unread_for_user(thread) else 0
 
 
+async def user_unread_payload(session, user_id: int) -> dict[str, Any]:
+    thread = await get_thread_by_user(session, user_id)
+    unread = 1 if thread and _is_unread_for_user(thread) else 0
+    latest_id = 0
+    preview = ""
+    if thread:
+        result = await session.execute(
+            select(WebSupportMessage.id, WebSupportMessage.body)
+            .where(
+                WebSupportMessage.thread_id == thread.id,
+                WebSupportMessage.author_role == WebSupportAuthorRole.ADMIN.value,
+            )
+            .order_by(WebSupportMessage.id.desc())
+            .limit(1)
+        )
+        row = result.first()
+        if row:
+            latest_id = int(row[0] or 0)
+            preview = " ".join((row[1] or "").split())[:120] or "Новое сообщение"
+    return {
+        "unread": unread,
+        "latest_message_id": latest_id,
+        "latest_preview": preview,
+    }
+
+
 async def admin_unread_count(session) -> int:
     result = await session.execute(
         select(func.count())

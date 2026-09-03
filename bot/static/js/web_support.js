@@ -85,7 +85,8 @@
         if (!el) return;
         var n = Number(count || 0);
         var show = n > 0;
-        var isDot = el.hasAttribute('data-support-nav-badge');
+        var isDot = el.hasAttribute('data-support-nav-badge')
+            || el.hasAttribute('data-support-fab-badge');
         if (isDot) {
             if (el.classList.contains('is-on') === show) return;
             el.classList.toggle('is-on', show);
@@ -98,6 +99,7 @@
     }
 
     var NOTIFY_KEY = 'web_support_last_msg_id';
+    var USER_NOTIFY_KEY = 'web_support_user_last_msg_id';
     var notifyGestureBound = false;
 
     function isTopWindow() {
@@ -108,7 +110,7 @@
         return (location.pathname.replace(/\/$/, '') || '/') === '/web/support';
     }
 
-    function bindAdminNotifyGesture() {
+    function bindNotifyGesture() {
         if (notifyGestureBound || !isTopWindow()) return;
         notifyGestureBound = true;
         function ask() {
@@ -117,6 +119,52 @@
             Notification.requestPermission().catch(function () {});
         }
         document.addEventListener('pointerdown', ask, true);
+    }
+
+    function notifyUserNewMessage(data) {
+        if (!isTopWindow()) return;
+        if (!data || data.admin) return;
+        var msgId = Number(data.latest_message_id || 0);
+        if (!msgId) return;
+        var last = 0;
+        try { last = Number(localStorage.getItem(USER_NOTIFY_KEY) || 0); } catch (e) {}
+        if (!last) {
+            try { localStorage.setItem(USER_NOTIFY_KEY, String(msgId)); } catch (e) {}
+            return;
+        }
+        if (msgId <= last) return;
+        try { localStorage.setItem(USER_NOTIFY_KEY, String(msgId)); } catch (e) {}
+        if (!data.unread) return;
+        var panel = $('#supportPanel');
+        if (panel && !panel.hidden) return;
+        if (!window.Notification || Notification.permission !== 'granted') return;
+        try {
+            var n = new Notification('Поддержка', {
+                body: data.latest_preview || 'Новое сообщение',
+                tag: 'web-support-user',
+                renotify: true,
+            });
+            n.onclick = function () {
+                n.close();
+                window.focus();
+                if (window.WebSupportWidget && typeof window.WebSupportWidget.open === 'function') {
+                    window.WebSupportWidget.open();
+                }
+            };
+        } catch (e) {}
+    }
+
+    function setUserUnread(count) {
+        var n = Number(count || 0);
+        document.querySelectorAll('[data-support-fab-badge]').forEach(function (el) {
+            setBadge(el, n);
+        });
+        var fab = $('#supportFab');
+        if (!fab) return;
+        var has = n > 0;
+        fab.classList.toggle('is-unread', has);
+        fab.setAttribute('aria-label', has ? 'Есть новое сообщение от поддержки' : 'Написать в поддержку');
+        fab.setAttribute('title', has ? 'Есть новое сообщение от поддержки' : 'Поддержка');
     }
 
     function notifyAdminNewMessage(data) {
@@ -496,16 +544,16 @@
     async function pollUnread() {
         try {
             var data = await api('/web/support/api/unread');
+            bindNotifyGesture();
             if (data && data.admin) {
-                bindAdminNotifyGesture();
                 notifyAdminNewMessage(data);
+            } else if (data) {
+                notifyUserNewMessage(data);
             }
             document.querySelectorAll('[data-support-nav-badge]').forEach(function (el) {
                 setBadge(el, data.admin ? data.unread : 0);
             });
-            document.querySelectorAll('[data-support-fab-badge]').forEach(function (el) {
-                setBadge(el, data.admin ? 0 : data.unread);
-            });
+            setUserUnread(data && data.admin ? 0 : (data && data.unread) || 0);
             return data;
         } catch (e) {
             return null;
@@ -552,7 +600,7 @@
                 if (!box) return;
                 appendMessages(box, [message], 'user');
                 loaded = true;
-                setBadge($('[data-support-fab-badge]'), 0);
+                setUserUnread(0);
             },
         });
 
@@ -572,7 +620,7 @@
                 if (!box || !message) return;
                 appendMessages(box, [message], 'user');
                 loaded = true;
-                setBadge($('[data-support-fab-badge]'), 0);
+                setUserUnread(0);
             },
         };
 
@@ -592,7 +640,7 @@
                     loaded = true;
                 }
                 if (messages.length) appendMessages(box, messages, 'user');
-                setBadge($('[data-support-fab-badge]'), 0);
+                setUserUnread(0);
             } catch (e) {}
             pollBusy = false;
         }

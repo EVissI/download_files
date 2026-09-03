@@ -47,6 +47,10 @@
     font-size: 0;
     line-height: 0;
     box-sizing: border-box;
+    overflow: visible;
+}
+.support-fab.is-unread {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28), 0 0 0 3px #e53935;
 }
 .support-fab svg {
     display: block;
@@ -60,21 +64,35 @@
 .support-fab:hover { filter: brightness(1.08); }
 .support-fab-badge {
     position: absolute;
-    top: -3px;
-    right: -3px;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 999px;
-    background: #c62828;
+    top: -2px;
+    right: -2px;
+    width: 14px;
+    height: 14px;
+    min-width: 14px;
+    padding: 0;
+    border-radius: 50%;
+    background: #e53935;
+    border: 2px solid var(--web-bg-card);
     color: #fff;
-    font-size: 0.7rem;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    font-size: 0;
+    line-height: 0;
+    display: block;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+.support-fab-badge.is-on {
+    opacity: 1;
+    visibility: visible;
+    animation: support-unread-pulse 1.6s ease-out infinite;
 }
 .support-fab-badge[hidden] { display: none !important; }
+@keyframes support-unread-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.65); }
+    70% { box-shadow: 0 0 0 8px rgba(229, 57, 53, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
+}
 
 .support-panel {
     position: fixed;
