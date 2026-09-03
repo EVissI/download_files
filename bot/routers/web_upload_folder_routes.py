@@ -572,41 +572,44 @@ def register_web_upload_folder_routes(
                 raise HTTPException(status_code=404, detail="Пользователь не найден")
             folder_id = int(folder.id)
             folder_name = str(folder.name or "")
-            grant, created = await dao.grant_folder_access(
-                folder_id, int(body.target_user_id), user_id
+            target_user_id = int(body.target_user_id)
+            _grant, created = await dao.grant_folder_access(
+                folder_id, target_user_id, user_id
             )
             await db.commit()
-            notify_sent = False
-            notify_error = None
-            if created:
-                admin_row = await db.get(WebUser, user_id)
-                admin_login = getattr(admin_row, "login", None) if admin_row else None
-                thread = await get_or_create_thread(db, int(body.target_user_id))
-                try:
-                    await add_message(
-                        db,
-                        thread=thread,
-                        author_user_id=user_id,
-                        author_role=WebSupportAuthorRole.ADMIN.value,
-                        author_login=admin_login,
-                        body=f"Вам открыт доступ к папке «{folder_name}».",
-                        source_path=f"/web/{folder_service}/folder/{folder_id}",
-                        files=[],
-                    )
-                    notify_sent = True
-                except Exception as exc:
-                    notify_error = str(exc)
-                    logger.warning(
-                        "Failed to notify web user {} about folder {}: {}",
-                        body.target_user_id,
-                        folder_id,
-                        exc,
-                    )
-            return {
-                "ok": True,
-                "created": created,
-                "already_had": not created,
-                "notify_sent": notify_sent,
-                "notify_error": notify_error,
-            }
+
+        notify_sent = False
+        notify_error = None
+        try:
+            async with async_session_maker() as notify_db:
+                admin_row = await notify_db.get(WebUser, user_id)
+                admin_login = (
+                    getattr(admin_row, "login", None) if admin_row else None
+                )
+                thread = await get_or_create_thread(notify_db, target_user_id)
+                await add_message(
+                    notify_db,
+                    thread=thread,
+                    author_user_id=user_id,
+                    author_role=WebSupportAuthorRole.ADMIN.value,
+                    author_login=admin_login,
+                    body=f"Вам открыт доступ к папке «{folder_name}».",
+                    source_path=f"/web/{folder_service}/folder/{folder_id}",
+                    files=[],
+                )
+            notify_sent = True
+        except Exception as exc:
+            notify_error = str(exc)
+            logger.exception(
+                "Failed to notify web user {} about folder {}",
+                target_user_id,
+                folder_id,
+            )
+        return {
+            "ok": True,
+            "created": created,
+            "already_had": not created,
+            "notify_sent": notify_sent,
+            "notify_error": notify_error,
+        }
 

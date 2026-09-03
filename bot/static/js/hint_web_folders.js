@@ -730,7 +730,14 @@
             target_user_id: selectedShareUserId,
         }).then(function (data) {
             closeFolderShareModal();
-            if (manageMsg) {
+            if (!manageMsg) return;
+            if (data && data.notify_sent) {
+                manageMsg.textContent = data.already_had
+                    ? 'Доступ уже был. Уведомление отправлено в чат.'
+                    : 'Доступ отправлен. Пользователь получит сообщение в чат поддержки.';
+            } else if (data && data.notify_error) {
+                manageMsg.textContent = 'Доступ выдан, но сообщение в чат не отправилось.';
+            } else {
                 manageMsg.textContent = data && data.already_had
                     ? 'У пользователя уже есть доступ к этой папке.'
                     : 'Доступ отправлен.';

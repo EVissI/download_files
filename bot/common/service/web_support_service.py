@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from loguru import logger
-from sqlalchemy import and_, case, func, or_, select
+from sqlalchemy import and_, case, func, inspect as sa_inspect, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
@@ -88,6 +88,13 @@ _SOURCE_TABS = (
     ("/web/pokaz", "Позиция"),
     ("/web/cards", "Карточки"),
 )
+
+
+def _identity_pk(obj) -> int | None:
+    ident = sa_inspect(obj).identity
+    if not ident:
+        return None
+    return int(ident[0])
 
 
 def _now() -> datetime:
@@ -423,8 +430,15 @@ async def add_message(
 
     created_at = _now()
     stored_source = sanitize_source_path(source_path)
+    thread_id = _identity_pk(thread)
+    if not thread_id:
+        await session.flush()
+        thread_id = _identity_pk(thread)
+    if not thread_id:
+        raise ValueError("Тред поддержки не создан")
+
     message = WebSupportMessage(
-        thread_id=thread.id,
+        thread_id=thread_id,
         author_role=author_role,
         author_user_id=int(author_user_id),
         body=text,
@@ -432,44 +446,72 @@ async def add_message(
     )
     session.add(message)
     await session.flush()
+    message_id = _identity_pk(message)
+    if not message_id:
+        raise ValueError("Не удалось сохранить сообщение")
 
-    s3 = HintS3Storage.from_settings()
     attachments: list[WebSupportAttachment] = []
-    for filename, stored, content_type, data in prepared:
-        key = s3.support_attachment_key(thread.id, stored)
-        try:
-            await _upload_bytes(s3, key, data, content_type)
-        except Exception:
-            logger.exception("support attachment upload failed key={}", key)
-            await session.rollback()
-            raise ValueError("Не удалось сохранить файл") from None
-        att = WebSupportAttachment(
-            message_id=message.id,
-            original_filename=filename,
-            stored_name=stored,
-            s3_key=key,
-            content_type=content_type[:120],
-            size_bytes=len(data),
-        )
-        session.add(att)
-        attachments.append(att)
+    if prepared:
+        s3 = HintS3Storage.from_settings()
+        for filename, stored, content_type, data in prepared:
+            key = s3.support_attachment_key(thread_id, stored)
+            try:
+                await _upload_bytes(s3, key, data, content_type)
+            except Exception:
+                logger.exception("support attachment upload failed key={}", key)
+                await session.rollback()
+                raise ValueError("Не удалось сохранить файл") from None
+            att = WebSupportAttachment(
+                message_id=message_id,
+                original_filename=filename,
+                stored_name=stored,
+                s3_key=key,
+                content_type=content_type[:120],
+                size_bytes=len(data),
+            )
+            session.add(att)
+            attachments.append(att)
 
-    thread.last_message_at = created_at
-    thread.last_author_role = author_role
-    thread.last_preview = _preview(text, [item[0] for item in prepared])
+    thread_values: dict[str, Any] = {
+        "last_message_at": created_at,
+        "last_author_role": author_role,
+        "last_preview": _preview(text, [item[0] for item in prepared]),
+    }
     if author_role == WebSupportAuthorRole.ADMIN.value:
-        thread.admin_last_read_at = created_at
+        thread_values["admin_last_read_at"] = created_at
     else:
-        thread.user_last_read_at = created_at
+        thread_values["user_last_read_at"] = created_at
+    await session.execute(
+        update(WebSupportThread)
+        .where(WebSupportThread.id == thread_id)
+        .values(**thread_values)
+    )
     await session.flush()
+    att_payloads = []
+    for att in attachments:
+        att_id = _identity_pk(att)
+        att_payloads.append(
+            {
+                "id": att_id,
+                "filename": att.original_filename,
+                "size": att.size_bytes,
+                "content_type": att.content_type,
+                "is_image": attachment_is_image(att),
+                "url": f"/web/support/api/files/{att_id}",
+            }
+        )
     payload = {
-        "id": message.id,
+        "id": message_id,
         "role": author_role,
         "author_login": author_login or "",
         "body": text,
         "created_at": created_at.isoformat(),
-        "attachments": [serialize_attachment(att) for att in attachments],
+        "attachments": att_payloads,
     }
+    folder_open = folder_open_from_source(stored_source)
+    if folder_open:
+        payload["folder_open_url"] = folder_open
+        payload["folder_open_label"] = "Открыть папку"
     await session.commit()
     return payload
 
