@@ -209,6 +209,53 @@ async def _collect_mat_files(
     return collected
 
 
+def collect_mat_files_from_bytes(
+    filename: str, data: bytes, workdir: str
+) -> list[tuple[str, str]]:
+    raw_name = _safe_filename(filename)
+    if not data:
+        return []
+    if _is_zip(raw_name):
+        zip_path = os.path.join(workdir, f"in_{uuid.uuid4().hex}.zip")
+        with open(zip_path, "wb") as f:
+            f.write(data)
+        collected: list[tuple[str, str]] = []
+        try:
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                for info in zf.infolist():
+                    if info.is_dir():
+                        continue
+                    inner = _safe_filename(info.filename)
+                    if not _is_mat(inner):
+                        continue
+                    if ".." in info.filename.replace("\\", "/"):
+                        continue
+                    stored = inner
+                    if stored.lower().endswith(".txt"):
+                        stored = f"{Path(stored).stem}.mat"
+                    target = os.path.join(workdir, f"{uuid.uuid4().hex}_{stored}")
+                    with zf.open(info) as src, open(target, "wb") as dst:
+                        shutil.copyfileobj(src, dst)
+                    collected.append((target, stored))
+        except zipfile.BadZipFile as exc:
+            raise HTTPException(
+                status_code=400, detail=f"Не удалось открыть архив {raw_name}"
+            ) from exc
+        finally:
+            if os.path.isfile(zip_path):
+                os.remove(zip_path)
+        return collected
+    if not _is_mat(raw_name) and not raw_name.lower().endswith(".txt"):
+        return []
+    stored = raw_name
+    if stored.lower().endswith(".txt"):
+        stored = f"{Path(stored).stem}.mat"
+    target = os.path.join(workdir, f"{uuid.uuid4().hex}_{stored}")
+    with open(target, "wb") as f:
+        f.write(data)
+    return [(target, stored)]
+
+
 async def _enqueue_single(
     *,
     local_mat: str,

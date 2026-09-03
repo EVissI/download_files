@@ -207,6 +207,24 @@ html[data-theme="light"] .support-msg.is-mine {
     border-radius: 8px;
     object-fit: cover;
 }
+.support-msg-actions {
+    margin-top: 8px;
+}
+.support-send-hints-btn {
+    border: 0;
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--web-accent);
+    color: #fff;
+    font-size: 0.8rem;
+}
+.support-send-hints-btn:hover { filter: brightness(1.08); }
+.support-send-hints-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
 .support-composer {
     flex: none;
     border-top: 1px solid var(--web-border);

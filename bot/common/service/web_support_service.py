@@ -23,10 +23,36 @@ from bot.db.models import (
 )
 from bot.db.redis import redis_client
 
+HINTS_ORDER_EXTS = {".mat", ".txt", ".zip"}
 MAX_BODY_LEN = 4000
 MAX_FILES = 5
 ORDER_ANALYSIS_CHAT_TEXT = "Здравствуйте, хочу заказать анализ"
 MAX_FILE_BYTES = 15 * 1024 * 1024
+
+
+def attachment_ok_for_hints(filename: str | None) -> bool:
+    name = (filename or "").replace("\\", "/").split("/")[-1].strip().lower()
+    if "." not in name:
+        return False
+    return "." + name.rsplit(".", 1)[-1] in HINTS_ORDER_EXTS
+
+
+def is_order_analysis_message(
+    message: WebSupportMessage, attachments: list[Any] | None = None
+) -> bool:
+    if (message.author_role or "") != WebSupportAuthorRole.USER.value:
+        return False
+    if (message.body or "").strip() != ORDER_ANALYSIS_CHAT_TEXT:
+        return False
+    items = attachments if attachments is not None else (
+        message.__dict__.get("attachments") or []
+    )
+    return any(
+        attachment_ok_for_hints(getattr(item, "original_filename", None))
+        for item in items
+    )
+
+
 MAX_TOTAL_BYTES = 30 * 1024 * 1024
 RATE_LIMIT_MAX = 20
 RATE_LIMIT_WINDOW_SEC = 600
@@ -178,6 +204,8 @@ def serialize_message(
         label = source_tab_label(message.source_path)
         if label:
             payload["source_tab"] = label
+        if is_order_analysis_message(message, raw_attachments):
+            payload["can_send_to_hints"] = True
     return payload
 
 
@@ -426,6 +454,18 @@ async def _upload_bytes(
     import asyncio
 
     await asyncio.to_thread(s3.upload_bytes, key, data, content_type)
+
+
+async def get_message(session, message_id: int) -> WebSupportMessage | None:
+    result = await session.execute(
+        select(WebSupportMessage)
+        .options(
+            selectinload(WebSupportMessage.attachments),
+            selectinload(WebSupportMessage.thread),
+        )
+        .where(WebSupportMessage.id == int(message_id))
+    )
+    return result.scalar_one_or_none()
 
 
 async def get_attachment(session, attachment_id: int) -> WebSupportAttachment | None:

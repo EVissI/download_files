@@ -5,11 +5,13 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
+import shutil
+import tempfile
 from typing import Any
 from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException, Query, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from loguru import logger
 
@@ -28,6 +30,7 @@ from bot.common.service.web_support_service import (
     admin_unread_payload,
     check_rate_limit,
     get_attachment,
+    get_message,
     get_or_create_thread,
     get_thread_by_id,
     get_thread_by_user,
@@ -40,6 +43,8 @@ from bot.common.service.web_support_service import (
     INBOX_PAGE_SIZE,
     MAX_FILES,
     ALLOWED_EXT,
+    attachment_ok_for_hints,
+    is_order_analysis_message,
     _ext,
     _safe_filename,
 )
@@ -255,6 +260,93 @@ async def web_support_admin_send(request: Request, thread_id: int):
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "message": payload}
+
+
+@web_support_api_router.post(
+    "/web/support/api/threads/{thread_id}/messages/{message_id}/send-to-hints"
+)
+async def web_support_send_message_to_hints(
+    request: Request, thread_id: int, message_id: int
+):
+    token, session = await _require_admin(request)
+    async with async_session_maker() as db:
+        message = await get_message(db, message_id)
+        if (
+            not message
+            or not message.thread
+            or int(message.thread_id) != int(thread_id)
+        ):
+            raise HTTPException(status_code=404, detail="Сообщение не найдено")
+        attachments = list(message.attachments or [])
+        if not is_order_analysis_message(message, attachments):
+            raise HTTPException(status_code=400, detail="Это не заявка на анализ")
+        att = next(
+            (
+                item
+                for item in attachments
+                if attachment_ok_for_hints(item.original_filename)
+            ),
+            None,
+        )
+        if not att or not HintS3Storage.is_support_attachment_key(att.s3_key):
+            raise HTTPException(status_code=404, detail="Файл не найден")
+        s3_key = att.s3_key
+        filename = att.original_filename
+        attachment_id = att.id
+    s3 = HintS3Storage.from_settings()
+    try:
+        file_bytes = await asyncio.to_thread(s3.download_bytes, s3_key)
+    except Exception:
+        logger.exception("support send-to-hints download failed id={}", attachment_id)
+        raise HTTPException(status_code=404, detail="Файл не найден") from None
+    if not file_bytes:
+        raise HTTPException(status_code=404, detail="Файл не найден")
+
+    from bot.routers.hint_viewer_web_router import (
+        _enqueue_batch,
+        _enqueue_single,
+        collect_mat_files_from_bytes,
+    )
+
+    workdir = tempfile.mkdtemp(prefix="support_hints_")
+    try:
+        collected = collect_mat_files_from_bytes(filename, file_bytes, workdir)
+        if not collected:
+            raise HTTPException(
+                status_code=400,
+                detail="Вложение не содержит файл .mat",
+            )
+        web_uid = int(session.get("web_uid") or -int(session.get("user_id") or 1))
+        user_id = session.get("user_id")
+        user_id = int(user_id) if user_id else None
+        if len(collected) == 1:
+            local_mat, stored_name = collected[0]
+            job = await _enqueue_single(
+                local_mat=local_mat,
+                filename=stored_name,
+                web_uid=web_uid,
+                session_token=token,
+                user_id=user_id,
+            )
+        else:
+            job = await _enqueue_batch(
+                files=collected,
+                web_uid=web_uid,
+                session_token=token,
+                user_id=user_id,
+            )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception(
+            "support send-to-hints failed thread={} message={}", thread_id, message_id
+        )
+        raise HTTPException(
+            status_code=500, detail="Не удалось отправить файл в Ошибки"
+        ) from exc
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+    return JSONResponse({"ok": True, "redirect": "/web/hints", "job": job})
 
 
 @web_support_api_router.get("/web/support/api/files/{attachment_id}")

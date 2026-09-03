@@ -48,10 +48,17 @@
                 escapeHtml(att.filename) + '</a>';
         }).join('');
         var body = msg.body ? '<div class="support-msg-body">' + escapeHtml(msg.body) + '</div>' : '';
+        var actions = '';
+        if (mineRole === 'admin' && msg.can_send_to_hints) {
+            actions = '<div class="support-msg-actions">' +
+                '<button type="button" class="support-send-hints-btn" data-send-to-hints="' +
+                escapeHtml(msg.id) + '">В ошибки</button></div>';
+        }
         return '<div class="support-msg ' + (mine ? 'is-mine' : 'is-admin') + '" data-id="' + msg.id + '">' +
             '<div class="support-msg-meta">' + meta + '</div>' +
             body +
             (files ? '<div class="support-files">' + files + '</div>' : '') +
+            actions +
             '</div>';
     }
 
@@ -701,6 +708,31 @@
                 loadList();
             },
         });
+
+        var sendingHints = false;
+        if (box) {
+            box.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-send-to-hints]');
+                if (!btn || !currentId) return;
+                e.preventDefault();
+                if (sendingHints || btn.disabled) return;
+                var messageId = btn.getAttribute('data-send-to-hints');
+                if (!messageId) return;
+                sendingHints = true;
+                btn.disabled = true;
+                var statusEl = $('#supportInboxStatus');
+                if (statusEl) statusEl.textContent = '';
+                api('/web/support/api/threads/' + currentId + '/messages/' + messageId + '/send-to-hints', {
+                    method: 'POST',
+                }).then(function (data) {
+                    window.location.href = (data && data.redirect) || '/web/hints';
+                }).catch(function (err) {
+                    sendingHints = false;
+                    btn.disabled = false;
+                    if (statusEl) statusEl.textContent = (err && err.message) || 'Не удалось отправить в Ошибки';
+                });
+            });
+        }
 
         var params = new URLSearchParams(location.search);
         var initial = Number(params.get('thread') || 0);
