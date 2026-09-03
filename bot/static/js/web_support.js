@@ -1,4 +1,6 @@
 (function () {
+    if (window.__webSupportBooted) return;
+    window.__webSupportBooted = true;
     var loginUrl = '/web/hints/login';
 
     function $(sel, root) {
@@ -54,7 +56,12 @@
     }
 
     function appendMessages(box, messages, mineRole) {
-        var html = messages.map(function (msg) { return renderMessage(msg, mineRole); }).join('');
+        if (!box || !messages || !messages.length) return;
+        var html = messages.filter(function (msg) {
+            if (!msg || !msg.id) return true;
+            return !box.querySelector('.support-msg[data-id="' + msg.id + '"]');
+        }).map(function (msg) { return renderMessage(msg, mineRole); }).join('');
+        if (!html) return;
         var empty = box.querySelector('.support-empty');
         if (empty) empty.remove();
         box.insertAdjacentHTML('beforeend', html);
@@ -412,7 +419,9 @@
             });
         }
 
+        var sending = false;
         async function submit() {
+            if (sending) return;
             var text = (textEl && textEl.value || '').trim();
             if (!text && !selected.length) return;
             var url = typeof opts.url === 'function' ? opts.url() : opts.url;
@@ -420,10 +429,12 @@
                 if (statusEl) statusEl.textContent = 'Выберите диалог';
                 return;
             }
-            sendBtn.disabled = true;
+            sending = true;
+            if (sendBtn) sendBtn.disabled = true;
             if (statusEl) statusEl.textContent = '';
+            var pending = selected.slice();
             try {
-                var data = await sendForm(url, text, selected, opts.extra && opts.extra());
+                var data = await sendForm(url, text, pending, opts.extra && opts.extra());
                 if (textEl) textEl.value = '';
                 selected = [];
                 if (fileEl) fileEl.value = '';
@@ -432,7 +443,8 @@
             } catch (e) {
                 if (statusEl) statusEl.textContent = e.message || 'Не удалось отправить';
             }
-            sendBtn.disabled = false;
+            sending = false;
+            if (sendBtn) sendBtn.disabled = false;
         }
 
         if (sendBtn) sendBtn.addEventListener('click', submit);
@@ -470,6 +482,8 @@
         var panel = $('#supportPanel');
         var fab = $('#supportFab');
         if (!panel || !fab) return;
+        if (panel.getAttribute('data-support-inited')) return;
+        panel.setAttribute('data-support-inited', '1');
         var box = $('#supportMessages', panel);
         var closeBtn = $('#supportPanelClose', panel);
         var open = false;
@@ -522,8 +536,11 @@
             },
         };
 
+        var pollBusy = false;
         async function pollThread(force) {
             if (!box || (!open && !force)) return;
+            if (pollBusy) return;
+            pollBusy = true;
             try {
                 var after = loaded ? lastId(box) : 0;
                 var data = await api('/web/support/api/thread?after_id=' + after + '&mark=1');
@@ -537,6 +554,7 @@
                 if (messages.length) appendMessages(box, messages, 'user');
                 setBadge($('[data-support-fab-badge]'), 0);
             } catch (e) {}
+            pollBusy = false;
         }
 
         pollThread(false);
@@ -546,6 +564,8 @@
     function initInbox() {
         var root = $('#supportInbox');
         if (!root) return;
+        if (root.getAttribute('data-support-inited')) return;
+        root.setAttribute('data-support-inited', '1');
         var listEl = $('#supportThreadList');
         var chatEl = $('#supportInboxChat');
         var searchEl = $('#supportInboxSearch');
@@ -592,9 +612,12 @@
             }
         }
 
+        var pollBusy = false;
         async function pollThread(force) {
             if (!currentId || !box) return;
             if (!force && document.hidden) return;
+            if (pollBusy) return;
+            pollBusy = true;
             try {
                 var after = loaded ? lastId(box) : 0;
                 var data = await api('/web/support/api/threads/' + currentId + '?after_id=' + after + '&mark=1');
@@ -605,6 +628,7 @@
                 }
                 if (messages.length) appendMessages(box, messages, 'admin');
             } catch (e) {}
+            pollBusy = false;
         }
 
         if (listEl) {
