@@ -157,46 +157,68 @@
         return data;
     }
 
-    async function blobFromFile(file) {
+    async function readFileBuffer(file) {
         if (!file) return null;
         if (typeof file.arrayBuffer === 'function') {
             try {
                 var buf = await file.arrayBuffer();
-                if (buf && buf.byteLength) {
-                    return new Blob([buf], { type: file.type || 'application/octet-stream' });
-                }
+                if (buf && buf.byteLength) return buf;
             } catch (e) {}
         }
-        if (file.size) {
+        if (typeof FileReader !== 'function') return null;
+        return new Promise(function (resolve) {
+            var reader = new FileReader();
+            reader.onload = function () {
+                resolve(reader.result && reader.result.byteLength ? reader.result : null);
+            };
+            reader.onerror = function () { resolve(null); };
             try {
-                return new Blob([file], { type: file.type || 'application/octet-stream' });
-            } catch (e) {}
+                reader.readAsArrayBuffer(file);
+            } catch (e) {
+                resolve(null);
+            }
+        });
+    }
+
+    function arrayBufferToBase64(buf) {
+        var bytes = new Uint8Array(buf);
+        var chunk = 0x8000;
+        var parts = [];
+        for (var i = 0; i < bytes.length; i += chunk) {
+            var slice = bytes.subarray(i, i + chunk);
+            parts.push(String.fromCharCode.apply(null, Array.prototype.slice.call(slice)));
         }
-        return null;
+        return btoa(parts.join(''));
     }
 
     async function sendForm(url, text, files, extra) {
-        var form = new FormData();
-        form.append('text', text || '');
-        Object.keys(extra || {}).forEach(function (key) {
-            if (key === 'files' || key === 'file' || key === 'file_names') return;
-            form.append(key, extra[key]);
-        });
-        var attached = 0;
+        extra = extra || {};
+        var payload = {
+            text: text || '',
+            source_path: extra.source_path || '',
+            files: [],
+        };
         var list = Array.prototype.slice.call(files || []);
         for (var i = 0; i < list.length; i++) {
             var file = list[i];
-            var blob = await blobFromFile(file);
-            if (!blob || !blob.size) continue;
+            var buf = await readFileBuffer(file);
+            if (!buf || !buf.byteLength) continue;
             var name = uniqueUploadName(file, i);
-            form.append('files', blob, name);
-            form.append('file_names', file && file.name ? file.name : name);
-            attached += 1;
+            payload.files.push({
+                name: name,
+                original_name: file && file.name ? file.name : name,
+                content_type: (file && file.type) || 'application/octet-stream',
+                data: arrayBufferToBase64(buf),
+            });
         }
-        if (!String(text || '').trim() && !attached) {
+        if (!String(payload.text || '').trim() && !payload.files.length) {
             throw new Error('Нужен текст или файл');
         }
-        return api(url, { method: 'POST', body: form });
+        return api(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
     }
 
     var ALLOWED_EXT = {

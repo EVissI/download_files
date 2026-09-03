@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import binascii
 from typing import Any
 from urllib.parse import quote
 
@@ -161,17 +163,7 @@ async def web_support_own_send(request: Request):
             status_code=429,
             detail={"message": "Слишком много сообщений", "wait_text": wait_text},
         )
-    form = await _parse_form(request)
-    text = _form_text(form, "text")
-    source_path = _form_text(form, "source_path")
-    uploads = await _read_form_uploads(form)
-    if not text.strip() and not uploads:
-        names = [v for v in form.getlist("file_names") if not isinstance(v, UploadFile)]
-        if names:
-            raise HTTPException(
-                status_code=400,
-                detail="Файл не удалось прочитать. Попробуйте прикрепить ещё раз",
-            )
+    text, source_path, uploads = await _load_send_payload(request)
     async with async_session_maker() as db:
         thread = await get_or_create_thread(db, uid)
         login_row = await db.get(WebUser, uid)
@@ -243,16 +235,7 @@ async def web_support_thread_detail(
 async def web_support_admin_send(request: Request, thread_id: int):
     _token, session = await _require_admin(request)
     uid = _user_id(session)
-    form = await _parse_form(request)
-    text = _form_text(form, "text")
-    uploads = await _read_form_uploads(form)
-    if not text.strip() and not uploads:
-        names = [v for v in form.getlist("file_names") if not isinstance(v, UploadFile)]
-        if names:
-            raise HTTPException(
-                status_code=400,
-                detail="Файл не удалось прочитать. Попробуйте прикрепить ещё раз",
-            )
+    text, _source_path, uploads = await _load_send_payload(request)
     async with async_session_maker() as db:
         thread = await get_thread_by_id(db, thread_id)
         if not thread:
@@ -322,6 +305,97 @@ def _form_text(form, key: str) -> str:
     if value is None or isinstance(value, UploadFile):
         return ""
     return str(value)
+
+
+def _form_strings(form, key: str) -> list[str]:
+    if not hasattr(form, "getlist"):
+        value = _form_text(form, key)
+        return [value] if value else []
+    return [
+        str(value)
+        for value in form.getlist(key)
+        if not isinstance(value, UploadFile)
+    ]
+
+
+def _decode_b64(value: Any) -> bytes:
+    if not isinstance(value, str) or not value.strip():
+        return b""
+    raw = value.strip()
+    if "," in raw and raw.lower().startswith("data:"):
+        raw = raw.split(",", 1)[1]
+    try:
+        return base64.b64decode(raw, validate=False)
+    except (binascii.Error, ValueError):
+        return b""
+
+
+def _uploads_from_json(raw: Any) -> list[tuple[str, bytes, str | None]]:
+    items = raw if isinstance(raw, list) else []
+    uploads: list[tuple[str, bytes, str | None]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        stored = str(item.get("name") or "file")
+        original = str(item.get("original_name") or stored)
+        ctype = str(item.get("content_type") or "") or None
+        data = _decode_b64(item.get("data"))
+        if not data:
+            logger.warning("support json upload skipped empty name={}", stored)
+            continue
+        uploads.append((_pick_upload_filename(original, stored), data, ctype))
+        if len(uploads) > MAX_FILES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Можно прикрепить не больше {MAX_FILES} файлов",
+            )
+    return uploads
+
+
+async def _load_send_payload(
+    request: Request,
+) -> tuple[str, str, list[tuple[str, bytes, str | None]]]:
+    ctype = (request.headers.get("content-type") or "").lower()
+    if "application/json" in ctype:
+        try:
+            body = await request.json()
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail="Некорректный запрос") from exc
+        if not isinstance(body, dict):
+            raise HTTPException(status_code=400, detail="Некорректный запрос")
+        text = str(body.get("text") or "")
+        source_path = str(body.get("source_path") or "")
+        return text, source_path, _uploads_from_json(body.get("files"))
+    form = await _parse_form(request)
+    text = _form_text(form, "text")
+    source_path = _form_text(form, "source_path")
+    uploads = await _read_form_uploads(form)
+    if not uploads:
+        uploads = _uploads_from_b64_fields(form)
+    return text, source_path, uploads
+
+
+def _uploads_from_b64_fields(form) -> list[tuple[str, bytes, str | None]]:
+    payloads = _form_strings(form, "file_b64")
+    if not payloads:
+        return []
+    names = _form_strings(form, "file_names")
+    types = _form_strings(form, "file_types")
+    uploads: list[tuple[str, bytes, str | None]] = []
+    for idx, raw in enumerate(payloads):
+        data = _decode_b64(raw)
+        if not data:
+            continue
+        stored = f"file-{idx}"
+        preferred = names[idx] if idx < len(names) else stored
+        ctype = types[idx] if idx < len(types) else None
+        uploads.append((_pick_upload_filename(preferred, stored), data, ctype or None))
+        if len(uploads) > MAX_FILES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Можно прикрепить не больше {MAX_FILES} файлов",
+            )
+    return uploads
 
 
 async def _parse_form(request: Request):
