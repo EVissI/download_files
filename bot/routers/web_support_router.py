@@ -37,6 +37,9 @@ from bot.common.service.web_support_service import (
     user_unread,
     INBOX_PAGE_SIZE,
     MAX_FILES,
+    ALLOWED_EXT,
+    _ext,
+    _safe_filename,
 )
 from bot.common.utils.static_assets import get_static_asset_version
 from bot.db.database import async_session_maker
@@ -162,6 +165,13 @@ async def web_support_own_send(request: Request):
     text = _form_text(form, "text")
     source_path = _form_text(form, "source_path")
     uploads = await _read_form_uploads(form)
+    if not text.strip() and not uploads:
+        names = [v for v in form.getlist("file_names") if not isinstance(v, UploadFile)]
+        if names:
+            raise HTTPException(
+                status_code=400,
+                detail="Файл не удалось прочитать. Попробуйте прикрепить ещё раз",
+            )
     async with async_session_maker() as db:
         thread = await get_or_create_thread(db, uid)
         login_row = await db.get(WebUser, uid)
@@ -236,6 +246,13 @@ async def web_support_admin_send(request: Request, thread_id: int):
     form = await _parse_form(request)
     text = _form_text(form, "text")
     uploads = await _read_form_uploads(form)
+    if not text.strip() and not uploads:
+        names = [v for v in form.getlist("file_names") if not isinstance(v, UploadFile)]
+        if names:
+            raise HTTPException(
+                status_code=400,
+                detail="Файл не удалось прочитать. Попробуйте прикрепить ещё раз",
+            )
     async with async_session_maker() as db:
         thread = await get_thread_by_id(db, thread_id)
         if not thread:
@@ -308,20 +325,29 @@ def _form_text(form, key: str) -> str:
 
 
 async def _parse_form(request: Request):
+    max_part = 16 * 1024 * 1024
     try:
-        return await request.form(max_files=20, max_fields=40)
+        return await request.form(
+            max_files=20,
+            max_fields=40,
+            max_part_size=max_part,
+        )
     except TypeError:
-        return await request.form()
+        try:
+            return await request.form(max_files=20, max_fields=40)
+        except TypeError:
+            return await request.form()
 
 
 def _uploads_from_form(form) -> list[UploadFile]:
     items: list[UploadFile] = []
     seen: set[int] = set()
     values: list[Any] = []
+    if hasattr(form, "getlist"):
+        values.extend(list(form.getlist("files") or []))
+        values.extend(list(form.getlist("file") or []))
     if hasattr(form, "multi_items"):
-        values = [value for _key, value in form.multi_items()]
-    else:
-        values = list(form.getlist("files") or [])
+        values.extend(value for _key, value in form.multi_items())
     for value in values:
         if not isinstance(value, UploadFile):
             continue
@@ -331,6 +357,20 @@ def _uploads_from_form(form) -> list[UploadFile]:
         seen.add(ident)
         items.append(value)
     return items
+
+
+def _pick_upload_filename(preferred: str | None, fallback: str) -> str:
+    fallback = fallback or "file"
+    preferred = (preferred or "").strip()
+    if not preferred:
+        return fallback
+    pref_ext = _ext(_safe_filename(preferred))
+    fall_ext = _ext(fallback)
+    if pref_ext in ALLOWED_EXT:
+        return preferred
+    if not pref_ext and fall_ext:
+        return preferred + fall_ext
+    return fallback
 
 
 async def _read_form_uploads(form) -> list[tuple[str, bytes, str | None]]:
@@ -343,7 +383,7 @@ async def _read_form_uploads(form) -> list[tuple[str, bytes, str | None]]:
     if not names:
         return uploads
     return [
-        (names[idx] if idx < len(names) and names[idx] else name, data, ctype)
+        (_pick_upload_filename(names[idx] if idx < len(names) else None, name), data, ctype)
         for idx, (name, data, ctype) in enumerate(uploads)
     ]
 
@@ -360,8 +400,13 @@ async def _read_uploads(files) -> list[tuple[str, bytes, str | None]]:
         if not isinstance(upload, UploadFile):
             continue
         filename = upload.filename or "file"
+        try:
+            await upload.seek(0)
+        except Exception:
+            pass
         data = await upload.read()
         if not data:
+            logger.warning("support upload skipped empty filename={}", filename)
             continue
         uploads.append((filename, data, upload.content_type))
         if len(uploads) > MAX_FILES:

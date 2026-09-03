@@ -127,6 +127,7 @@
             </div>
         </div>
 
+        {% if not web_standalone_mode|default(false) %}
         <div id="supportModal" class="modal">
             <div class="modal-content">
                 <h2>Техническая поддержка</h2>
@@ -138,6 +139,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 
     <div id="msgModalOverlay" class="msg-modal-overlay">

@@ -305,11 +305,21 @@ async def mark_read(session, thread: WebSupportThread, *, is_admin: bool) -> Non
     await session.flush()
 
 
-def validate_upload(filename: str, size: int) -> str | None:
+def _ext_from_content_type(content_type: str | None) -> str:
+    ctype = (content_type or "").lower().split(";", 1)[0].strip()
+    guessed = mimetypes.guess_extension(ctype) or ""
+    if guessed in (".jpe", ".jpeg"):
+        return ".jpg"
+    return guessed
+
+
+def validate_upload(filename: str, size: int, content_type: str | None = None) -> str | None:
     name = _safe_filename(filename)
     ext = _ext(name)
     if ext not in ALLOWED_EXT:
-        return f"Тип файла не поддерживается: {name}"
+        ctype = (content_type or "").lower()
+        if not ctype.startswith("image/"):
+            return f"Тип файла не поддерживается: {name}"
     if size <= 0:
         return f"Пустой файл: {name}"
     if size > MAX_FILE_BYTES:
@@ -340,10 +350,14 @@ async def add_message(
     prepared: list[tuple[str, str, str, bytes]] = []
     for raw_name, data, ctype in files:
         filename = _safe_filename(raw_name)
-        err = validate_upload(filename, len(data))
+        err = validate_upload(filename, len(data), ctype)
         if err:
             raise ValueError(err)
         ext = _ext(filename)
+        if ext not in ALLOWED_EXT:
+            ext = _ext_from_content_type(ctype) or ".png"
+            if not filename.lower().endswith(ext):
+                filename = f"{filename}{ext}"
         stored = f"{uuid.uuid4().hex}{ext}"
         guessed = ctype or mimetypes.guess_type(filename)[0] or "application/octet-stream"
         prepared.append((filename, stored, guessed, data))

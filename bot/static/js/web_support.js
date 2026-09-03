@@ -157,6 +157,24 @@
         return data;
     }
 
+    async function blobFromFile(file) {
+        if (!file) return null;
+        if (typeof file.arrayBuffer === 'function') {
+            try {
+                var buf = await file.arrayBuffer();
+                if (buf && buf.byteLength) {
+                    return new Blob([buf], { type: file.type || 'application/octet-stream' });
+                }
+            } catch (e) {}
+        }
+        if (file.size) {
+            try {
+                return new Blob([file], { type: file.type || 'application/octet-stream' });
+            } catch (e) {}
+        }
+        return null;
+    }
+
     async function sendForm(url, text, files, extra) {
         var form = new FormData();
         form.append('text', text || '');
@@ -165,14 +183,16 @@
             form.append(key, extra[key]);
         });
         var attached = 0;
-        Array.prototype.forEach.call(files || [], function (file, i) {
-            var copy = cloneFile(file);
-            if (!copy || !copy.size) return;
-            var name = uniqueUploadName(copy, i);
-            form.append('files', copy, name);
-            form.append('file_names', copy.name || name);
+        var list = Array.prototype.slice.call(files || []);
+        for (var i = 0; i < list.length; i++) {
+            var file = list[i];
+            var blob = await blobFromFile(file);
+            if (!blob || !blob.size) continue;
+            var name = uniqueUploadName(file, i);
+            form.append('files', blob, name);
+            form.append('file_names', file && file.name ? file.name : name);
             attached += 1;
-        });
+        }
         if (!String(text || '').trim() && !attached) {
             throw new Error('Нужен текст или файл');
         }
@@ -194,22 +214,21 @@
 
     function uniqueUploadName(file, index) {
         var raw = String((file && file.name) || 'file').split(/[/\\]/).pop() || 'file';
-        var ext = fileExt(raw);
-        var base = ext ? raw.slice(0, -ext.length) : raw;
+        var ext = fileExt(raw) || extFromMime(file && file.type);
+        var base = ext && raw.toLowerCase().slice(-ext.length) === ext ? raw.slice(0, -ext.length) : raw;
         base = base.replace(/[^\w.\-()+ ]+/g, '_').slice(0, 80) || 'file';
         return base + '-' + index + '-' + Date.now() + ext;
     }
 
-    function cloneFile(file) {
-        if (!file) return null;
-        try {
-            return new File([file], file.name || 'file', {
-                type: file.type || 'application/octet-stream',
-                lastModified: file.lastModified || Date.now(),
-            });
-        } catch (e) {
-            return file;
-        }
+    function extFromMime(type) {
+        var mime = String(type || '').toLowerCase();
+        if (mime.indexOf('jpeg') >= 0) return '.jpg';
+        if (mime.indexOf('png') >= 0) return '.png';
+        if (mime.indexOf('gif') >= 0) return '.gif';
+        if (mime.indexOf('webp') >= 0) return '.webp';
+        if (mime.indexOf('bmp') >= 0) return '.bmp';
+        if (mime.indexOf('pdf') >= 0) return '.pdf';
+        return '';
     }
 
     function isAllowedFile(file) {
@@ -330,14 +349,13 @@
             incoming.forEach(function (raw) {
                 if (next.length >= MAX_ATTACH) return;
                 var file = normalizeFile(raw);
-                if (!file || !isAllowedFile(file)) return;
-                var copy = cloneFile(file);
-                if (!copy || !copy.size) return;
+                if (!file || !file.size || !isAllowedFile(file)) return;
                 var dup = next.some(function (item) {
-                    return item === copy || item === file || item === raw;
+                    return item === file || item === raw ||
+                        (item.name === file.name && item.size === file.size && item.lastModified === file.lastModified);
                 });
                 if (dup) return;
-                next.push(copy);
+                next.push(file);
             });
             var added = next.length - selected.length;
             selected = next;
@@ -430,8 +448,8 @@
         var panel = $('#supportPanel');
         var fab = $('#supportFab');
         if (!panel || !fab) return;
-        var box = $('#supportMessages');
-        var closeBtn = $('#supportPanelClose');
+        var box = $('#supportMessages', panel);
+        var closeBtn = $('#supportPanelClose', panel);
         var open = false;
         var loaded = false;
 
@@ -449,12 +467,12 @@
         if (closeBtn) closeBtn.addEventListener('click', function () { setOpen(false); });
 
         var composer = bindComposer({
-            textEl: $('#supportText'),
-            fileEl: $('#supportFiles'),
-            chipsEl: $('#supportChips'),
-            statusEl: $('#supportStatus'),
-            sendBtn: $('#supportSend'),
-            attachBtn: $('#supportAttach'),
+            textEl: $('#supportText', panel),
+            fileEl: $('#supportFiles', panel),
+            chipsEl: $('#supportChips', panel),
+            statusEl: $('#supportStatus', panel),
+            sendBtn: $('#supportSend', panel),
+            attachBtn: $('#supportAttach', panel),
             dropRoot: panel,
             url: '/web/support/api/thread/messages',
             extra: function () {
@@ -472,7 +490,7 @@
             open: function () {
                 setOpen(true);
                 pollThread(true);
-                var textEl = $('#supportText');
+                var textEl = $('#supportText', panel);
                 if (textEl) {
                     setTimeout(function () { textEl.focus(); }, 0);
                 }

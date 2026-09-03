@@ -1974,8 +1974,18 @@ async function ensureContentEditor() {
         Double64.onload = imageLoaded;
 
         function openSupportModal() {
-            document.getElementById('supportModal').style.display = 'block';
-            document.getElementById('supportText').value = '';
+            if (isWebStandaloneBoardViewer()) {
+                const widget = window.WebSupportWidget;
+                if (widget && typeof widget.open === 'function') {
+                    widget.open();
+                    return;
+                }
+            }
+            const modal = document.getElementById('supportModal');
+            const textEl = document.getElementById('supportText');
+            if (!modal || !textEl) return;
+            modal.style.display = 'block';
+            textEl.value = '';
         }
 
         function closeSupportModal() {
