@@ -1901,6 +1901,9 @@ class HintWebLabelPreset(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
     web_user: Mapped["WebUser"] = relationship(
         "WebUser",
