@@ -42,6 +42,7 @@ WEB_ALLOWED_NEXT = (
     "/web/pip-count",
     "/web/match-analysis",
     "/web/analyze",
+    "/web/support",
 )
 
 

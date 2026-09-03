@@ -1579,6 +1579,11 @@ class WebUser(Base):
         "HintViewerWebUpload",
         back_populates="web_user",
     )
+    support_thread: Mapped[Optional["WebSupportThread"]] = relationship(
+        "WebSupportThread",
+        back_populates="user",
+        uselist=False,
+    )
 
     MAX_SESSIONS_MIN = 1
     MAX_SESSIONS_MAX = 99
@@ -1682,3 +1687,90 @@ class HintViewerWebUpload(Base):
     finished_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+
+class WebSupportAuthorRole(str, enum.Enum):
+    USER = "user"
+    ADMIN = "admin"
+
+
+class WebSupportThread(Base):
+    """Один тред поддержки на веб-аккаунт."""
+
+    __tablename__ = "web_support_threads"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("web_users.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    user: Mapped["WebUser"] = relationship(
+        "WebUser",
+        back_populates="support_thread",
+    )
+    last_message_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
+    last_preview: Mapped[str | None] = mapped_column(String(240), nullable=True)
+    last_author_role: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    user_last_read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    admin_last_read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    messages: Mapped[list["WebSupportMessage"]] = relationship(
+        "WebSupportMessage",
+        back_populates="thread",
+        cascade="all, delete-orphan",
+        order_by="WebSupportMessage.id",
+    )
+
+
+class WebSupportMessage(Base):
+    __tablename__ = "web_support_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    thread_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("web_support_threads.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    thread: Mapped["WebSupportThread"] = relationship(
+        "WebSupportThread",
+        back_populates="messages",
+    )
+    author_role: Mapped[str] = mapped_column(String(10), nullable=False)
+    author_user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    body: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    source_path: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    attachments: Mapped[list["WebSupportAttachment"]] = relationship(
+        "WebSupportAttachment",
+        back_populates="message",
+        cascade="all, delete-orphan",
+    )
+
+
+class WebSupportAttachment(Base):
+    __tablename__ = "web_support_attachments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    message_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("web_support_messages.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    message: Mapped["WebSupportMessage"] = relationship(
+        "WebSupportMessage",
+        back_populates="attachments",
+    )
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    stored_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    s3_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)

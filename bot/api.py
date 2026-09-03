@@ -28,6 +28,7 @@ from bot.routers.autoanalize_web_router import autoanalize_web_api_router
 from bot.routers.match_analysis_router import match_analysis_api_router
 from bot.routers.content_cards_web_router import content_cards_web_api_router
 from bot.routers.short_board import short_board_api_router
+from bot.routers.web_support_router import web_support_api_router
 from bot.flask_admin.appbuilder_main import create_app
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
 from bot.common.service.hint_s3_service import HintS3Storage
@@ -144,6 +145,10 @@ class _SkipHintWebPollAccessLogFilter(logging.Filter):
         "/web/board/api/history",
         "/web/analyze/api/jobs",
         "/web/analyze/api/history",
+        "/web/support/api/unread",
+        "/web/support/api/thread",
+        "/web/support/api/inbox",
+        "/web/support/api/threads/",
     )
 
     def filter(self, record: logging.LogRecord) -> bool:
@@ -322,6 +327,7 @@ app.include_router(pokaz_web_api_router, prefix="")
 app.include_router(autoanalize_web_api_router, prefix="")
 app.include_router(match_analysis_api_router, prefix="")
 app.include_router(content_cards_web_api_router, prefix="")
+app.include_router(web_support_api_router, prefix="")
 app.include_router(short_board_api_router, prefix="")
 
 

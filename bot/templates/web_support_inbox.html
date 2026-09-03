@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Поддержка</title>
+    {% include "includes/web_theme_boot.html" %}
+    <link rel="stylesheet" href="/static/css/web_theme.css?t={{ cache_timestamp }}">
+    <style>
+        * { box-sizing: border-box; }
+        html { overflow-x: hidden; }
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: var(--web-bg);
+            color: var(--web-text);
+            min-height: 100vh;
+        }
+        .wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 16px;
+            padding-left: max(16px, env(safe-area-inset-left));
+            padding-right: max(16px, env(safe-area-inset-right));
+            padding-bottom: max(16px, env(safe-area-inset-bottom));
+        }
+        .support-inbox-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--web-border);
+        }
+        .support-inbox-head strong { font-size: 0.95rem; }
+        .ghost {
+            border: 0;
+            background: var(--web-ghost-bg);
+            color: var(--web-ghost-fg);
+            border-radius: 8px;
+            padding: 8px 10px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        @media (min-width: 721px) {
+            .support-inbox-back { display: none; }
+        }
+    </style>
+    <script src="/static/js/web_theme.js?t={{ cache_timestamp }}" defer></script>
+</head>
+<body>
+    {% include "includes/web_cabinet_header.html" %}
+    <div class="wrap">
+        <div class="support-inbox" id="supportInbox">
+            <div class="support-inbox-list">
+                <div class="support-inbox-search">
+                    <input id="supportInboxSearch" type="search" placeholder="Поиск по логину" autocomplete="off">
+                </div>
+                <div class="support-thread-list" id="supportThreadList">
+                    <div class="support-empty">Загрузка…</div>
+                </div>
+            </div>
+            <div class="support-inbox-chat">
+                <div class="support-inbox-head">
+                    <button type="button" class="ghost support-inbox-back" id="supportInboxBack">К списку</button>
+                    <strong id="supportInboxTitle">Выберите обращение</strong>
+                </div>
+                <div class="support-messages" id="supportInboxMessages">
+                    <div class="support-inbox-placeholder">Слева список обращений пользователей.</div>
+                </div>
+                <div class="support-composer">
+                    <textarea id="supportInboxText" maxlength="4000" placeholder="Ответ пользователю…"></textarea>
+                    <div class="support-file-chips" id="supportInboxChips"></div>
+                    <div class="support-composer-row">
+                        <button type="button" class="support-attach-btn" id="supportInboxAttach">Файл</button>
+                        <button type="button" class="support-send-btn" id="supportInboxSend">Отправить</button>
+                    </div>
+                    <input id="supportInboxFiles" type="file" multiple hidden accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.pdf,.txt,.zip,.mat,.sgf,.csv,.doc,.docx,.xlsx,image/*,application/pdf,application/zip">
+                    <div class="support-status" id="supportInboxStatus"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

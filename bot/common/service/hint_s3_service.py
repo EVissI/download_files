@@ -22,6 +22,7 @@ class HintS3Storage:
     AUTOANALYZE_PREFIX = "autoanalyze"
     CONTENT_CARDS_MEDIA_PREFIX = "content_cards/media"
     MATCH_ANALYSIS_MEDIA_PREFIX = "match_analysis/media"
+    SUPPORT_PREFIX = "web_support"
     CABINET_GALLERY_FOLDER = "cabinet_gallery"
 
     def __init__(self):
@@ -119,6 +120,25 @@ class HintS3Storage:
             return False
         name = parts[3]
         if not name or len(name) > 220 or ".." in name:
+            return False
+        return all(c.isalnum() or c in "._-" for c in name)
+
+    @staticmethod
+    def support_attachment_key(thread_id: int, stored_name: str) -> str:
+        fn = stored_name.replace("\\", "/").split("/")[-1].strip()
+        if not fn or ".." in fn or "/" in fn:
+            fn = "file.bin"
+        return f"{HintS3Storage.SUPPORT_PREFIX}/{int(thread_id)}/{fn}"
+
+    @classmethod
+    def is_support_attachment_key(cls, key: str) -> bool:
+        parts = (key or "").strip().split("/")
+        if len(parts) != 3:
+            return False
+        if parts[0] != cls.SUPPORT_PREFIX or not parts[1].isdigit():
+            return False
+        name = parts[2]
+        if not name or len(name) > 80 or ".." in name:
             return False
         return all(c.isalnum() or c in "._-" for c in name)
 

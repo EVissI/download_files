@@ -71,7 +71,7 @@ class WebUserModelView(ModelView):
     add_columns = ["login", "password", "is_admin", "unlimited", "expires_at", "max_sessions"]
     edit_columns = ["login", "password", "is_admin", "unlimited", "expires_at", "max_sessions"]
     search_columns = ["login"]
-    exclude_columns = ["password_hash", "password_encrypted", "uploads"]
+    exclude_columns = ["password_hash", "password_encrypted", "uploads", "support_thread"]
 
     label_columns = {
         "id": "ID",
