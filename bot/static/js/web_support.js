@@ -161,11 +161,13 @@
         var form = new FormData();
         form.append('text', text || '');
         Object.keys(extra || {}).forEach(function (key) {
-            if (key === 'files' || key === 'file') return;
+            if (key === 'files' || key === 'file' || key === 'file_names') return;
             form.append(key, extra[key]);
         });
         Array.prototype.forEach.call(files || [], function (file, i) {
-            form.append('files', file, uniqueUploadName(file, i));
+            var name = uniqueUploadName(file, i);
+            form.append('files', file, name);
+            form.append('file_names', (file && file.name) || name);
         });
         return api(url, { method: 'POST', body: form });
     }
@@ -284,6 +286,13 @@
             }).join('');
         }
 
+        function removeFile(idx) {
+            if (idx < 0 || idx >= selected.length) return;
+            selected.splice(idx, 1);
+            refreshChips();
+            if (statusEl) statusEl.textContent = '';
+        }
+
         if (chipsEl && !chipsEl.getAttribute('data-chip-bound')) {
             chipsEl.setAttribute('data-chip-bound', '1');
             chipsEl.addEventListener('click', function (e) {
@@ -291,12 +300,7 @@
                 if (!btn) return;
                 e.preventDefault();
                 e.stopPropagation();
-                var idx = Number(btn.getAttribute('data-index'));
-                if (idx >= 0 && idx < selected.length) {
-                    selected.splice(idx, 1);
-                    refreshChips();
-                    if (statusEl) statusEl.textContent = '';
-                }
+                removeFile(Number(btn.getAttribute('data-index')));
             });
         }
 
