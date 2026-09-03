@@ -489,6 +489,7 @@
         const pdfDownload = {{ pdf_download|default(false)|tojson }};
         const sendToHintsEnabled = {{ send_to_hints|default(false)|tojson }};
         const sendToAnalyzeEnabled = {{ send_to_analyze|default(false)|tojson }};
+        const saveMatchAnalysisEnabled = {{ (is_admin|default(false) and (web_service|default('') == 'hints'))|tojson }};
         const enableUserFolders = {{ enable_user_folders|default(false)|tojson }};
         const fileInput = document.getElementById('fileInput');
         const dropzone = document.getElementById('dropzone');
@@ -637,6 +638,11 @@
             return `<button type="button" class="btn ghost history-pdf-btn" data-order-analysis="${escapeHtml(gameId)}">Заказать анализ</button>`;
         }
 
+        function matchAnalysisButton(gameId) {
+            if (!saveMatchAnalysisEnabled || !gameId) return '';
+            return `<button type="button" class="btn ghost history-pdf-btn" data-save-match-analysis="${escapeHtml(gameId)}">Анализ матча</button>`;
+        }
+
         function analyzeFileActions(gameId) {
             if (!gameId) return '';
             const orderNextToHints = sendToHintsEnabled ? orderAnalysisButton(gameId) : '';
@@ -648,7 +654,8 @@
                 return `<a class="btn ghost" href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a>`;
             });
             const extra = analyzeFileActions(gameId) + statsButton(gameId)
-                + (sendToAnalyzeEnabled ? orderAnalysisButton(gameId) : '');
+                + (sendToAnalyzeEnabled ? orderAnalysisButton(gameId) : '')
+                + matchAnalysisButton(gameId);
             if (!links.length && !extra) return '';
             return `<div class="actions open-modes job-file-actions">${links.join('')}${extra}</div>`;
         }
@@ -881,7 +888,7 @@
                 ? ''
                 : openMatchButtons(
                     item.open_links,
-                    item.status === 'done' ? statsButton(gameId) + orderAnalysisButton(gameId) : ''
+                    item.status === 'done' ? statsButton(gameId) + orderAnalysisButton(gameId) + matchAnalysisButton(gameId) : ''
                 );
             const err = item.error_message ? `<div class="muted">${escapeHtml(item.error_message)}</div>` : '';
             const expandable = !nested && !!(historyExpandable && item.expandable && gameId);
@@ -1238,8 +1245,40 @@
             }
         }
 
+        let savingMatchAnalysis = false;
+        async function saveHintsToMatchAnalysis(gameId, btn) {
+            if (!gameId || savingMatchAnalysis) return;
+            savingMatchAnalysis = true;
+            if (btn) btn.disabled = true;
+            try {
+                const res = await fetch(
+                    apiBase + '/api/save-match-analysis?game_id=' + encodeURIComponent(gameId),
+                    { method: 'POST' }
+                );
+                const data = await res.json().catch(() => ({}));
+                if (res.status === 401) { window.location.href = loginUrl; return; }
+                if (!res.ok) {
+                    const detail = data.detail;
+                    const message = typeof detail === 'string'
+                        ? detail
+                        : 'Не удалось сохранить карточку';
+                    showToast(message);
+                    return;
+                }
+                const title = data.title ? String(data.title) : '';
+                showToast(title
+                    ? ('Сохранено в «Анализ матча»: ' + title)
+                    : 'Сохранено в «Анализ матча»');
+            } catch (e) {
+                showToast('Сеть недоступна');
+            } finally {
+                savingMatchAnalysis = false;
+                if (btn) btn.disabled = false;
+            }
+        }
+
         const wrapEl = document.querySelector('.wrap');
-        if (wrapEl && (sendToHintsEnabled || sendToAnalyzeEnabled)) {
+        if (wrapEl && (sendToHintsEnabled || sendToAnalyzeEnabled || saveMatchAnalysisEnabled)) {
             wrapEl.addEventListener('click', (event) => {
                 const hintsBtn = event.target.closest('[data-send-hints]');
                 if (hintsBtn) {
@@ -1260,6 +1299,16 @@
                     event.preventDefault();
                     event.stopPropagation();
                     orderAnalysisToSupport(orderBtn.getAttribute('data-order-analysis'), orderBtn);
+                    return;
+                }
+                const matchAnalysisBtn = event.target.closest('[data-save-match-analysis]');
+                if (matchAnalysisBtn) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    saveHintsToMatchAnalysis(
+                        matchAnalysisBtn.getAttribute('data-save-match-analysis'),
+                        matchAnalysisBtn
+                    );
                 }
             });
         }

@@ -1170,6 +1170,54 @@ async def web_hints_send_to_analyze(request: Request, game_id: str = ""):
         shutil.rmtree(workdir, ignore_errors=True)
 
 
+@hint_viewer_web_api_router.post("/web/hints/api/save-match-analysis")
+async def web_hints_save_match_analysis(request: Request, game_id: str = ""):
+    _token, session = await _require_session(request)
+    if not session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Только для администраторов")
+    user_id = session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Нужна авторизация")
+    gid = (game_id or "").strip()
+    if not gid:
+        raise HTTPException(status_code=400, detail="Нужен game_id")
+    gid = require_public_id(gid, name="game")
+
+    async with async_session_maker() as db:
+        dao = HintViewerWebUploadDAO(db)
+        row = await dao.find_for_user_game(int(user_id), gid, WEB_SERVICE_HINTS)
+    if not row:
+        raise HTTPException(status_code=404, detail="Анализ не найден")
+    if row.status != HintViewerWebUploadStatus.DONE.value:
+        raise HTTPException(status_code=400, detail="Анализ ещё не готов")
+
+    from bot.common.service.web_grant_user import web_grant_user_id
+    from bot.routers.match_analysis_router import save_match_analysis_from_game_id
+
+    grant_uid = int(session.get("web_uid") or web_grant_user_id(int(user_id)))
+    try:
+        result = await save_match_analysis_from_game_id(gid, grant_uid)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404, detail="Анализ не найден в хранилище"
+        )
+    except Exception as exc:
+        logger.exception(
+            "save match analysis from hints failed game_id={}", gid
+        )
+        raise HTTPException(
+            status_code=500, detail="Не удалось сохранить карточку"
+        ) from exc
+    return JSONResponse(
+        {
+            "ok": True,
+            "id": result["id"],
+            "title": result["title"],
+            "cabinet_url": "/match-analysis-cabinet",
+        }
+    )
+
+
 @hint_viewer_web_api_router.post("/web/hints/api/order-analysis")
 async def web_hints_order_analysis(request: Request, game_id: str = ""):
     _token, session = await _require_session(request)
