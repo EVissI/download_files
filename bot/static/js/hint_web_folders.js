@@ -136,7 +136,6 @@
 
     function updateSelectionUi() {
         var ids = historyApi.getSelectedUploadIds ? historyApi.getSelectedUploadIds() : [];
-        if (foldersBtn) foldersBtn.disabled = !ids.length;
         var inFolder = !!historyApi.getFolderId();
         if (removeBtn) {
             removeBtn.hidden = !inFolder;
@@ -428,9 +427,20 @@
         folderActionUploadIds = [];
     }
 
+    function showHint(text) {
+        if (historyApi.showToast) {
+            historyApi.showToast(text);
+            return;
+        }
+        window.alert(text);
+    }
+
     function openActionModal() {
         var ids = historyApi.getSelectedUploadIds();
-        if (!ids.length) return;
+        if (!ids.length) {
+            showHint('Сначала выберите матчи');
+            return;
+        }
         folderActionUploadIds = ids.slice();
         if (actionSubtitle) {
             actionSubtitle.textContent = 'Выбрано файлов: ' + ids.length;
