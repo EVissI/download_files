@@ -125,34 +125,6 @@
             background: var(--web-ghost-hover);
             color: var(--web-text);
         }
-        .btn-stats,
-        .open-modes .btn.btn-stats,
-        .job-file-actions .btn.btn-stats,
-        .history-item-actions .btn.btn-stats {
-            background: #fff;
-            color: var(--web-accent);
-        }
-        .btn-stats:hover,
-        .open-modes .btn.btn-stats:hover,
-        .job-file-actions .btn.btn-stats:hover,
-        .history-item-actions .btn.btn-stats:hover {
-            background: #f3f4f6;
-            color: var(--web-accent-2);
-        }
-        html[data-theme="light"] .btn-stats,
-        html[data-theme="light"] .open-modes .btn.btn-stats,
-        html[data-theme="light"] .job-file-actions .btn.btn-stats,
-        html[data-theme="light"] .history-item-actions .btn.btn-stats {
-            background: var(--web-accent);
-            color: #fff;
-        }
-        html[data-theme="light"] .btn-stats:hover,
-        html[data-theme="light"] .open-modes .btn.btn-stats:hover,
-        html[data-theme="light"] .job-file-actions .btn.btn-stats:hover,
-        html[data-theme="light"] .history-item-actions .btn.btn-stats:hover {
-            background: var(--web-accent-2);
-            color: #fff;
-        }
         .toast {
             position: fixed;
             right: 16px;
@@ -512,11 +484,13 @@
             }[ch]));
         }
 
-        function openMatchButtons(links) {
-            if (!links || !links.length) return '';
-            return `<div class="actions open-modes">${links.map((link) => {
+        function openMatchButtons(links, extraHtml) {
+            const linkBtns = (links || []).map((link) => {
                 return `<a class="btn ghost" href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a>`;
-            }).join('')}</div>`;
+            });
+            const extra = extraHtml || '';
+            if (!linkBtns.length && !extra) return '';
+            return `<div class="actions open-modes">${linkBtns.join('')}${extra}</div>`;
         }
 
         function pdfLink(gameId) {
@@ -532,19 +506,19 @@
 
         function statsButton(gameId) {
             if (!sendToAnalyzeEnabled || !gameId) return '';
-            return `<button type="button" class="btn btn-stats history-pdf-btn" data-send-analyze="${escapeHtml(gameId)}">Статистика</button>`;
+            return `<button type="button" class="btn ghost history-pdf-btn" data-send-analyze="${escapeHtml(gameId)}">Статистика</button>`;
         }
 
         function analyzeFileActions(gameId) {
             if (!gameId) return '';
-            return pdfLink(gameId) + hintsButton(gameId) + statsButton(gameId);
+            return pdfLink(gameId) + hintsButton(gameId);
         }
 
         function fileActionButtons(openLinks, gameId) {
             const links = (openLinks || []).map((link) => {
                 return `<a class="btn ghost" href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a>`;
             });
-            const extra = analyzeFileActions(gameId);
+            const extra = analyzeFileActions(gameId) + statsButton(gameId);
             if (!links.length && !extra) return '';
             return `<div class="actions open-modes job-file-actions">${links.join('')}${extra}</div>`;
         }
@@ -766,9 +740,11 @@
 
         function renderHistoryFile(item, nested) {
             const players = [item.red_player, item.black_player].filter(Boolean).join(' vs ');
-            const open = historyExpandable ? '' : openMatchButtons(item.open_links);
-            const err = item.error_message ? `<div class="muted">${escapeHtml(item.error_message)}</div>` : '';
             const gameId = item.game_id ? String(item.game_id) : '';
+            const open = historyExpandable
+                ? ''
+                : openMatchButtons(item.open_links, item.status === 'done' ? statsButton(gameId) : '');
+            const err = item.error_message ? `<div class="muted">${escapeHtml(item.error_message)}</div>` : '';
             const expandable = !nested && !!(historyExpandable && item.expandable && gameId);
             const isOpen = expandable && openGameIds.has(gameId);
             const extraClass = [
