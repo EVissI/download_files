@@ -42,6 +42,8 @@ from bot.db.models import (
     MessageForNew,
     HintViewerWebUpload,
     HintViewerWebUploadStatus,
+    HintWebFolder,
+    HintWebFolderItem,
     WebUser,
 )
 from sqlalchemy import String, cast, delete, func, insert, literal, not_, or_, select, text
@@ -2900,16 +2902,31 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
             conditions.append(HintViewerWebUpload.service == service)
         return conditions
 
+    def _folder_membership_filter(self, folder_id: int | None):
+        if folder_id is None:
+            return []
+        return [
+            HintViewerWebUpload.id.in_(
+                select(HintWebFolderItem.upload_id).where(
+                    HintWebFolderItem.folder_id == folder_id
+                )
+            )
+        ]
+
     async def list_for_user(
         self,
         user_id: int,
         limit: int = 10,
         offset: int = 0,
         service: str | None = None,
+        folder_id: int | None = None,
     ) -> list[HintViewerWebUpload]:
         result = await self._session.execute(
             select(HintViewerWebUpload)
-            .where(*self._user_service_filter(user_id, service))
+            .where(
+                *self._user_service_filter(user_id, service),
+                *self._folder_membership_filter(folder_id),
+            )
             .order_by(HintViewerWebUpload.id.desc())
             .limit(limit)
             .offset(offset)
@@ -2917,14 +2934,38 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         return list(result.scalars().all())
 
     async def count_for_user(
-        self, user_id: int, service: str | None = None
+        self,
+        user_id: int,
+        service: str | None = None,
+        folder_id: int | None = None,
     ) -> int:
         result = await self._session.execute(
             select(func.count())
             .select_from(HintViewerWebUpload)
-            .where(*self._user_service_filter(user_id, service))
+            .where(
+                *self._user_service_filter(user_id, service),
+                *self._folder_membership_filter(folder_id),
+            )
         )
         return int(result.scalar_one() or 0)
+
+    async def get_owned_upload_ids(
+        self,
+        user_id: int,
+        upload_ids: list[int],
+        service: str | None = "hints",
+    ) -> list[int]:
+        ids = [int(x) for x in upload_ids if x is not None]
+        if not ids:
+            return []
+        result = await self._session.execute(
+            select(HintViewerWebUpload.id).where(
+                *self._user_service_filter(user_id, service),
+                HintViewerWebUpload.id.in_(ids),
+            )
+        )
+        found = {int(x) for x in result.scalars().all()}
+        return [uid for uid in ids if uid in found]
 
     def _history_group_key(self):
         return func.coalesce(
@@ -3146,3 +3187,246 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
                 red_player=red_player,
                 black_player=black_player,
             )
+
+
+class HintWebFolderDAO(BaseDAO[HintWebFolder]):
+    """Персональные папки веб-ошибок: дерево на каждого WebUser."""
+
+    model = HintWebFolder
+
+    def _user_filter(self, user_id: int):
+        return HintWebFolder.user_id == user_id
+
+    async def get_all_folders(self, user_id: int) -> list[HintWebFolder]:
+        result = await self._session.execute(
+            select(HintWebFolder)
+            .where(self._user_filter(user_id))
+            .order_by(
+                HintWebFolder.parent_id.asc().nullsfirst(),
+                HintWebFolder.sort_order.asc(),
+                HintWebFolder.id.asc(),
+            )
+        )
+        return list(result.scalars().all())
+
+    async def get_folder_for_user(
+        self, folder_id: int, user_id: int
+    ) -> HintWebFolder | None:
+        result = await self._session.execute(
+            select(HintWebFolder).where(
+                HintWebFolder.id == folder_id,
+                self._user_filter(user_id),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def next_sort_order(self, user_id: int, parent_id: int | None) -> int:
+        parent_cond = (
+            HintWebFolder.parent_id.is_(None)
+            if parent_id is None
+            else HintWebFolder.parent_id == parent_id
+        )
+        result = await self._session.execute(
+            select(func.coalesce(func.max(HintWebFolder.sort_order), -1)).where(
+                self._user_filter(user_id),
+                parent_cond,
+            )
+        )
+        return int(result.scalar_one() or -1) + 1
+
+    async def create_folder(
+        self,
+        user_id: int,
+        name: str,
+        parent_id: int | None,
+        sort_order: int | None = None,
+    ) -> HintWebFolder:
+        if parent_id is not None:
+            parent = await self.get_folder_for_user(parent_id, user_id)
+            if not parent:
+                raise ValueError("Родительская папка не найдена")
+        order = (
+            sort_order
+            if sort_order is not None
+            else await self.next_sort_order(user_id, parent_id)
+        )
+        folder = HintWebFolder(
+            user_id=user_id,
+            name=name[:255],
+            parent_id=parent_id,
+            sort_order=order,
+        )
+        self._session.add(folder)
+        await self._session.flush()
+        return folder
+
+    async def update_folder(
+        self,
+        folder_id: int,
+        user_id: int,
+        name: str | None = None,
+        sort_order: int | None = None,
+    ) -> HintWebFolder | None:
+        folder = await self.get_folder_for_user(folder_id, user_id)
+        if not folder:
+            return None
+        if name is not None:
+            folder.name = name[:255]
+        if sort_order is not None:
+            folder.sort_order = sort_order
+        folder.updated_at = datetime.now(timezone.utc)
+        await self._session.flush()
+        return folder
+
+    async def move_folder(
+        self,
+        folder_id: int,
+        user_id: int,
+        new_parent_id: int | None,
+        new_sort_order: int | None = None,
+    ) -> HintWebFolder | None:
+        folder = await self.get_folder_for_user(folder_id, user_id)
+        if not folder:
+            return None
+        if new_parent_id is not None:
+            new_parent = await self.get_folder_for_user(new_parent_id, user_id)
+            if not new_parent:
+                raise ValueError("Родительская папка не найдена")
+            if await self._is_descendant(folder_id, new_parent_id, user_id):
+                raise ValueError(
+                    f"Нельзя переместить папку {folder_id} внутрь своего потомка {new_parent_id}"
+                )
+        folder.parent_id = new_parent_id
+        folder.sort_order = (
+            new_sort_order
+            if new_sort_order is not None
+            else await self.next_sort_order(user_id, new_parent_id)
+        )
+        folder.updated_at = datetime.now(timezone.utc)
+        await self._session.flush()
+        return folder
+
+    async def _collect_descendant_folder_ids(
+        self, root_folder_id: int, user_id: int
+    ) -> list[int]:
+        all_folders = await self.get_all_folders(user_id)
+        children_map: dict[int | None, list[int]] = {}
+        for f in all_folders:
+            children_map.setdefault(f.parent_id, []).append(f.id)
+        result: list[int] = []
+        queue: list[int] = list(children_map.get(root_folder_id, []))
+        while queue:
+            current = queue.pop(0)
+            result.append(current)
+            queue.extend(children_map.get(current, []))
+        return result
+
+    async def delete_folder(self, folder_id: int, user_id: int) -> bool:
+        folder = await self.get_folder_for_user(folder_id, user_id)
+        if not folder:
+            return False
+        descendant_ids = await self._collect_descendant_folder_ids(folder_id, user_id)
+        ids_to_delete = descendant_ids + [folder_id]
+        await self._session.execute(
+            delete(HintWebFolder).where(
+                HintWebFolder.user_id == user_id,
+                HintWebFolder.id.in_(ids_to_delete),
+            )
+        )
+        await self._session.flush()
+        return True
+
+    async def _is_descendant(
+        self, ancestor_id: int, candidate_id: int, user_id: int
+    ) -> bool:
+        visited: set[int] = set()
+        current_id: int | None = candidate_id
+        while current_id is not None:
+            if current_id in visited:
+                break
+            visited.add(current_id)
+            if current_id == ancestor_id:
+                return True
+            result = await self._session.execute(
+                select(HintWebFolder.parent_id).where(
+                    HintWebFolder.id == current_id,
+                    self._user_filter(user_id),
+                )
+            )
+            current_id = result.scalar_one_or_none()
+        return False
+
+    async def get_direct_counts(self, user_id: int) -> dict[int, int]:
+        result = await self._session.execute(
+            select(
+                HintWebFolderItem.folder_id,
+                func.count(HintWebFolderItem.id),
+            )
+            .join(HintWebFolder, HintWebFolder.id == HintWebFolderItem.folder_id)
+            .where(HintWebFolder.user_id == user_id)
+            .group_by(HintWebFolderItem.folder_id)
+        )
+        return {int(row[0]): int(row[1]) for row in result.all()}
+
+    async def get_child_folders(
+        self, folder_id: int, user_id: int
+    ) -> list[HintWebFolder]:
+        result = await self._session.execute(
+            select(HintWebFolder)
+            .where(
+                self._user_filter(user_id),
+                HintWebFolder.parent_id == folder_id,
+            )
+            .order_by(HintWebFolder.sort_order.asc(), HintWebFolder.id.asc())
+        )
+        return list(result.scalars().all())
+
+    async def get_folder_upload_ids(self, folder_id: int) -> list[int]:
+        result = await self._session.execute(
+            select(HintWebFolderItem.upload_id)
+            .where(HintWebFolderItem.folder_id == folder_id)
+            .order_by(
+                HintWebFolderItem.sort_order.asc(),
+                HintWebFolderItem.id.asc(),
+            )
+        )
+        return [int(uid) for uid in result.scalars().all() if uid is not None]
+
+    async def add_uploads_to_folder(
+        self, folder_id: int, upload_ids: list[int]
+    ) -> int:
+        existing_ids = set(await self.get_folder_upload_ids(folder_id))
+        added = 0
+        next_order = len(existing_ids)
+        for uid in upload_ids:
+            if uid in existing_ids:
+                continue
+            self._session.add(
+                HintWebFolderItem(
+                    folder_id=folder_id,
+                    upload_id=uid,
+                    sort_order=next_order,
+                )
+            )
+            existing_ids.add(uid)
+            next_order += 1
+            added += 1
+        if added:
+            await self._session.flush()
+        return added
+
+    async def remove_upload_from_folder(
+        self, folder_id: int, upload_id: int
+    ) -> bool:
+        result = await self._session.execute(
+            select(HintWebFolderItem).where(
+                HintWebFolderItem.folder_id == folder_id,
+                HintWebFolderItem.upload_id == upload_id,
+            )
+        )
+        item = result.scalar_one_or_none()
+        if not item:
+            return False
+        await self._session.delete(item)
+        await self._session.flush()
+        return True

@@ -310,6 +310,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
         "dropzone_hint": ".mat или .zip",
         "accept": ".mat,.zip,application/zip",
         "dropzone_title": "Нажмите или перетащите файлы сюда",
+        "enable_user_folders": True,
     }
 
 
@@ -785,6 +786,7 @@ async def list_history_for_user(
     page: int = 1,
     page_size: int = HISTORY_PAGE_SIZE,
     service: str = WEB_SERVICE_HINTS,
+    folder_id: int | None = None,
 ) -> dict[str, Any]:
     empty = {
         "items": [],
@@ -802,10 +804,13 @@ async def list_history_for_user(
     async with async_session_maker() as session:
         dao = HintViewerWebUploadDAO(session)
         group_batches = service == WEB_SERVICE_ANALYZE
+        scoped_folder_id = None if group_batches else folder_id
         if group_batches:
             total = await dao.count_groups_for_user(user_id, service=service)
         else:
-            total = await dao.count_for_user(user_id, service=service)
+            total = await dao.count_for_user(
+                user_id, service=service, folder_id=scoped_folder_id
+            )
         pages = max(1, (total + size - 1) // size) if total else 1
         current = max(1, int(page or 1))
         if current > pages:
@@ -823,7 +828,11 @@ async def list_history_for_user(
                     items.append(_history_item(rows[0]))
         else:
             rows = await dao.list_for_user(
-                user_id, limit=size, offset=offset, service=service
+                user_id,
+                limit=size,
+                offset=offset,
+                service=service,
+                folder_id=scoped_folder_id,
             )
             items = [_history_item(row) for row in rows]
         return {

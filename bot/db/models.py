@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -1579,6 +1580,11 @@ class WebUser(Base):
         "HintViewerWebUpload",
         back_populates="web_user",
     )
+    hint_folders: Mapped[list["HintWebFolder"]] = relationship(
+        "HintWebFolder",
+        back_populates="web_user",
+        cascade="all, delete-orphan",
+    )
     support_thread: Mapped[Optional["WebSupportThread"]] = relationship(
         "WebSupportThread",
         back_populates="user",
@@ -1686,6 +1692,102 @@ class HintViewerWebUpload(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+    folder_items: Mapped[list["HintWebFolderItem"]] = relationship(
+        "HintWebFolderItem",
+        back_populates="upload",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class HintWebFolder(Base):
+    """Персональное дерево папок пользователя в веб-ошибках."""
+
+    __tablename__ = "hint_web_folders"
+    __table_args__ = (
+        Index("ix_hint_web_folders_user_id_parent_id", "user_id", "parent_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("web_users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    parent_id: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("hint_web_folders.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    web_user: Mapped["WebUser"] = relationship(
+        "WebUser",
+        back_populates="hint_folders",
+    )
+    parent: Mapped[Optional["HintWebFolder"]] = relationship(
+        "HintWebFolder",
+        remote_side="HintWebFolder.id",
+        back_populates="children",
+    )
+    children: Mapped[list["HintWebFolder"]] = relationship(
+        "HintWebFolder",
+        back_populates="parent",
+        cascade="all, delete-orphan",
+    )
+    items: Mapped[list["HintWebFolderItem"]] = relationship(
+        "HintWebFolderItem",
+        back_populates="folder",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class HintWebFolderItem(Base):
+    """Привязка записи истории загрузок к папке пользователя."""
+
+    __tablename__ = "hint_web_folder_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "folder_id",
+            "upload_id",
+            name="uq_hint_web_folder_items_folder_id_upload_id",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    folder_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("hint_web_folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    upload_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("hint_viewer_web_uploads.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    folder: Mapped["HintWebFolder"] = relationship(
+        "HintWebFolder",
+        back_populates="items",
+    )
+    upload: Mapped["HintViewerWebUpload"] = relationship(
+        "HintViewerWebUpload",
+        back_populates="folder_items",
+        passive_deletes=True,
     )
 
 
