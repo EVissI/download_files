@@ -327,7 +327,6 @@ async def add_message(
         body=text,
         source_path=source_path,
     )
-    message.created_at = created_at
     session.add(message)
     await session.flush()
 
