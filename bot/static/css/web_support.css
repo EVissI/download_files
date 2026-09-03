@@ -137,6 +137,9 @@ html[data-theme="light"] .support-msg.is-mine {
     color: var(--web-text-muted);
     margin-bottom: 4px;
 }
+.support-msg-source {
+    color: var(--web-text-soft);
+}
 .support-msg-body {
     white-space: pre-wrap;
     overflow-wrap: anywhere;

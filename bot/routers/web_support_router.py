@@ -30,6 +30,7 @@ from bot.common.service.web_support_service import (
     get_thread_by_user,
     list_inbox,
     mark_read,
+    sanitize_source_path,
     serialize_thread_messages,
     serialize_thread_meta,
     user_unread,
@@ -141,6 +142,7 @@ async def web_support_own_thread(
 async def web_support_own_send(
     request: Request,
     text: str = Form(""),
+    source_path: str = Form(""),
     files: list[UploadFile] | None = File(None),
 ):
     _token, session = await _require_session(request)
@@ -168,7 +170,7 @@ async def web_support_own_send(
                 author_role=WebSupportAuthorRole.USER.value,
                 author_login=getattr(login_row, "login", None),
                 body=text,
-                source_path=None,
+                source_path=sanitize_source_path(source_path),
                 files=uploads,
             )
         except ValueError as exc:
@@ -212,7 +214,9 @@ async def web_support_thread_detail(
         login = getattr(getattr(thread, "user", None), "login", None)
         if mark:
             await mark_read(db, thread, is_admin=True)
-        messages = await serialize_thread_messages(db, thread, after_id=after_id)
+        messages = await serialize_thread_messages(
+            db, thread, after_id=after_id, include_source=True
+        )
         meta = serialize_thread_meta(
             thread,
             login=login,

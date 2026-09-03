@@ -51,6 +51,15 @@ ALLOWED_EXT = {
 }
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
 _SOURCE_RE = re.compile(r"^/web(/[A-Za-z0-9._~-]+)*$")
+_SOURCE_TABS = (
+    ("/web/match-analysis", "Анализ матча"),
+    ("/web/pip-count", "Подсчёт пипсов"),
+    ("/web/analyze", "Анализ"),
+    ("/web/board", "Плеер"),
+    ("/web/hints", "Ошибки"),
+    ("/web/pokaz", "Позиция"),
+    ("/web/cards", "Карточки"),
+)
 
 
 def _now() -> datetime:
@@ -73,6 +82,16 @@ def sanitize_source_path(value: str | None) -> str | None:
     if len(path) > 200 or not _SOURCE_RE.match(path):
         return None
     return path
+
+
+def source_tab_label(value: str | None) -> str | None:
+    path = sanitize_source_path(value)
+    if not path:
+        return None
+    for prefix, label in _SOURCE_TABS:
+        if path == prefix or path.startswith(prefix + "/"):
+            return label
+    return None
 
 
 def _safe_filename(name: str | None) -> str:
@@ -142,10 +161,11 @@ def serialize_message(
     message: WebSupportMessage,
     *,
     author_login: str | None,
+    include_source: bool = False,
 ) -> dict[str, Any]:
     created = _aware(getattr(message, "created_at", None))
     raw_attachments = message.__dict__.get("attachments") or []
-    return {
+    payload = {
         "id": message.id,
         "role": message.author_role,
         "author_login": author_login or "",
@@ -153,6 +173,11 @@ def serialize_message(
         "created_at": created.isoformat() if created else None,
         "attachments": [serialize_attachment(att) for att in raw_attachments],
     }
+    if include_source and message.author_role == WebSupportAuthorRole.USER.value:
+        label = source_tab_label(message.source_path)
+        if label:
+            payload["source_tab"] = label
+    return payload
 
 
 async def check_rate_limit(user_id: int) -> tuple[bool, int]:
@@ -239,11 +264,16 @@ async def serialize_thread_messages(
     thread: WebSupportThread,
     *,
     after_id: int = 0,
+    include_source: bool = False,
 ) -> list[dict[str, Any]]:
     messages = await load_messages(session, thread.id, after_id=after_id)
     logins = await _author_logins(session, messages)
     return [
-        serialize_message(msg, author_login=logins.get(int(msg.author_user_id)))
+        serialize_message(
+            msg,
+            author_login=logins.get(int(msg.author_user_id)),
+            include_source=include_source,
+        )
         for msg in messages
     ]
 
@@ -319,12 +349,17 @@ async def add_message(
         prepared.append((filename, stored, guessed, data))
 
     created_at = _now()
+    stored_source = (
+        sanitize_source_path(source_path)
+        if author_role == WebSupportAuthorRole.USER.value
+        else None
+    )
     message = WebSupportMessage(
         thread_id=thread.id,
         author_role=author_role,
         author_user_id=int(author_user_id),
         body=text,
-        source_path=source_path,
+        source_path=stored_source,
     )
     session.add(message)
     await session.flush()

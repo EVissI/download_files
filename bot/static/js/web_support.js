@@ -32,6 +32,10 @@
     function renderMessage(msg, mineRole) {
         var mine = msg.role === mineRole;
         var who = msg.role === 'admin' ? ('Поддержка' + (msg.author_login ? ' · ' + msg.author_login : '')) : (msg.author_login || 'Вы');
+        var meta = escapeHtml(who) + ' · ' + escapeHtml(formatTime(msg.created_at));
+        if (mineRole === 'admin' && msg.role === 'user' && msg.source_tab) {
+            meta += ' · <span class="support-msg-source">' + escapeHtml(msg.source_tab) + '</span>';
+        }
         var files = (msg.attachments || []).map(function (att) {
             if (att.is_image) {
                 return '<a class="support-file-link" href="' + escapeHtml(att.url) + '" target="_blank" rel="noopener">' +
@@ -43,7 +47,7 @@
         }).join('');
         var body = msg.body ? '<div class="support-msg-body">' + escapeHtml(msg.body) + '</div>' : '';
         return '<div class="support-msg ' + (mine ? 'is-mine' : 'is-admin') + '" data-id="' + msg.id + '">' +
-            '<div class="support-msg-meta">' + escapeHtml(who) + ' · ' + escapeHtml(formatTime(msg.created_at)) + '</div>' +
+            '<div class="support-msg-meta">' + meta + '</div>' +
             body +
             (files ? '<div class="support-files">' + files + '</div>' : '') +
             '</div>';
@@ -275,6 +279,9 @@
             sendBtn: $('#supportSend'),
             attachBtn: $('#supportAttach'),
             url: '/web/support/api/thread/messages',
+            extra: function () {
+                return { source_path: location.pathname || '' };
+            },
             onSent: function (message) {
                 if (!box) return;
                 appendMessages(box, [message], 'user');
