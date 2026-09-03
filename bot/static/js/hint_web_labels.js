@@ -204,6 +204,7 @@
             useBtn.addEventListener('click', function () {
                 if (labelDraft.indexOf(preset.value) === -1) labelDraft.push(preset.value);
                 renderEditList();
+                closePresetsModal();
                 if (!editModal || !editModal.classList.contains('is-open')) {
                     if (historyApi.showToast) historyApi.showToast('Пресет: «' + preset.value + '»');
                 }
