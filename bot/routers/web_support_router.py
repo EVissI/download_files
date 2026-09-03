@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Annotated, Any
+from typing import Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from loguru import logger
@@ -144,12 +144,7 @@ async def web_support_own_thread(
 
 
 @web_support_api_router.post("/web/support/api/thread/messages")
-async def web_support_own_send(
-    request: Request,
-    text: str = Form(""),
-    source_path: str = Form(""),
-    files: Annotated[list[UploadFile], File()] = [],
-):
+async def web_support_own_send(request: Request):
     _token, session = await _require_session(request)
     uid = _user_id(session)
     allowed, wait_sec = await check_rate_limit(uid)
@@ -163,7 +158,10 @@ async def web_support_own_send(
             status_code=429,
             detail={"message": "Слишком много сообщений", "wait_text": wait_text},
         )
-    uploads = await _collect_uploads(request, files)
+    form = await _parse_form(request)
+    text = _form_text(form, "text")
+    source_path = _form_text(form, "source_path")
+    uploads = await _read_form_uploads(form)
     async with async_session_maker() as db:
         thread = await get_or_create_thread(db, uid)
         login_row = await db.get(WebUser, uid)
@@ -232,15 +230,12 @@ async def web_support_thread_detail(
 
 
 @web_support_api_router.post("/web/support/api/threads/{thread_id}/messages")
-async def web_support_admin_send(
-    request: Request,
-    thread_id: int,
-    text: str = Form(""),
-    files: Annotated[list[UploadFile], File()] = [],
-):
+async def web_support_admin_send(request: Request, thread_id: int):
     _token, session = await _require_admin(request)
     uid = _user_id(session)
-    uploads = await _collect_uploads(request, files)
+    form = await _parse_form(request)
+    text = _form_text(form, "text")
+    uploads = await _read_form_uploads(form)
     async with async_session_maker() as db:
         thread = await get_thread_by_id(db, thread_id)
         if not thread:
@@ -305,12 +300,18 @@ def _safe_ascii(name: str) -> str:
     return (cleaned or "file")[:180]
 
 
-def _as_upload_list(files) -> list[UploadFile]:
-    if files is None:
-        return []
-    if isinstance(files, UploadFile):
-        return [files]
-    return [item for item in list(files) if isinstance(item, UploadFile)]
+def _form_text(form, key: str) -> str:
+    value = form.get(key)
+    if value is None or isinstance(value, UploadFile):
+        return ""
+    return str(value)
+
+
+async def _parse_form(request: Request):
+    try:
+        return await request.form(max_files=20, max_fields=40)
+    except TypeError:
+        return await request.form()
 
 
 def _uploads_from_form(form) -> list[UploadFile]:
@@ -332,19 +333,13 @@ def _uploads_from_form(form) -> list[UploadFile]:
     return items
 
 
-async def _collect_uploads(
-    request: Request, declared: list[UploadFile] | None
-) -> list[tuple[str, bytes, str | None]]:
-    form = await request.form()
-    items = _as_upload_list(declared)
-    if not items:
-        items = _uploads_from_form(form)
-    uploads = await _read_uploads(items)
+async def _read_form_uploads(form) -> list[tuple[str, bytes, str | None]]:
     names = [
         str(value)
         for value in form.getlist("file_names")
         if not isinstance(value, UploadFile)
     ]
+    uploads = await _read_uploads(_uploads_from_form(form))
     if not names:
         return uploads
     return [

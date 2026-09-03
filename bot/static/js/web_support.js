@@ -164,11 +164,18 @@
             if (key === 'files' || key === 'file' || key === 'file_names') return;
             form.append(key, extra[key]);
         });
+        var attached = 0;
         Array.prototype.forEach.call(files || [], function (file, i) {
-            var name = uniqueUploadName(file, i);
-            form.append('files', file, name);
-            form.append('file_names', (file && file.name) || name);
+            var copy = cloneFile(file);
+            if (!copy || !copy.size) return;
+            var name = uniqueUploadName(copy, i);
+            form.append('files', copy, name);
+            form.append('file_names', copy.name || name);
+            attached += 1;
         });
+        if (!String(text || '').trim() && !attached) {
+            throw new Error('Нужен текст или файл');
+        }
         return api(url, { method: 'POST', body: form });
     }
 
@@ -191,6 +198,18 @@
         var base = ext ? raw.slice(0, -ext.length) : raw;
         base = base.replace(/[^\w.\-()+ ]+/g, '_').slice(0, 80) || 'file';
         return base + '-' + index + '-' + Date.now() + ext;
+    }
+
+    function cloneFile(file) {
+        if (!file) return null;
+        try {
+            return new File([file], file.name || 'file', {
+                type: file.type || 'application/octet-stream',
+                lastModified: file.lastModified || Date.now(),
+            });
+        } catch (e) {
+            return file;
+        }
     }
 
     function isAllowedFile(file) {
@@ -312,11 +331,13 @@
                 if (next.length >= MAX_ATTACH) return;
                 var file = normalizeFile(raw);
                 if (!file || !isAllowedFile(file)) return;
-                var dup = next.indexOf(file) !== -1 || next.some(function (item) {
-                    return item === raw || item === file;
+                var copy = cloneFile(file);
+                if (!copy || !copy.size) return;
+                var dup = next.some(function (item) {
+                    return item === copy || item === file || item === raw;
                 });
                 if (dup) return;
-                next.push(file);
+                next.push(copy);
             });
             var added = next.length - selected.length;
             selected = next;
