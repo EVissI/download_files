@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Annotated, Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from loguru import logger
@@ -148,6 +148,7 @@ async def web_support_own_send(
     request: Request,
     text: str = Form(""),
     source_path: str = Form(""),
+    files: Annotated[list[UploadFile], File()] = [],
 ):
     _token, session = await _require_session(request)
     uid = _user_id(session)
@@ -162,8 +163,7 @@ async def web_support_own_send(
             status_code=429,
             detail={"message": "Слишком много сообщений", "wait_text": wait_text},
         )
-    form = await request.form()
-    uploads = await _read_form_uploads(form)
+    uploads = await _collect_uploads(request, files)
     async with async_session_maker() as db:
         thread = await get_or_create_thread(db, uid)
         login_row = await db.get(WebUser, uid)
@@ -236,11 +236,11 @@ async def web_support_admin_send(
     request: Request,
     thread_id: int,
     text: str = Form(""),
+    files: Annotated[list[UploadFile], File()] = [],
 ):
     _token, session = await _require_admin(request)
     uid = _user_id(session)
-    form = await request.form()
-    uploads = await _read_form_uploads(form)
+    uploads = await _collect_uploads(request, files)
     async with async_session_maker() as db:
         thread = await get_thread_by_id(db, thread_id)
         if not thread:
@@ -305,6 +305,14 @@ def _safe_ascii(name: str) -> str:
     return (cleaned or "file")[:180]
 
 
+def _as_upload_list(files) -> list[UploadFile]:
+    if files is None:
+        return []
+    if isinstance(files, UploadFile):
+        return [files]
+    return [item for item in list(files) if isinstance(item, UploadFile)]
+
+
 def _uploads_from_form(form) -> list[UploadFile]:
     items: list[UploadFile] = []
     seen: set[int] = set()
@@ -324,13 +332,19 @@ def _uploads_from_form(form) -> list[UploadFile]:
     return items
 
 
-async def _read_form_uploads(form) -> list[tuple[str, bytes, str | None]]:
+async def _collect_uploads(
+    request: Request, declared: list[UploadFile] | None
+) -> list[tuple[str, bytes, str | None]]:
+    form = await request.form()
+    items = _as_upload_list(declared)
+    if not items:
+        items = _uploads_from_form(form)
+    uploads = await _read_uploads(items)
     names = [
         str(value)
         for value in form.getlist("file_names")
         if not isinstance(value, UploadFile)
     ]
-    uploads = await _read_uploads(_uploads_from_form(form))
     if not names:
         return uploads
     return [
