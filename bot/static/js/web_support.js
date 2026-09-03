@@ -152,6 +152,9 @@
             window.location.href = loginUrl + '?next=' + encodeURIComponent(location.pathname);
             throw new Error('auth');
         }
+        if (res.status === 413) {
+            throw new Error(tooLargeMessage());
+        }
         var data = {};
         try { data = await res.json(); } catch (e) {}
         if (!res.ok) {
@@ -206,10 +209,21 @@
             files: [],
         };
         var list = Array.prototype.slice.call(files || []);
+        var total = 0;
         for (var i = 0; i < list.length; i++) {
             var file = list[i];
+            if (file && file.size > MAX_FILE_BYTES) {
+                throw new Error(tooLargeMessage());
+            }
             var buf = await readFileBuffer(file);
             if (!buf || !buf.byteLength) continue;
+            if (buf.byteLength > MAX_FILE_BYTES) {
+                throw new Error(tooLargeMessage());
+            }
+            total += buf.byteLength;
+            if (total > MAX_TOTAL_BYTES) {
+                throw new Error('Суммарный размер вложений больше 30 МБ');
+            }
             var name = uniqueUploadName(file, i);
             payload.files.push({
                 name: name,
@@ -234,6 +248,12 @@
         '.doc': 1, '.docx': 1, '.xlsx': 1,
     };
     var MAX_ATTACH = 5;
+    var MAX_FILE_BYTES = 15 * 1024 * 1024;
+    var MAX_TOTAL_BYTES = 30 * 1024 * 1024;
+
+    function tooLargeMessage() {
+        return 'Файл слишком большой (макс. 15 МБ)';
+    }
 
     function fileExt(name) {
         var lower = String(name || '').toLowerCase();
@@ -375,10 +395,15 @@
             var incoming = Array.prototype.slice.call(list || []);
             if (!incoming.length) return;
             var next = selected.slice();
+            var tooLarge = false;
             incoming.forEach(function (raw) {
                 if (next.length >= MAX_ATTACH) return;
                 var file = normalizeFile(raw);
                 if (!file || !file.size || !isAllowedFile(file)) return;
+                if (file.size > MAX_FILE_BYTES) {
+                    tooLarge = true;
+                    return;
+                }
                 var dup = next.some(function (item) {
                     return item === file || item === raw ||
                         (item.name === file.name && item.size === file.size && item.lastModified === file.lastModified);
@@ -391,7 +416,9 @@
             if (fileEl) fileEl.value = '';
             refreshChips();
             if (!statusEl) return;
-            if (!added) {
+            if (tooLarge) {
+                statusEl.textContent = tooLargeMessage();
+            } else if (!added) {
                 statusEl.textContent = selected.length >= MAX_ATTACH
                     ? 'Можно прикрепить не больше ' + MAX_ATTACH + ' файлов'
                     : 'Этот тип файла не поддерживается';
