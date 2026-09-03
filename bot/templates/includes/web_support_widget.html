@@ -16,7 +16,7 @@
         <div class="support-empty">Напишите сообщение — ответит администратор.</div>
     </div>
     <div class="support-composer">
-        <textarea id="supportText" maxlength="4000" placeholder="Опишите вопрос…"></textarea>
+        <textarea id="supportText" maxlength="4000" placeholder="Опишите вопрос… Можно вставить или перетащить файл."></textarea>
         <div class="support-file-chips" id="supportChips"></div>
         <div class="support-composer-row">
             <button type="button" class="support-attach-btn" id="supportAttach">Файл</button>
@@ -25,5 +25,6 @@
         <input id="supportFiles" type="file" multiple hidden accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.pdf,.txt,.zip,.mat,.sgf,.csv,.doc,.docx,.xlsx,image/*,application/pdf,application/zip">
         <div class="support-status" id="supportStatus"></div>
     </div>
+    <div class="support-drop-overlay" id="supportDropOverlay">Перетащите файлы сюда</div>
 </div>
 {% endif %}

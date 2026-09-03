@@ -169,6 +169,96 @@
         return api(url, { method: 'POST', body: form });
     }
 
+    var ALLOWED_EXT = {
+        '.png': 1, '.jpg': 1, '.jpeg': 1, '.gif': 1, '.webp': 1, '.bmp': 1,
+        '.pdf': 1, '.txt': 1, '.zip': 1, '.mat': 1, '.sgf': 1, '.csv': 1,
+        '.doc': 1, '.docx': 1, '.xlsx': 1,
+    };
+    var MAX_ATTACH = 5;
+
+    function fileExt(name) {
+        var lower = String(name || '').toLowerCase();
+        var dot = lower.lastIndexOf('.');
+        return dot >= 0 ? lower.slice(dot) : '';
+    }
+
+    function isAllowedFile(file) {
+        if (!file) return false;
+        if (ALLOWED_EXT[fileExt(file.name)]) return true;
+        return String(file.type || '').indexOf('image/') === 0;
+    }
+
+    function normalizeFile(file) {
+        if (!file) return null;
+        if (file.name) return file;
+        var type = file.type || 'image/png';
+        var ext = '.png';
+        if (type.indexOf('jpeg') >= 0) ext = '.jpg';
+        else if (type.indexOf('gif') >= 0) ext = '.gif';
+        else if (type.indexOf('webp') >= 0) ext = '.webp';
+        else if (type.indexOf('bmp') >= 0) ext = '.bmp';
+        return new File([file], 'screenshot-' + Date.now() + ext, { type: type });
+    }
+
+    function filesFromTransfer(dt) {
+        if (!dt) return [];
+        var out = [];
+        var seen = {};
+        function push(raw) {
+            var file = normalizeFile(raw);
+            if (!file || !isAllowedFile(file)) return;
+            var key = file.name + ':' + file.size + ':' + (file.lastModified || 0);
+            if (seen[key]) return;
+            seen[key] = 1;
+            out.push(file);
+        }
+        if (dt.files && dt.files.length) {
+            Array.prototype.forEach.call(dt.files, push);
+        }
+        if (!out.length && dt.items) {
+            Array.prototype.forEach.call(dt.items, function (item) {
+                if (item && item.kind === 'file') push(item.getAsFile());
+            });
+        }
+        return out;
+    }
+
+    function transferHasFiles(e) {
+        var types = e.dataTransfer && e.dataTransfer.types;
+        if (!types) return false;
+        if (typeof types.contains === 'function') return types.contains('Files');
+        return Array.prototype.indexOf.call(types, 'Files') !== -1;
+    }
+
+    function bindDrop(root, onFiles) {
+        if (!root) return;
+        var depth = 0;
+        root.addEventListener('dragenter', function (e) {
+            if (!transferHasFiles(e)) return;
+            e.preventDefault();
+            depth += 1;
+            root.classList.add('is-drop');
+        });
+        root.addEventListener('dragover', function (e) {
+            if (!transferHasFiles(e)) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        root.addEventListener('dragleave', function () {
+            depth -= 1;
+            if (depth > 0) return;
+            depth = 0;
+            root.classList.remove('is-drop');
+        });
+        root.addEventListener('drop', function (e) {
+            if (!transferHasFiles(e)) return;
+            e.preventDefault();
+            depth = 0;
+            root.classList.remove('is-drop');
+            onFiles(filesFromTransfer(e.dataTransfer));
+        });
+    }
+
     function bindComposer(opts) {
         var textEl = opts.textEl;
         var fileEl = opts.fileEl;
@@ -185,13 +275,52 @@
             }).join('');
         }
 
+        function addFiles(list) {
+            var incoming = Array.prototype.slice.call(list || []);
+            if (!incoming.length) return;
+            var next = selected.slice();
+            incoming.forEach(function (raw) {
+                if (next.length >= MAX_ATTACH) return;
+                var file = normalizeFile(raw);
+                if (!file || !isAllowedFile(file)) return;
+                var dup = next.some(function (item) {
+                    return item.name === file.name
+                        && item.size === file.size
+                        && item.lastModified === file.lastModified;
+                });
+                if (dup) return;
+                next.push(file);
+            });
+            var added = next.length - selected.length;
+            selected = next;
+            if (fileEl) fileEl.value = '';
+            refreshChips();
+            if (!statusEl) return;
+            if (!added) {
+                statusEl.textContent = selected.length >= MAX_ATTACH
+                    ? 'Можно прикрепить не больше ' + MAX_ATTACH + ' файлов'
+                    : 'Этот тип файла не поддерживается';
+            } else {
+                statusEl.textContent = '';
+            }
+        }
+
         if (attachBtn && fileEl) {
             attachBtn.addEventListener('click', function () { fileEl.click(); });
         }
         if (fileEl) {
             fileEl.addEventListener('change', function () {
-                selected = Array.prototype.slice.call(fileEl.files || [], 0, 5);
-                refreshChips();
+                addFiles(fileEl.files);
+            });
+        }
+        bindDrop(opts.dropRoot, addFiles);
+        var pasteRoot = opts.dropRoot || textEl;
+        if (pasteRoot) {
+            pasteRoot.addEventListener('paste', function (e) {
+                var files = filesFromTransfer(e.clipboardData);
+                if (!files.length) return;
+                e.preventDefault();
+                addFiles(files);
             });
         }
 
@@ -278,6 +407,7 @@
             statusEl: $('#supportStatus'),
             sendBtn: $('#supportSend'),
             attachBtn: $('#supportAttach'),
+            dropRoot: panel,
             url: '/web/support/api/thread/messages',
             extra: function () {
                 return { source_path: location.pathname || '' };
