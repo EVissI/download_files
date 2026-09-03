@@ -86,6 +86,7 @@ from bot.routers.web_upload_folder_routes import (
     register_web_upload_folder_routes,
     resolve_scoped_folder_id,
 )
+from bot.routers.web_upload_label_routes import register_web_upload_label_routes
 from bot.db.redis import redis_client
 
 hint_viewer_web_api_router = APIRouter()
@@ -1012,7 +1013,12 @@ async def reconcile_open_hint_history(user_id: int | None) -> None:
 
 
 @hint_viewer_web_api_router.get("/web/hints/api/history")
-async def web_hints_history(request: Request, page: int = 1, folder_id: int | None = None):
+async def web_hints_history(
+    request: Request,
+    page: int = 1,
+    folder_id: int | None = None,
+    label: str | None = None,
+):
     _token, session = await _require_session(request)
     user_id = session.get("user_id")
     scoped_folder_id = None
@@ -1029,6 +1035,7 @@ async def web_hints_history(request: Request, page: int = 1, folder_id: int | No
             page_size=HISTORY_PAGE_SIZE,
             service=WEB_SERVICE_HINTS,
             folder_id=scoped_folder_id,
+            label=label,
         )
         if user_id
         else {
@@ -1043,6 +1050,9 @@ async def web_hints_history(request: Request, page: int = 1, folder_id: int | No
 
 
 register_web_upload_folder_routes(
+    hint_viewer_web_api_router, service=WEB_SERVICE_HINTS, prefix="/web/hints"
+)
+register_web_upload_label_routes(
     hint_viewer_web_api_router, service=WEB_SERVICE_HINTS, prefix="/web/hints"
 )
 

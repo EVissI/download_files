@@ -1,0 +1,192 @@
+.hw-link-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 80;
+}
+.hw-link-modal.is-open {
+    display: flex;
+}
+.hw-link-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+.hw-link-modal__box {
+    position: relative;
+    width: min(92vw, 430px);
+    background: var(--web-bg-card);
+    border: 1px solid var(--web-border);
+    border-radius: 14px;
+    padding: 16px;
+    color: var(--web-text);
+}
+.hw-link-modal__title {
+    margin: 0 0 10px;
+    font-size: 1rem;
+}
+.hw-link-modal__subtitle {
+    margin: 0 0 10px;
+    font-size: 0.85rem;
+    color: var(--web-text-muted);
+}
+.hw-link-modal__msg {
+    min-height: 1.1em;
+    margin: 0 0 8px;
+    font-size: 0.8rem;
+    color: var(--web-text-muted);
+}
+.hw-link-modal__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.hw-link-modal__btn {
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 14px;
+    background: var(--web-ghost-bg);
+    color: var(--web-ghost-fg);
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.hw-link-modal__btn:hover {
+    background: var(--web-ghost-hover);
+}
+.hw-link-modal__btn--primary {
+    background: var(--web-accent);
+    color: #fff;
+}
+.hw-link-modal__btn--primary:hover {
+    background: var(--web-accent-2);
+    color: #fff;
+}
+.history-card-head {
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.history-card-head h2 {
+    margin: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.history-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+}
+.history-label-filter {
+    max-width: 180px;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--web-border);
+    border-radius: 8px;
+    background: var(--web-ghost-bg);
+    color: var(--web-text);
+    font-size: 0.85rem;
+}
+.history-item-labels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-top: 8px;
+}
+.hw-label-chip {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding: 3px 9px;
+    border: 1px solid var(--web-border);
+    border-radius: 999px;
+    background: var(--web-ghost-bg);
+    color: var(--web-text);
+    font-size: 0.78rem;
+    line-height: 1.3;
+    word-break: break-word;
+}
+.hw-label-chip--edit {
+    padding: 4px 8px 4px 10px;
+    gap: 4px;
+}
+.hw-label-chip__remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--web-text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+.hw-label-chip__remove:hover {
+    background: var(--web-ghost-hover);
+    color: var(--web-text);
+}
+.hw-labels-modal__input-row {
+    display: flex;
+    gap: 8px;
+    margin: 0 0 10px;
+}
+.hw-labels-modal__input-row input {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--web-border);
+    border-radius: 8px;
+    background: var(--web-bg);
+    color: var(--web-text);
+    font-size: 0.9rem;
+}
+.hw-labels-modal__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 40px;
+    max-height: 220px;
+    overflow: auto;
+    margin: 0 0 8px;
+}
+.hw-labels-empty {
+    color: var(--web-text-muted);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+.hw-labels-presets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 240px;
+    overflow: auto;
+}
+.hw-labels-preset-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.hw-labels-preset-row button.hw-labels-preset-value {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.hw-labels-preset-row .hw-labels-preset-del {
+    flex-shrink: 0;
+    width: 32px;
+    min-width: 32px;
+    padding: 0;
+}

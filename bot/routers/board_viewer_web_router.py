@@ -36,6 +36,7 @@ from bot.routers.web_upload_folder_routes import (
     register_web_upload_folder_routes,
     resolve_scoped_folder_id,
 )
+from bot.routers.web_upload_label_routes import register_web_upload_label_routes
 
 board_viewer_web_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
@@ -187,7 +188,12 @@ async def web_board_upload(request: Request, files: list[UploadFile] = File(...)
 
 
 @board_viewer_web_api_router.get("/web/board/api/history")
-async def web_board_history(request: Request, page: int = 1, folder_id: int | None = None):
+async def web_board_history(
+    request: Request,
+    page: int = 1,
+    folder_id: int | None = None,
+    label: str | None = None,
+):
     _token, session = await _require_session(request)
     user_id = session.get("user_id")
     scoped_folder_id = None
@@ -202,6 +208,7 @@ async def web_board_history(request: Request, page: int = 1, folder_id: int | No
             page_size=HISTORY_PAGE_SIZE,
             service=WEB_SERVICE_BOARD,
             folder_id=scoped_folder_id,
+            label=label,
         )
         if user_id
         else {
@@ -247,5 +254,8 @@ async def web_board_view(request: Request, game_id: str | None = None):
 
 
 register_web_upload_folder_routes(
+    board_viewer_web_api_router, service=WEB_SERVICE_BOARD, prefix="/web/board"
+)
+register_web_upload_label_routes(
     board_viewer_web_api_router, service=WEB_SERVICE_BOARD, prefix="/web/board"
 )

@@ -1585,6 +1585,16 @@ class WebUser(Base):
         back_populates="web_user",
         cascade="all, delete-orphan",
     )
+    upload_labels: Mapped[list["HintWebUploadLabel"]] = relationship(
+        "HintWebUploadLabel",
+        back_populates="web_user",
+        cascade="all, delete-orphan",
+    )
+    label_presets: Mapped[list["HintWebLabelPreset"]] = relationship(
+        "HintWebLabelPreset",
+        back_populates="web_user",
+        cascade="all, delete-orphan",
+    )
     support_thread: Mapped[Optional["WebSupportThread"]] = relationship(
         "WebSupportThread",
         back_populates="user",
@@ -1699,6 +1709,12 @@ class HintViewerWebUpload(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    user_labels: Mapped[list["HintWebUploadLabel"]] = relationship(
+        "HintWebUploadLabel",
+        back_populates="upload",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
 class HintWebFolder(Base):
@@ -1800,6 +1816,95 @@ class HintWebFolderItem(Base):
         "HintViewerWebUpload",
         back_populates="folder_items",
         passive_deletes=True,
+    )
+
+
+class HintWebUploadLabel(Base):
+    """Персональные метки пользователя на записи истории (ошибки / плеер)."""
+
+    __tablename__ = "hint_web_upload_labels"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "upload_id",
+            name="uq_hint_web_upload_labels_user_id_upload_id",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("web_users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    upload_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("hint_viewer_web_uploads.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    labels: Mapped[list[str]] = mapped_column(
+        ARRAY[str](String(255)),
+        nullable=False,
+        default=list,
+        server_default="{}",
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    web_user: Mapped["WebUser"] = relationship(
+        "WebUser",
+        back_populates="upload_labels",
+    )
+    upload: Mapped["HintViewerWebUpload"] = relationship(
+        "HintViewerWebUpload",
+        back_populates="user_labels",
+        passive_deletes=True,
+    )
+
+
+class HintWebLabelPreset(Base):
+    """Персональные пресеты меток пользователя (отдельно для ошибок и плеера)."""
+
+    __tablename__ = "hint_web_label_presets"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "service",
+            "value",
+            name="uq_hint_web_label_presets_user_id_service_value",
+        ),
+        Index(
+            "ix_hint_web_label_presets_user_id_service",
+            "user_id",
+            "service",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("web_users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    service: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="hints",
+        server_default="hints",
+        index=True,
+    )
+    value: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    web_user: Mapped["WebUser"] = relationship(
+        "WebUser",
+        back_populates="label_presets",
     )
 
 

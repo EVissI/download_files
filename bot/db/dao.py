@@ -44,6 +44,8 @@ from bot.db.models import (
     HintViewerWebUploadStatus,
     HintWebFolder,
     HintWebFolderItem,
+    HintWebLabelPreset,
+    HintWebUploadLabel,
     WebUser,
 )
 from sqlalchemy import String, cast, delete, func, insert, literal, not_, or_, select, text
@@ -2913,6 +2915,19 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
             )
         ]
 
+    def _label_membership_filter(self, user_id: int, label: str | None):
+        text = (label or "").strip()
+        if not text:
+            return []
+        return [
+            HintViewerWebUpload.id.in_(
+                select(HintWebUploadLabel.upload_id).where(
+                    HintWebUploadLabel.user_id == user_id,
+                    HintWebUploadLabel.labels.contains([text]),
+                )
+            )
+        ]
+
     async def list_for_user(
         self,
         user_id: int,
@@ -2920,12 +2935,14 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         offset: int = 0,
         service: str | None = None,
         folder_id: int | None = None,
+        label: str | None = None,
     ) -> list[HintViewerWebUpload]:
         result = await self._session.execute(
             select(HintViewerWebUpload)
             .where(
                 *self._user_service_filter(user_id, service),
                 *self._folder_membership_filter(folder_id),
+                *self._label_membership_filter(user_id, label),
             )
             .order_by(HintViewerWebUpload.id.desc())
             .limit(limit)
@@ -2938,6 +2955,7 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         user_id: int,
         service: str | None = None,
         folder_id: int | None = None,
+        label: str | None = None,
     ) -> int:
         result = await self._session.execute(
             select(func.count())
@@ -2945,6 +2963,7 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
             .where(
                 *self._user_service_filter(user_id, service),
                 *self._folder_membership_filter(folder_id),
+                *self._label_membership_filter(user_id, label),
             )
         )
         return int(result.scalar_one() or 0)
@@ -3457,5 +3476,126 @@ class HintWebFolderDAO(BaseDAO[HintWebFolder]):
         if not item:
             return False
         await self._session.delete(item)
+        await self._session.flush()
+        return True
+
+
+class HintWebLabelDAO(BaseDAO[HintWebUploadLabel]):
+    """Персональные метки и пресеты меток веб-кабинета."""
+
+    model = HintWebUploadLabel
+
+    async def get_labels_map(
+        self, user_id: int, upload_ids: list[int]
+    ) -> dict[int, list[str]]:
+        ids = [int(x) for x in upload_ids if x is not None]
+        if not ids:
+            return {}
+        result = await self._session.execute(
+            select(HintWebUploadLabel.upload_id, HintWebUploadLabel.labels).where(
+                HintWebUploadLabel.user_id == user_id,
+                HintWebUploadLabel.upload_id.in_(ids),
+            )
+        )
+        out: dict[int, list[str]] = {}
+        for upload_id, labels in result.all():
+            out[int(upload_id)] = [str(x) for x in (labels or []) if str(x).strip()]
+        return out
+
+    async def list_all_labels(self, user_id: int, service: str) -> list[str]:
+        result = await self._session.execute(
+            select(HintWebUploadLabel.labels)
+            .join(
+                HintViewerWebUpload,
+                HintViewerWebUpload.id == HintWebUploadLabel.upload_id,
+            )
+            .where(
+                HintWebUploadLabel.user_id == user_id,
+                HintViewerWebUpload.service == (service or "hints"),
+            )
+        )
+        seen: set[str] = set()
+        out: list[str] = []
+        for (labels,) in result.all():
+            for item in labels or []:
+                text = str(item).strip()
+                if text and text not in seen:
+                    seen.add(text)
+                    out.append(text)
+        out.sort(key=lambda x: x.lower())
+        return out
+
+    async def set_labels(
+        self, user_id: int, upload_id: int, labels: list[str]
+    ) -> list[str]:
+        result = await self._session.execute(
+            select(HintWebUploadLabel).where(
+                HintWebUploadLabel.user_id == user_id,
+                HintWebUploadLabel.upload_id == upload_id,
+            )
+        )
+        row = result.scalar_one_or_none()
+        if not labels:
+            if row:
+                await self._session.delete(row)
+                await self._session.flush()
+            return []
+        if row:
+            row.labels = labels
+            row.updated_at = datetime.now(timezone.utc)
+        else:
+            row = HintWebUploadLabel(
+                user_id=user_id,
+                upload_id=upload_id,
+                labels=labels,
+            )
+            self._session.add(row)
+        await self._session.flush()
+        return list(row.labels or [])
+
+    async def list_presets(
+        self, user_id: int, service: str
+    ) -> list[HintWebLabelPreset]:
+        result = await self._session.execute(
+            select(HintWebLabelPreset)
+            .where(
+                HintWebLabelPreset.user_id == user_id,
+                HintWebLabelPreset.service == (service or "hints"),
+            )
+            .order_by(HintWebLabelPreset.value.asc(), HintWebLabelPreset.id.asc())
+        )
+        return list(result.scalars().all())
+
+    async def create_preset(
+        self, user_id: int, service: str, value: str
+    ) -> HintWebLabelPreset:
+        preset = HintWebLabelPreset(
+            user_id=user_id,
+            service=service or "hints",
+            value=value,
+        )
+        self._session.add(preset)
+        await self._session.flush()
+        return preset
+
+    async def get_preset_for_user(
+        self, preset_id: int, user_id: int, service: str
+    ) -> HintWebLabelPreset | None:
+        result = await self._session.execute(
+            select(HintWebLabelPreset).where(
+                HintWebLabelPreset.id == preset_id,
+                HintWebLabelPreset.user_id == user_id,
+                HintWebLabelPreset.service == (service or "hints"),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def delete_preset(
+        self, preset_id: int, user_id: int, service: str
+    ) -> bool:
+        preset = await self.get_preset_for_user(preset_id, user_id, service)
+        if not preset:
+            return False
+        await self._session.delete(preset)
         await self._session.flush()
         return True

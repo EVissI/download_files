@@ -267,6 +267,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
             "accept": ".mat",
             "dropzone_title": "Нажмите или перетащите файл сюда",
             "enable_user_folders": True,
+            "enable_user_labels": True,
         }
     if service == WEB_SERVICE_ANALYZE:
         return {
@@ -312,6 +313,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
         "accept": ".mat,.zip,application/zip",
         "dropzone_title": "Нажмите или перетащите файлы сюда",
         "enable_user_folders": True,
+        "enable_user_labels": True,
     }
 
 
@@ -788,6 +790,7 @@ async def list_history_for_user(
     page_size: int = HISTORY_PAGE_SIZE,
     service: str = WEB_SERVICE_HINTS,
     folder_id: int | None = None,
+    label: str | None = None,
 ) -> dict[str, Any]:
     empty = {
         "items": [],
@@ -799,18 +802,23 @@ async def list_history_for_user(
     if not user_id:
         return empty
     from bot.db.database import async_session_maker
-    from bot.db.dao import HintViewerWebUploadDAO
+    from bot.db.dao import HintViewerWebUploadDAO, HintWebLabelDAO
 
     size = max(1, min(int(page_size or HISTORY_PAGE_SIZE), 50))
+    label_text = (label or "").strip() or None
     async with async_session_maker() as session:
         dao = HintViewerWebUploadDAO(session)
         group_batches = service == WEB_SERVICE_ANALYZE
         scoped_folder_id = None if group_batches else folder_id
+        scoped_label = None if group_batches else label_text
         if group_batches:
             total = await dao.count_groups_for_user(user_id, service=service)
         else:
             total = await dao.count_for_user(
-                user_id, service=service, folder_id=scoped_folder_id
+                user_id,
+                service=service,
+                folder_id=scoped_folder_id,
+                label=scoped_label,
             )
         pages = max(1, (total + size - 1) // size) if total else 1
         current = max(1, int(page or 1))
@@ -834,14 +842,28 @@ async def list_history_for_user(
                 offset=offset,
                 service=service,
                 folder_id=scoped_folder_id,
+                label=scoped_label,
             )
             items = [_history_item(row) for row in rows]
+        upload_ids: list[int] = []
+        for item in items:
+            if item.get("id"):
+                upload_ids.append(int(item["id"]))
+            for nested in item.get("files") or []:
+                if nested.get("id"):
+                    upload_ids.append(int(nested["id"]))
+        labels_map = await HintWebLabelDAO(session).get_labels_map(user_id, upload_ids)
+        for item in items:
+            item["labels"] = list(labels_map.get(item.get("id"), []) or [])
+            for nested in item.get("files") or []:
+                nested["labels"] = list(labels_map.get(nested.get("id"), []) or [])
         return {
             "items": items,
             "page": current,
             "pages": pages,
             "page_size": size,
             "total": total,
+            "label": scoped_label,
         }
 
 

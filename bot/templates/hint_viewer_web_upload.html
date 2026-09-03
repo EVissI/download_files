@@ -9,6 +9,9 @@
     {% if enable_user_folders|default(false) %}
     <link rel="stylesheet" href="/static/css/hint_web_folders.css?t={{ cache_timestamp }}">
     {% endif %}
+    {% if enable_user_labels|default(false) %}
+    <link rel="stylesheet" href="/static/css/hint_web_labels.css?t={{ cache_timestamp }}">
+    {% endif %}
     <style>
         * { box-sizing: border-box; }
         html { overflow-x: hidden; }
@@ -366,11 +369,19 @@
         <div class="card">
             <div class="card-head history-card-head">
                 <h2 id="historyCardTitle">История загрузок</h2>
-                {% if enable_user_folders|default(false) %}
+                {% if enable_user_folders|default(false) or enable_user_labels|default(false) %}
                 <div class="history-card-actions">
+                    {% if enable_user_labels|default(false) %}
+                    <select id="historyLabelFilter" class="history-label-filter" title="Фильтр по метке">
+                        <option value="">Все метки</option>
+                    </select>
+                    <button type="button" class="ghost" id="manageLabelPresetsBtn">Пресеты</button>
+                    {% endif %}
+                    {% if enable_user_folders|default(false) %}
                     <button type="button" class="ghost" id="historyRemoveFromFolderBtn" hidden>Убрать из папки</button>
                     <button type="button" class="ghost" id="historyFoldersBtn">Папки</button>
                     <button type="button" class="ghost" id="manageFoldersBtn">Список папок</button>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
@@ -478,6 +489,43 @@
         </div>
     </div>
     {% endif %}
+    {% if enable_user_labels|default(false) %}
+    <div id="fileLabelsModal" class="hw-link-modal" aria-hidden="true">
+        <div id="fileLabelsModalOverlay" class="hw-link-modal__overlay"></div>
+        <div class="hw-link-modal__box" role="dialog" aria-modal="true" aria-labelledby="fileLabelsModalTitle">
+            <div class="card-labels-modal-header-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <h3 id="fileLabelsModalTitle" class="hw-link-modal__title" style="margin:0;text-align:left;">Метки файла</h3>
+                <button id="fileLabelsOpenPresetsBtn" type="button" class="ghost">Пресеты</button>
+            </div>
+            <div class="hw-labels-modal__input-row">
+                <input id="fileLabelsModalInput" type="text" maxlength="255" placeholder="Введите метку и нажмите Enter" autocomplete="off">
+                <button id="fileLabelsModalAddBtn" type="button" class="hw-link-modal__btn">Добавить</button>
+            </div>
+            <div id="fileLabelsModalList" class="hw-labels-modal__list"></div>
+            <p id="fileLabelsModalMsg" class="hw-link-modal__msg"></p>
+            <div class="hw-link-modal__actions">
+                <button id="fileLabelsModalCancelBtn" type="button" class="hw-link-modal__btn">Отмена</button>
+                <button id="fileLabelsModalSaveBtn" type="button" class="hw-link-modal__btn hw-link-modal__btn--primary">Сохранить</button>
+            </div>
+        </div>
+    </div>
+    <div id="labelPresetsModal" class="hw-link-modal" aria-hidden="true">
+        <div id="labelPresetsModalOverlay" class="hw-link-modal__overlay"></div>
+        <div class="hw-link-modal__box" role="dialog" aria-modal="true" aria-labelledby="labelPresetsModalTitle">
+            <h3 id="labelPresetsModalTitle" class="hw-link-modal__title">Пресеты меток</h3>
+            <p class="hw-link-modal__subtitle">Нажмите пресет — он добавится к меткам открытого файла. Список свой у каждого аккаунта.</p>
+            <div class="hw-labels-modal__input-row">
+                <input id="labelPresetsModalInput" type="text" maxlength="255" placeholder="Новый пресет" autocomplete="off">
+                <button id="labelPresetsModalAddBtn" type="button" class="hw-link-modal__btn">Сохранить</button>
+            </div>
+            <p id="labelPresetsModalMsg" class="hw-link-modal__msg"></p>
+            <div id="labelPresetsModalList" class="hw-labels-presets-list"></div>
+            <div class="hw-link-modal__actions">
+                <button id="labelPresetsModalCloseBtn" type="button" class="hw-link-modal__btn">Закрыть</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     <div class="toast" id="toast"></div>
     <script>
         const apiBase = {{ api_base|default('/web/hints')|tojson }};
@@ -491,6 +539,7 @@
         const sendToAnalyzeEnabled = {{ send_to_analyze|default(false)|tojson }};
         const saveMatchAnalysisEnabled = {{ (is_admin|default(false) and (web_service|default('') == 'hints'))|tojson }};
         const enableUserFolders = {{ enable_user_folders|default(false)|tojson }};
+        const enableUserLabels = {{ enable_user_labels|default(false)|tojson }};
         const fileInput = document.getElementById('fileInput');
         const dropzone = document.getElementById('dropzone');
         const fileList = document.getElementById('fileList');
@@ -823,10 +872,15 @@
         const historyPagerEl = document.getElementById('historyPager');
         let historyPage = 1;
         let historyFolderId = null;
+        let historyLabelFilter = '';
         if (enableUserFolders) {
             const rawFolderId = new URLSearchParams(window.location.search).get('folder_id');
             const parsedFolderId = parseInt(rawFolderId, 10);
             if (parsedFolderId > 0) historyFolderId = parsedFolderId;
+        }
+        if (enableUserLabels) {
+            const rawLabel = (new URLSearchParams(window.location.search).get('label') || '').trim();
+            if (rawLabel) historyLabelFilter = rawLabel;
         }
         const loadedTables = {};
         const loadedBatches = {};
@@ -881,6 +935,14 @@
             });
         }
 
+        function historyLabelsHtml(item) {
+            if (!enableUserLabels || !item || !item.id) return '';
+            const labels = Array.isArray(item.labels) ? item.labels : [];
+            const chips = labels.map((label) => `<span class="hw-label-chip">${escapeHtml(label)}</span>`).join('');
+            const encoded = escapeHtml(JSON.stringify(labels));
+            return `<div class="history-item-labels">${chips}<button type="button" class="btn ghost history-pdf-btn" data-edit-labels="${item.id}" data-labels="${encoded}">Метки</button></div>`;
+        }
+
         function renderHistoryFile(item, nested) {
             const players = [item.red_player, item.black_player].filter(Boolean).join(' vs ');
             const gameId = item.game_id ? String(item.game_id) : '';
@@ -921,6 +983,7 @@
                         <div class="muted">${escapeHtml(players || '—')} · ${historyStatusLabel(item.status)}</div>
                         ${err}
                         ${open}
+                        ${historyLabelsHtml(item)}
                     </div>
                     <div class="history-item-actions">${pdf}${chevron}</div>
                 </div>
@@ -1133,6 +1196,9 @@
                 if (enableUserFolders && historyFolderId) {
                     url += '&folder_id=' + encodeURIComponent(historyFolderId);
                 }
+                if (enableUserLabels && historyLabelFilter) {
+                    url += '&label=' + encodeURIComponent(historyLabelFilter);
+                }
                 const res = await fetch(url);
                 if (res.status === 401) { window.location.href = loginUrl; return; }
                 const data = await res.json();
@@ -1330,7 +1396,7 @@
 
         if (historyEl && historyExpandable) {
             historyEl.addEventListener('click', (event) => {
-                if (event.target.closest('a, button, .history-item-select, input')) return;
+                if (event.target.closest('a, button, .history-item-select, .history-item-labels, input')) return;
                 const head = event.target.closest('.history-item-head');
                 if (!head) return;
                 const item = head.parentElement;
@@ -1354,11 +1420,18 @@
             apiBase,
             loginUrl,
             enableUserFolders,
+            enableUserLabels,
             pollHistory,
             getFolderId() { return historyFolderId; },
             setFolderId(id, skipPoll) {
                 const next = id ? parseInt(id, 10) : null;
                 historyFolderId = next > 0 ? next : null;
+                historyPage = 1;
+                if (!skipPoll) pollHistory();
+            },
+            getLabelFilter() { return historyLabelFilter || ''; },
+            setLabelFilter(label, skipPoll) {
+                historyLabelFilter = (label || '').trim();
                 historyPage = 1;
                 if (!skipPoll) pollHistory();
             },
@@ -1414,6 +1487,9 @@
     </script>
     {% if enable_user_folders|default(false) %}
     <script src="/static/js/hint_web_folders.js?t={{ cache_timestamp }}"></script>
+    {% endif %}
+    {% if enable_user_labels|default(false) %}
+    <script src="/static/js/hint_web_labels.js?t={{ cache_timestamp }}"></script>
     {% endif %}
 </body>
 </html>
