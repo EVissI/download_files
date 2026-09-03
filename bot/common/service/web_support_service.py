@@ -359,9 +359,15 @@ async def add_message(
     else:
         thread.user_last_read_at = created_at
     await session.flush()
-    message.attachments = attachments
-    payload = serialize_message(message, author_login=author_login)
-    payload["created_at"] = created_at.isoformat()
+    payload = {
+        "id": message.id,
+        "role": author_role,
+        "author_login": author_login or "",
+        "body": text,
+        "source_path": source_path,
+        "created_at": created_at.isoformat(),
+        "attachments": [serialize_attachment(att) for att in attachments],
+    }
     await session.commit()
     return payload
 
