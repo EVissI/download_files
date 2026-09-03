@@ -105,14 +105,17 @@ html[data-theme="light"] .hw-hint__arrow {
 }
 
 .folder-view-bar {
-    display: none;
+    display: flex;
     flex-wrap: wrap;
     gap: 8px;
     align-items: center;
     margin: 0 0 12px;
 }
-.folder-view-bar.is-visible {
+.folder-view-bar__navs {
     display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    flex-shrink: 0;
 }
 .folder-view-bar__subfolders {
     display: flex;
@@ -132,6 +135,9 @@ html[data-theme="light"] .hw-hint__arrow {
     cursor: pointer;
 }
 .folder-view-bar__nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 36px;
     height: 36px;
     min-width: 36px;
@@ -139,8 +145,15 @@ html[data-theme="light"] .hw-hint__arrow {
     flex-shrink: 0;
 }
 .folder-view-bar__chip:hover,
-.folder-view-bar__nav:hover {
+.folder-view-bar__nav:hover:not(:disabled) {
     background: var(--web-ghost-hover);
+}
+.folder-view-bar__nav:disabled,
+.folder-view-bar__nav:disabled:hover {
+    opacity: 0.4;
+    cursor: default;
+    background: var(--web-ghost-bg);
+    color: var(--web-ghost-fg);
 }
 
 .hw-link-modal {

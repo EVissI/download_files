@@ -21,7 +21,11 @@
     var titleEl = document.getElementById('historyCardTitle');
     var folderViewBar = document.getElementById('folderViewBar');
     var folderViewSubfolders = document.getElementById('folderViewSubfolders');
+    var folderViewBackBtn = document.getElementById('folderViewBackBtn');
+    var folderViewHomeBtn = document.getElementById('folderViewHomeBtn');
     var folderViewUpBtn = document.getElementById('folderViewUpBtn');
+    var folderNavStack = [];
+    var FOLDER_NAV_STACK_MAX = 50;
 
     var actionModal = document.getElementById('folderActionModal');
     var actionSubtitle = document.getElementById('folderActionModalSubtitle');
@@ -144,34 +148,91 @@
         }
     }
 
-    function navigateToFolder(folderId, replace) {
-        writeFolderIdToUrl(folderId, replace);
-        historyApi.setFolderId(folderId);
+    function normalizeFolderId(folderId) {
+        if (folderId == null || folderId === '') return null;
+        var n = parseInt(folderId, 10);
+        return n > 0 ? n : null;
+    }
+
+    function sameFolderId(a, b) {
+        return normalizeFolderId(a) === normalizeFolderId(b);
+    }
+
+    function pruneNavStack(folderId) {
+        var skip = normalizeFolderId(folderId);
+        if (skip == null) return;
+        folderNavStack = folderNavStack.filter(function (id) {
+            return !sameFolderId(id, skip);
+        });
+    }
+
+    function pushNavState(fromId) {
+        var current = normalizeFolderId(fromId);
+        var last = folderNavStack.length ? folderNavStack[folderNavStack.length - 1] : undefined;
+        if (folderNavStack.length && sameFolderId(last, current)) return;
+        folderNavStack.push(current);
+        if (folderNavStack.length > FOLDER_NAV_STACK_MAX) {
+            folderNavStack.shift();
+        }
+    }
+
+    function updateNavButtons() {
+        var inFolder = !!historyApi.getFolderId();
+        if (folderViewBackBtn) {
+            folderViewBackBtn.disabled = folderNavStack.length === 0;
+        }
+        if (folderViewHomeBtn) {
+            folderViewHomeBtn.disabled = !inFolder;
+        }
+        if (folderViewUpBtn) {
+            folderViewUpBtn.disabled = !inFolder;
+            if (inFolder) {
+                var hasParent = !!(currentFolderMeta && currentFolderMeta.parent && currentFolderMeta.parent.id);
+                folderViewUpBtn.title = hasParent ? 'В родительскую папку' : 'Ко всем загрузкам';
+            } else {
+                folderViewUpBtn.title = 'На уровень выше';
+            }
+            folderViewUpBtn.setAttribute('aria-label', folderViewUpBtn.title);
+        }
+    }
+
+    function navigateToFolder(folderId, replace, fromHistory) {
+        var current = historyApi.getFolderId();
+        var next = normalizeFolderId(folderId);
+        if (!replace && !fromHistory && !sameFolderId(current, next)) {
+            pushNavState(current);
+        }
+        writeFolderIdToUrl(next, replace);
+        historyApi.setFolderId(next);
         loadCurrentFolderView();
         updateSelectionUi();
+        updateNavButtons();
     }
 
     function goHome(replace) {
         currentFolderMeta = null;
         if (titleEl) titleEl.textContent = 'История загрузок';
-        if (folderViewBar) {
-            folderViewBar.classList.remove('is-visible');
-            folderViewBar.setAttribute('aria-hidden', 'true');
-        }
         navigateToFolder(null, replace);
+    }
+
+    function goBack() {
+        if (!folderNavStack.length) return;
+        var prev = folderNavStack.pop();
+        navigateToFolder(prev, false, true);
     }
 
     function renderFolderBar(meta) {
         if (!folderViewBar || !folderViewSubfolders) return;
+        folderViewBar.classList.add('is-visible');
+        folderViewBar.setAttribute('aria-hidden', 'false');
+        folderViewSubfolders.innerHTML = '';
         if (!meta || !meta.folder) {
-            folderViewBar.classList.remove('is-visible');
-            folderViewBar.setAttribute('aria-hidden', 'true');
             if (titleEl) titleEl.textContent = 'История загрузок';
+            updateNavButtons();
             updateSelectionUi();
             return;
         }
         if (titleEl) titleEl.textContent = meta.folder.name || 'Папка';
-        folderViewSubfolders.innerHTML = '';
         (meta.child_folders || []).forEach(function (child) {
             var chip = document.createElement('button');
             chip.type = 'button';
@@ -183,13 +244,7 @@
             });
             folderViewSubfolders.appendChild(chip);
         });
-        if (folderViewUpBtn) {
-            var hasParent = !!(meta.parent && meta.parent.id);
-            folderViewUpBtn.title = hasParent ? 'В родительскую папку' : 'Ко всем загрузкам';
-            folderViewUpBtn.setAttribute('aria-label', folderViewUpBtn.title);
-        }
-        folderViewBar.classList.add('is-visible');
-        folderViewBar.setAttribute('aria-hidden', 'false');
+        updateNavButtons();
         updateSelectionUi();
     }
 
@@ -204,6 +259,7 @@
             currentFolderMeta = data;
             renderFolderBar(data);
         }).catch(function () {
+            pruneNavStack(folderId);
             goHome(true);
         });
     }
@@ -214,12 +270,14 @@
             if (pickModal && pickModal.classList.contains('is-open')) refreshPickList();
             if (createParentModal && createParentModal.classList.contains('is-open')) refreshCreateParentList();
             var currentId = historyApi.getFolderId();
+            if (deletedFolderId != null) pruneNavStack(deletedFolderId);
             if (currentId) {
                 if (deletedFolderId != null && Number(deletedFolderId) === Number(currentId)) {
                     goHome(true);
                     return;
                 }
                 if (!folderExistsInTree(folderTreeData, currentId)) {
+                    pruneNavStack(currentId);
                     goHome(true);
                     return;
                 }
@@ -743,6 +801,15 @@
     });
     window.addEventListener('scroll', hideHint, true);
     window.addEventListener('resize', hideHint);
+    if (folderViewBackBtn) {
+        folderViewBackBtn.addEventListener('click', goBack);
+    }
+    if (folderViewHomeBtn) {
+        folderViewHomeBtn.addEventListener('click', function () {
+            if (!historyApi.getFolderId()) return;
+            goHome(false);
+        });
+    }
     if (folderViewUpBtn) {
         folderViewUpBtn.addEventListener('click', function () {
             var parent = currentFolderMeta && currentFolderMeta.parent;
@@ -750,7 +817,7 @@
                 navigateToFolder(parent.id);
                 return;
             }
-            goHome(false);
+            if (historyApi.getFolderId()) goHome(false);
         });
     }
 
@@ -831,6 +898,7 @@
         historyApi.setFolderId(folderId, true);
         loadCurrentFolderView();
         updateSelectionUi();
+        updateNavButtons();
     });
 
     historyApi.onSelectionChange = updateSelectionUi;
@@ -842,4 +910,5 @@
         loadCurrentFolderView();
     }
     updateSelectionUi();
+    updateNavButtons();
 })();

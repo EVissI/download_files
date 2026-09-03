@@ -375,12 +375,24 @@
                 {% endif %}
             </div>
             {% if enable_user_folders|default(false) %}
-            <div id="folderViewBar" class="folder-view-bar" aria-hidden="true">
-                <button type="button" class="ghost folder-view-bar__nav" id="folderViewUpBtn" title="На уровень выше" aria-label="На уровень выше">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M12 19V6M12 6l-6 6M12 6l6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
+            <div id="folderViewBar" class="folder-view-bar is-visible" aria-hidden="false">
+                <div class="folder-view-bar__navs">
+                    <button type="button" class="ghost folder-view-bar__nav" id="folderViewBackBtn" title="Назад" aria-label="Назад" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M19 12H6M6 12l6-6M6 12l6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button type="button" class="ghost folder-view-bar__nav" id="folderViewHomeBtn" title="Ко всем загрузкам" aria-label="Ко всем загрузкам" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M4 11.2L12 4l8 7.2V20a1 1 0 0 1-1 1h-5.5v-6h-3v6H5a1 1 0 0 1-1-1v-8.8Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button type="button" class="ghost folder-view-bar__nav" id="folderViewUpBtn" title="На уровень выше" aria-label="На уровень выше" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M12 19V6M12 6l-6 6M12 6l6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
                 <div id="folderViewSubfolders" class="folder-view-bar__subfolders"></div>
             </div>
             {% endif %}
