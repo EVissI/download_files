@@ -304,6 +304,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
         "show_current_jobs": True,
         "allow_multiple": True,
         "open_on_upload": False,
+        "send_to_analyze": True,
         "dropzone_hint": ".mat или .zip",
         "accept": ".mat,.zip,application/zip",
         "dropzone_title": "Нажмите или перетащите файлы сюда",

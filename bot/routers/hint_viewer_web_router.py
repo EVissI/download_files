@@ -41,6 +41,7 @@ from bot.common.service.hint_viewer_web_service import (
     COOKIE_NAME,
     HISTORY_PAGE_SIZE,
     SESSION_TTL_SEC,
+    WEB_SERVICE_ANALYZE,
     append_session_job,
     attach_device_cookie,
     authenticate_web_user,
@@ -935,6 +936,81 @@ async def web_download_screenshots(request: Request):
         media_type="application/zip",
         headers={"Content-Disposition": 'attachment; filename="screenshots.zip"'},
     )
+
+
+@hint_viewer_web_api_router.post("/web/hints/api/send-to-analyze")
+async def web_hints_send_to_analyze(request: Request, game_id: str = ""):
+    token, session = await _require_session(request)
+    user_id = session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Нужна авторизация")
+    gid = (game_id or "").strip()
+    if not gid:
+        raise HTTPException(status_code=400, detail="Нужен game_id")
+
+    from bot.db.database import async_session_maker
+    from bot.db.dao import HintViewerWebUploadDAO
+
+    async with async_session_maker() as db:
+        dao = HintViewerWebUploadDAO(db)
+        row = await dao.find_for_user_game(int(user_id), gid, "hints")
+    if not row:
+        raise HTTPException(status_code=404, detail="Анализ не найден")
+
+    s3 = HintS3Storage.from_settings()
+    key = HintS3Storage.mat_key(gid)
+    if not await asyncio.to_thread(s3.exists, key):
+        raise HTTPException(status_code=404, detail="Исходный файл не найден")
+
+    filename = row.original_filename or f"{gid}.mat"
+    if not str(filename).lower().endswith(".mat"):
+        filename = f"{Path(filename).stem}.mat"
+
+    workdir = tempfile.mkdtemp(prefix="hint_to_analyze_")
+    try:
+        local_mat = os.path.join(workdir, filename)
+        await asyncio.to_thread(s3.download_file, key, local_mat)
+
+        from bot.routers.autoanalize_web_router import (
+            _prepare_analyze_file,
+            _push_analyze_work,
+        )
+
+        analyze_game_id = uuid.uuid4().hex
+        job_id = f"web_analyze_{analyze_game_id[:12]}"
+        file_meta, work = await _prepare_analyze_file(
+            src_path=local_mat,
+            filename=filename,
+            token=token,
+            user_id=int(user_id),
+            job_id=job_id,
+            game_id=analyze_game_id,
+            kind="single",
+        )
+        now = datetime.now(timezone.utc).isoformat()
+        job = {
+            "kind": "single",
+            "job_id": job_id,
+            "game_id": analyze_game_id,
+            "filename": filename,
+            "red_player": file_meta["red_player"],
+            "black_player": file_meta["black_player"],
+            "status": HintViewerWebUploadStatus.QUEUED.value,
+            "created_at": now,
+            "expandable": False,
+        }
+        await append_session_job(token, job, WEB_SERVICE_ANALYZE)
+        await _push_analyze_work(work)
+        return JSONResponse({"ok": True, "redirect": "/web/analyze", "job": job})
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("send hint file to analyze failed game_id={}: {}", gid, exc)
+        raise HTTPException(
+            status_code=500, detail="Не удалось отправить файл на анализ"
+        ) from exc
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
 
 
 @hint_viewer_web_api_router.get("/web/hints/view", response_class=HTMLResponse)
