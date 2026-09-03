@@ -1751,6 +1751,9 @@ class HintWebFolder(Base):
         nullable=True,
     )
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    is_shared: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_false()
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -1783,6 +1786,12 @@ class HintWebFolder(Base):
         back_populates="folder",
         uselist=False,
         cascade="all, delete-orphan",
+    )
+    grants: Mapped[list["HintWebFolderGrant"]] = relationship(
+        "HintWebFolderGrant",
+        back_populates="folder",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
 
@@ -1865,6 +1874,48 @@ class HintWebFolderSchedule(Base):
     folder: Mapped["HintWebFolder"] = relationship(
         "HintWebFolder",
         back_populates="schedule",
+    )
+
+
+class HintWebFolderGrant(Base):
+    """Доступ веб-пользователя к общей папке администратора."""
+
+    __tablename__ = "hint_web_folder_grants"
+    __table_args__ = (
+        UniqueConstraint(
+            "folder_id",
+            "user_id",
+            name="uq_hint_web_folder_grants_folder_id_user_id",
+        ),
+        Index("ix_hint_web_folder_grants_user_id", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    folder_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("hint_web_folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("web_users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    granted_by: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("web_users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    folder: Mapped["HintWebFolder"] = relationship(
+        "HintWebFolder",
+        back_populates="grants",
     )
 
 

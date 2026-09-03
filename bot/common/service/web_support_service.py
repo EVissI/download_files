@@ -78,6 +78,7 @@ ALLOWED_EXT = {
 }
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
 _SOURCE_RE = re.compile(r"^/web(/[A-Za-z0-9._~-]+)*$")
+_FOLDER_OPEN_RE = re.compile(r"^/web/(hints|board)/folder/(\d+)$")
 _SOURCE_TABS = (
     ("/web/match-analysis", "Анализ матча"),
     ("/web/pip-count", "Подсчёт пипсов"),
@@ -109,6 +110,16 @@ def sanitize_source_path(value: str | None) -> str | None:
     if len(path) > 200 or not _SOURCE_RE.match(path):
         return None
     return path
+
+
+def folder_open_from_source(value: str | None) -> str | None:
+    path = sanitize_source_path(value)
+    if not path:
+        return None
+    match = _FOLDER_OPEN_RE.match(path)
+    if not match:
+        return None
+    return f"/web/{match.group(1)}?folder_id={match.group(2)}"
 
 
 def source_tab_label(value: str | None) -> str | None:
@@ -200,6 +211,10 @@ def serialize_message(
         "created_at": created.isoformat() if created else None,
         "attachments": [serialize_attachment(att) for att in raw_attachments],
     }
+    folder_open = folder_open_from_source(message.source_path)
+    if folder_open:
+        payload["folder_open_url"] = folder_open
+        payload["folder_open_label"] = "Открыть папку"
     if include_source and message.author_role == WebSupportAuthorRole.USER.value:
         label = source_tab_label(message.source_path)
         if label:
@@ -407,11 +422,7 @@ async def add_message(
         prepared.append((filename, stored, guessed, data))
 
     created_at = _now()
-    stored_source = (
-        sanitize_source_path(source_path)
-        if author_role == WebSupportAuthorRole.USER.value
-        else None
-    )
+    stored_source = sanitize_source_path(source_path)
     message = WebSupportMessage(
         thread_id=thread.id,
         author_role=author_role,

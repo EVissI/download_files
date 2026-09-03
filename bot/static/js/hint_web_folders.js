@@ -80,6 +80,28 @@
         '<rect x="3.5" y="5.5" width="17" height="15" rx="2" stroke="currentColor" stroke-width="1.7"/>' +
         '<path d="M8 3.5v4M16 3.5v4M3.5 10h17" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>' +
         '</svg>';
+    var SHARED_ICON =
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+        '<circle cx="9" cy="8" r="2.4" stroke="currentColor" stroke-width="1.7"/>' +
+        '<path d="M4.5 18c.4-2.6 2.4-4 4.5-4s4.1 1.4 4.5 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>' +
+        '<circle cx="16.2" cy="8.6" r="2" stroke="currentColor" stroke-width="1.7"/>' +
+        '<path d="M15.2 14.2c1.8.2 3.4 1.4 3.8 3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>' +
+        '</svg>';
+    var SEND_ICON =
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+        '<path d="M4 11.5L20 4l-6.8 16-2.4-6.4L4 11.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' +
+        '</svg>';
+    var isAdminUser = !!historyApi.isAdmin;
+    var shareModal = document.getElementById('folderShareModal');
+    var shareSubtitle = document.getElementById('folderShareModalSubtitle');
+    var shareSearchInput = document.getElementById('folderShareSearchInput');
+    var shareMsg = document.getElementById('folderShareModalMsg');
+    var shareTbody = document.getElementById('folderShareUsersTbody');
+    var shareSubmitBtn = document.getElementById('folderShareSubmitBtn');
+    var shareUsers = [];
+    var shareUsersLoaded = false;
+    var selectedShareUserId = null;
+    var sharePending = null;
 
     function folderApi(method, path, body) {
         var opts = {
@@ -172,10 +194,11 @@
     function updateSelectionUi() {
         var ids = historyApi.getSelectedUploadIds ? historyApi.getSelectedUploadIds() : [];
         var inFolder = !!historyApi.getFolderId();
+        var granted = !!(currentFolderMeta && currentFolderMeta.folder && currentFolderMeta.folder.is_granted);
         if (removeBtn) {
-            removeBtn.hidden = !inFolder;
-            removeBtn.setAttribute('aria-hidden', inFolder ? 'false' : 'true');
-            removeBtn.disabled = !inFolder || !ids.length;
+            removeBtn.hidden = !inFolder || granted;
+            removeBtn.setAttribute('aria-hidden', (!inFolder || granted) ? 'true' : 'false');
+            removeBtn.disabled = !inFolder || granted || !ids.length;
         }
     }
 
@@ -267,7 +290,11 @@
             updateSelectionUi();
             return;
         }
-        if (titleEl) titleEl.textContent = meta.folder.name || 'Папка';
+        if (titleEl) {
+            var title = meta.folder.name || 'Папка';
+            if (meta.folder.is_granted) title += ' · общая';
+            titleEl.textContent = title;
+        }
         (meta.child_folders || []).forEach(function (child) {
             var chip = document.createElement('button');
             chip.type = 'button';
@@ -344,14 +371,26 @@
         });
     }
 
+    function ownFolderNodes(nodes) {
+        var out = [];
+        (nodes || []).forEach(function (node) {
+            if (!node || node.is_granted) return;
+            out.push(Object.assign({}, node, {
+                children: ownFolderNodes(node.children || []),
+            }));
+        });
+        return out;
+    }
+
     function refreshPickList() {
         if (!pickTree) return;
         pickTree.innerHTML = '';
-        if (!folderTreeData.length) {
+        var nodes = ownFolderNodes(folderTreeData);
+        if (!nodes.length) {
             pickTree.appendChild(emptyTreeMessage('Папок пока нет. Сначала создайте папку.'));
             return;
         }
-        folderTreeData.forEach(function (node) {
+        nodes.forEach(function (node) {
             pickTree.appendChild(buildPickNode(node));
         });
     }
@@ -359,7 +398,7 @@
     function refreshCreateParentList() {
         if (!createParentTree) return;
         createParentTree.innerHTML = '';
-        folderTreeData.forEach(function (node) {
+        ownFolderNodes(folderTreeData).forEach(function (node) {
             createParentTree.appendChild(buildCreateParentNode(node));
         });
     }
@@ -601,6 +640,126 @@
         });
     }
 
+    function setFolderShareMsg(msg) {
+        if (shareMsg) shareMsg.textContent = msg || '';
+    }
+
+    function closeFolderShareModal() {
+        setOpen(shareModal, false);
+        sharePending = null;
+        selectedShareUserId = null;
+        setFolderShareMsg('');
+        if (shareSubmitBtn) shareSubmitBtn.disabled = false;
+    }
+
+    function renderFolderShareUsers() {
+        if (!shareTbody) return;
+        shareTbody.innerHTML = '';
+        var filterText = String(shareSearchInput ? shareSearchInput.value : '').trim().toLowerCase();
+        var rows = shareUsers.filter(function (row) {
+            if (!filterText) return true;
+            var idText = String((row && row.id) || '');
+            var username = String((row && row.username) || '').toLowerCase();
+            return idText.indexOf(filterText) !== -1 || username.indexOf(filterText) !== -1;
+        });
+        if (!rows.length) {
+            var emptyTr = document.createElement('tr');
+            var emptyTd = document.createElement('td');
+            emptyTd.colSpan = 2;
+            emptyTd.textContent = 'Пользователи не найдены.';
+            emptyTr.appendChild(emptyTd);
+            shareTbody.appendChild(emptyTr);
+            return;
+        }
+        rows.forEach(function (row) {
+            var tr = document.createElement('tr');
+            tr.classList.toggle('is-selected', row.id === selectedShareUserId);
+            tr.addEventListener('click', function () {
+                selectedShareUserId = row.id;
+                setFolderShareMsg('');
+                renderFolderShareUsers();
+            });
+            var idTd = document.createElement('td');
+            idTd.textContent = String(row.id);
+            tr.appendChild(idTd);
+            var loginTd = document.createElement('td');
+            loginTd.textContent = row.username || '—';
+            tr.appendChild(loginTd);
+            shareTbody.appendChild(tr);
+        });
+    }
+
+    function loadFolderShareUsers() {
+        if (shareUsersLoaded) {
+            renderFolderShareUsers();
+            return Promise.resolve();
+        }
+        if (shareSubmitBtn) shareSubmitBtn.disabled = true;
+        return folderApiPost('web_users').then(function (data) {
+            shareUsers = Array.isArray(data && data.users) ? data.users : [];
+            shareUsersLoaded = true;
+            renderFolderShareUsers();
+        }).finally(function () {
+            if (shareSubmitBtn) shareSubmitBtn.disabled = false;
+        });
+    }
+
+    function openFolderShareModal(folderId, folderName) {
+        if (!shareModal || !isAdminUser) return;
+        sharePending = { folderId: folderId, folderName: folderName };
+        selectedShareUserId = null;
+        if (shareSearchInput) shareSearchInput.value = '';
+        if (shareSubtitle) shareSubtitle.textContent = 'Папка «' + folderName + '»';
+        setFolderShareMsg('');
+        setOpen(shareModal, true);
+        loadFolderShareUsers().catch(function (e) {
+            setFolderShareMsg(e && e.message ? e.message : 'Ошибка загрузки списка пользователей');
+        });
+    }
+
+    function submitFolderShare() {
+        if (!sharePending) return;
+        if (!selectedShareUserId) {
+            setFolderShareMsg('Выберите пользователя.');
+            return;
+        }
+        if (shareSubmitBtn) shareSubmitBtn.disabled = true;
+        setFolderShareMsg('Отправка...');
+        folderApiPost('share', {
+            folder_id: sharePending.folderId,
+            target_user_id: selectedShareUserId,
+        }).then(function (data) {
+            closeFolderShareModal();
+            if (manageMsg) {
+                manageMsg.textContent = data && data.already_had
+                    ? 'У пользователя уже есть доступ к этой папке.'
+                    : 'Доступ отправлен.';
+            }
+        }).catch(function (e) {
+            setFolderShareMsg(e.message || String(e));
+            if (shareSubmitBtn) shareSubmitBtn.disabled = false;
+        });
+    }
+
+    function toggleFolderShared(node) {
+        var next = !node.is_shared;
+        folderApiPost('set_shared', {
+            folder_id: node.id,
+            is_shared: next,
+        }).then(function () {
+            return loadFolderTreeData().then(function () {
+                refreshManageList();
+                if (manageMsg) {
+                    manageMsg.textContent = next
+                        ? 'Папка сделана общей.'
+                        : 'Папка больше не общая.';
+                }
+            });
+        }).catch(function (e) {
+            if (manageMsg) manageMsg.textContent = 'Ошибка: ' + (e.message || e);
+        });
+    }
+
     function buildToggle(expandedMap, node, hasChildren, refresh) {
         var toggle = document.createElement('span');
         toggle.className = 'hw-folder-node__toggle';
@@ -697,17 +856,24 @@
         name.className = 'hw-folder-node__name';
         name.textContent = node.name;
         nameWrap.appendChild(name);
-        var renameBtn = document.createElement('button');
-        renameBtn.type = 'button';
-        renameBtn.className = 'hw-folder-node__rename';
-        renameBtn.title = 'Переименовать папку';
-        renameBtn.setAttribute('aria-label', 'Переименовать папку «' + node.name + '»');
-        renameBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4l10.5-10.5a1.4 1.4 0 0 0 0-2L14.5 3.5a1.4 1.4 0 0 0-2 0L3 13v4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13.5 5.5l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
-        renameBtn.addEventListener('click', function (ev) {
-            ev.stopPropagation();
-            openRenameFolderModal(node.id, node.name);
-        });
-        nameWrap.appendChild(renameBtn);
+        if (node.is_granted) {
+            var badge = document.createElement('span');
+            badge.className = 'hw-folder-node__badge';
+            badge.textContent = 'общая';
+            nameWrap.appendChild(badge);
+        } else {
+            var renameBtn = document.createElement('button');
+            renameBtn.type = 'button';
+            renameBtn.className = 'hw-folder-node__rename';
+            renameBtn.title = 'Переименовать папку';
+            renameBtn.setAttribute('aria-label', 'Переименовать папку «' + node.name + '»');
+            renameBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4l10.5-10.5a1.4 1.4 0 0 0 0-2L14.5 3.5a1.4 1.4 0 0 0-2 0L3 13v4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13.5 5.5l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+            renameBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                openRenameFolderModal(node.id, node.name);
+            });
+            nameWrap.appendChild(renameBtn);
+        }
         row.appendChild(nameWrap);
 
         var right = document.createElement('span');
@@ -719,27 +885,55 @@
 
         var actions = document.createElement('span');
         actions.className = 'hw-folder-node__actions';
-        var scheduleBtn = document.createElement('button');
-        scheduleBtn.type = 'button';
-        scheduleBtn.className = 'hw-folder-node__action';
-        if (node.schedule && node.schedule.is_active) {
-            scheduleBtn.className += ' hw-folder-node__action--schedule-active';
+        if (!node.is_granted) {
+            if (isAdminUser) {
+                var sharedBtn = document.createElement('button');
+                sharedBtn.type = 'button';
+                sharedBtn.className = 'hw-folder-node__action' + (node.is_shared ? ' hw-folder-node__action--shared-active' : '');
+                sharedBtn.innerHTML = SHARED_ICON;
+                sharedBtn.title = node.is_shared ? 'Папка общая' : 'Сделать папку общей';
+                sharedBtn.setAttribute('aria-label', sharedBtn.title + ': ' + node.name);
+                sharedBtn.addEventListener('click', function (ev) {
+                    ev.stopPropagation();
+                    toggleFolderShared(node);
+                });
+                actions.appendChild(sharedBtn);
+                if (node.is_shared) {
+                    var sendBtn = document.createElement('button');
+                    sendBtn.type = 'button';
+                    sendBtn.className = 'hw-folder-node__action';
+                    sendBtn.innerHTML = SEND_ICON;
+                    sendBtn.title = 'Отправить доступ';
+                    sendBtn.setAttribute('aria-label', 'Отправить доступ к папке «' + node.name + '»');
+                    sendBtn.addEventListener('click', function (ev) {
+                        ev.stopPropagation();
+                        openFolderShareModal(node.id, node.name);
+                    });
+                    actions.appendChild(sendBtn);
+                }
+            }
+            var scheduleBtn = document.createElement('button');
+            scheduleBtn.type = 'button';
+            scheduleBtn.className = 'hw-folder-node__action';
+            if (node.schedule && node.schedule.is_active) {
+                scheduleBtn.className += ' hw-folder-node__action--schedule-active';
+            }
+            scheduleBtn.innerHTML = CALENDAR_ICON;
+            scheduleBtn.title = node.schedule && node.schedule.is_active
+                ? 'Расписание активно'
+                : 'Настроить расписание';
+            scheduleBtn.setAttribute(
+                'aria-label',
+                (node.schedule && node.schedule.is_active
+                    ? 'Расписание активно: '
+                    : 'Настроить расписание: ') + node.name
+            );
+            scheduleBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                loadFolderScheduleAndOpen(node.id, node.name, node.schedule || null);
+            });
+            actions.appendChild(scheduleBtn);
         }
-        scheduleBtn.innerHTML = CALENDAR_ICON;
-        scheduleBtn.title = node.schedule && node.schedule.is_active
-            ? 'Расписание активно'
-            : 'Настроить расписание';
-        scheduleBtn.setAttribute(
-            'aria-label',
-            (node.schedule && node.schedule.is_active
-                ? 'Расписание активно: '
-                : 'Настроить расписание: ') + node.name
-        );
-        scheduleBtn.addEventListener('click', function (ev) {
-            ev.stopPropagation();
-            loadFolderScheduleAndOpen(node.id, node.name, node.schedule || null);
-        });
-        actions.appendChild(scheduleBtn);
         var goBtn = document.createElement('button');
         goBtn.type = 'button';
         goBtn.className = 'hw-folder-node__action';
@@ -751,21 +945,23 @@
             navigateToFolder(node.id);
         });
         actions.appendChild(goBtn);
-        var delBtn = document.createElement('button');
-        delBtn.type = 'button';
-        delBtn.className = 'hw-folder-node__action hw-folder-node__action--danger';
-        delBtn.title = 'Удалить папку';
-        delBtn.textContent = '×';
-        delBtn.addEventListener('click', function (ev) {
-            ev.stopPropagation();
-            if (!window.confirm('Удалить «' + node.name + '»?')) return;
-            folderApiPost('delete', { folder_id: node.id }).then(function () {
-                return afterFolderStructureChanged(node.id);
-            }).catch(function (e) {
-                if (manageMsg) manageMsg.textContent = 'Ошибка: ' + (e.message || e);
+        if (!node.is_granted) {
+            var delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'hw-folder-node__action hw-folder-node__action--danger';
+            delBtn.title = 'Удалить папку';
+            delBtn.textContent = '×';
+            delBtn.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                if (!window.confirm('Удалить «' + node.name + '»?')) return;
+                folderApiPost('delete', { folder_id: node.id }).then(function () {
+                    return afterFolderStructureChanged(node.id);
+                }).catch(function (e) {
+                    if (manageMsg) manageMsg.textContent = 'Ошибка: ' + (e.message || e);
+                });
             });
-        });
-        actions.appendChild(delBtn);
+            actions.appendChild(delBtn);
+        }
         right.appendChild(actions);
         row.appendChild(right);
         row.addEventListener('click', function (ev) {
@@ -1197,6 +1393,14 @@
     }
     if (scheduleSaveBtn) scheduleSaveBtn.addEventListener('click', submitFolderScheduleSave);
     if (scheduleDeleteBtn) scheduleDeleteBtn.addEventListener('click', submitFolderScheduleDelete);
+    if (document.getElementById('folderShareCancelBtn')) {
+        document.getElementById('folderShareCancelBtn').addEventListener('click', closeFolderShareModal);
+    }
+    if (document.getElementById('folderShareModalOverlay')) {
+        document.getElementById('folderShareModalOverlay').addEventListener('click', closeFolderShareModal);
+    }
+    if (shareSubmitBtn) shareSubmitBtn.addEventListener('click', submitFolderShare);
+    if (shareSearchInput) shareSearchInput.addEventListener('input', renderFolderShareUsers);
 
     window.addEventListener('popstate', function () {
         var folderId = readFolderIdFromUrl();

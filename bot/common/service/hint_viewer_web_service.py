@@ -803,6 +803,7 @@ async def list_history_for_user(
         return empty
     from bot.db.database import async_session_maker
     from bot.db.dao import HintViewerWebUploadDAO, HintWebLabelDAO
+    from bot.db.models import HintWebFolder
 
     size = max(1, min(int(page_size or HISTORY_PAGE_SIZE), 50))
     label_text = (label or "").strip() or None
@@ -811,6 +812,11 @@ async def list_history_for_user(
         group_batches = service == WEB_SERVICE_ANALYZE
         scoped_folder_id = None if group_batches else folder_id
         scoped_label = None if group_batches else label_text
+        skip_owner_filter = False
+        if scoped_folder_id:
+            folder_row = await session.get(HintWebFolder, int(scoped_folder_id))
+            if folder_row and int(folder_row.user_id) != int(user_id):
+                skip_owner_filter = True
         if group_batches:
             total = await dao.count_groups_for_user(user_id, service=service)
         else:
@@ -819,6 +825,7 @@ async def list_history_for_user(
                 service=service,
                 folder_id=scoped_folder_id,
                 label=scoped_label,
+                skip_owner_filter=skip_owner_filter,
             )
         pages = max(1, (total + size - 1) // size) if total else 1
         current = max(1, int(page or 1))
@@ -843,6 +850,7 @@ async def list_history_for_user(
                 service=service,
                 folder_id=scoped_folder_id,
                 label=scoped_label,
+                skip_owner_filter=skip_owner_filter,
             )
             items = [_history_item(row) for row in rows]
         upload_ids: list[int] = []

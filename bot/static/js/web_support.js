@@ -49,7 +49,13 @@
         }).join('');
         var body = msg.body ? '<div class="support-msg-body">' + escapeHtml(msg.body) + '</div>' : '';
         var actions = '';
-        if (mineRole === 'admin' && msg.can_send_to_hints) {
+        if (msg.folder_open_url) {
+            actions = '<div class="support-msg-actions">' +
+                '<a class="support-send-hints-btn support-folder-open-btn" href="' +
+                escapeHtml(msg.folder_open_url) + '">' +
+                escapeHtml(msg.folder_open_label || 'Открыть папку') +
+                '</a></div>';
+        } else if (mineRole === 'admin' && msg.can_send_to_hints) {
             actions = '<div class="support-msg-actions">' +
                 '<button type="button" class="support-send-hints-btn" data-send-to-hints="' +
                 escapeHtml(msg.id) + '">В ошибки</button></div>';

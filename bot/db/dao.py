@@ -43,6 +43,7 @@ from bot.db.models import (
     HintViewerWebUpload,
     HintViewerWebUploadStatus,
     HintWebFolder,
+    HintWebFolderGrant,
     HintWebFolderItem,
     HintWebFolderSchedule,
     HintWebLabelPreset,
@@ -2793,6 +2794,24 @@ class WebUserDAO(BaseDAO[WebUser]):
         )
         return result.scalar_one_or_none()
 
+    async def list_share_targets(self, exclude_user_id: int) -> list[WebUser]:
+        result = await self._session.execute(
+            select(WebUser)
+            .where(WebUser.id != int(exclude_user_id))
+            .order_by(WebUser.login.asc(), WebUser.id.asc())
+        )
+        now = datetime.now(timezone.utc)
+        out: list[WebUser] = []
+        for row in result.scalars().all():
+            expires = row.expires_at
+            if expires is not None:
+                if expires.tzinfo is None:
+                    expires = expires.replace(tzinfo=timezone.utc)
+                if expires <= now:
+                    continue
+            out.append(row)
+        return out
+
 
 _WEB_UPLOAD_DONE = HintViewerWebUploadStatus.DONE.value
 _WEB_UPLOAD_ERROR = HintViewerWebUploadStatus.ERROR.value
@@ -2937,11 +2956,23 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         service: str | None = None,
         folder_id: int | None = None,
         label: str | None = None,
+        skip_owner_filter: bool = False,
     ) -> list[HintViewerWebUpload]:
+        owner_filter = (
+            []
+            if skip_owner_filter
+            else self._user_service_filter(user_id, service)
+        )
+        service_filter = (
+            [HintViewerWebUpload.service == service]
+            if skip_owner_filter and service
+            else []
+        )
         result = await self._session.execute(
             select(HintViewerWebUpload)
             .where(
-                *self._user_service_filter(user_id, service),
+                *owner_filter,
+                *service_filter,
                 *self._folder_membership_filter(folder_id),
                 *self._label_membership_filter(user_id, label),
             )
@@ -2957,12 +2988,24 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         service: str | None = None,
         folder_id: int | None = None,
         label: str | None = None,
+        skip_owner_filter: bool = False,
     ) -> int:
+        owner_filter = (
+            []
+            if skip_owner_filter
+            else self._user_service_filter(user_id, service)
+        )
+        service_filter = (
+            [HintViewerWebUpload.service == service]
+            if skip_owner_filter and service
+            else []
+        )
         result = await self._session.execute(
             select(func.count())
             .select_from(HintViewerWebUpload)
             .where(
-                *self._user_service_filter(user_id, service),
+                *owner_filter,
+                *service_filter,
                 *self._folder_membership_filter(folder_id),
                 *self._label_membership_filter(user_id, label),
             )
@@ -3270,6 +3313,151 @@ class HintWebFolderDAO(BaseDAO[HintWebFolder]):
             )
         )
         return result.scalar_one_or_none()
+
+    async def get_folder_by_id_service(
+        self, folder_id: int, service: str = "hints"
+    ) -> HintWebFolder | None:
+        result = await self._session.execute(
+            select(HintWebFolder).where(
+                HintWebFolder.id == folder_id,
+                HintWebFolder.service == (service or "hints"),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def get_accessible_folder(
+        self, folder_id: int, user_id: int, service: str = "hints"
+    ) -> HintWebFolder | None:
+        folder = await self.get_folder_by_id_service(folder_id, service)
+        if not folder:
+            return None
+        if int(folder.user_id) == int(user_id):
+            return folder
+        chain_ids = [int(folder.id)]
+        current = folder
+        visited: set[int] = set()
+        while current.parent_id:
+            parent_id = int(current.parent_id)
+            if parent_id in visited:
+                break
+            visited.add(parent_id)
+            parent = await self._session.get(HintWebFolder, parent_id)
+            if not parent or parent.service != folder.service:
+                break
+            chain_ids.append(int(parent.id))
+            current = parent
+        grant = await self._session.scalar(
+            select(HintWebFolderGrant.id)
+            .join(HintWebFolder, HintWebFolder.id == HintWebFolderGrant.folder_id)
+            .where(
+                HintWebFolderGrant.user_id == int(user_id),
+                HintWebFolderGrant.folder_id.in_(chain_ids),
+                HintWebFolder.is_shared.is_(True),
+            )
+            .limit(1)
+        )
+        return folder if grant is not None else None
+
+    async def list_visible_folders(
+        self, user_id: int, service: str = "hints"
+    ) -> list[HintWebFolder]:
+        own = await self.get_all_folders(user_id, service)
+        by_id: dict[int, HintWebFolder] = {int(f.id): f for f in own}
+        granted_res = await self._session.execute(
+            select(HintWebFolder)
+            .join(
+                HintWebFolderGrant,
+                HintWebFolderGrant.folder_id == HintWebFolder.id,
+            )
+            .where(
+                HintWebFolderGrant.user_id == int(user_id),
+                HintWebFolder.service == (service or "hints"),
+                HintWebFolder.is_shared.is_(True),
+            )
+        )
+        granted_roots = list(granted_res.scalars().all())
+        owner_trees: dict[int, list[HintWebFolder]] = {}
+        for root in granted_roots:
+            owner_id = int(root.user_id)
+            if owner_id not in owner_trees:
+                owner_trees[owner_id] = await self.get_all_folders(owner_id, service)
+            children_map: dict[int | None, list[HintWebFolder]] = {}
+            for item in owner_trees[owner_id]:
+                children_map.setdefault(item.parent_id, []).append(item)
+            queue = [root]
+            seen: set[int] = set()
+            while queue:
+                current = queue.pop(0)
+                cid = int(current.id)
+                if cid in seen:
+                    continue
+                seen.add(cid)
+                by_id[cid] = current
+                queue.extend(children_map.get(cid, []))
+        return list(by_id.values())
+
+    async def set_folder_shared(
+        self, folder_id: int, user_id: int, is_shared: bool, service: str = "hints"
+    ) -> HintWebFolder | None:
+        folder = await self.get_folder_for_user(folder_id, user_id, service)
+        if not folder:
+            return None
+        folder.is_shared = bool(is_shared)
+        folder.updated_at = datetime.now(timezone.utc)
+        await self._session.flush()
+        return folder
+
+    async def grant_folder_access(
+        self,
+        folder_id: int,
+        target_user_id: int,
+        granted_by: int,
+    ) -> tuple[HintWebFolderGrant, bool]:
+        existing = await self._session.scalar(
+            select(HintWebFolderGrant).where(
+                HintWebFolderGrant.folder_id == int(folder_id),
+                HintWebFolderGrant.user_id == int(target_user_id),
+            )
+        )
+        if existing:
+            return existing, False
+        grant = HintWebFolderGrant(
+            folder_id=int(folder_id),
+            user_id=int(target_user_id),
+            granted_by=int(granted_by),
+        )
+        self._session.add(grant)
+        await self._session.flush()
+        return grant, True
+
+    async def get_direct_counts_for_ids(
+        self, folder_ids: list[int]
+    ) -> dict[int, int]:
+        ids = [int(x) for x in folder_ids if x is not None]
+        if not ids:
+            return {}
+        result = await self._session.execute(
+            select(
+                HintWebFolderItem.folder_id,
+                func.count(HintWebFolderItem.id),
+            )
+            .where(HintWebFolderItem.folder_id.in_(ids))
+            .group_by(HintWebFolderItem.folder_id)
+        )
+        return {int(row[0]): int(row[1]) for row in result.all()}
+
+    async def get_child_folders_of(
+        self, folder: HintWebFolder
+    ) -> list[HintWebFolder]:
+        result = await self._session.execute(
+            select(HintWebFolder)
+            .where(
+                HintWebFolder.parent_id == folder.id,
+                HintWebFolder.service == (folder.service or "hints"),
+            )
+            .order_by(HintWebFolder.sort_order.asc(), HintWebFolder.id.asc())
+        )
+        return list(result.scalars().all())
 
     async def next_sort_order(
         self, user_id: int, parent_id: int | None, service: str = "hints"

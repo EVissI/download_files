@@ -243,6 +243,10 @@ html[data-theme="light"] .support-msg.is-mine {
     opacity: 0.55;
     cursor: default;
 }
+a.support-folder-open-btn {
+    display: inline-block;
+    text-decoration: none;
+}
 .support-composer {
     flex: none;
     border-top: 1px solid var(--web-border);

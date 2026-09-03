@@ -597,3 +597,109 @@ html[data-theme="light"] .hw-hint__arrow {
     color: var(--web-text-muted);
     margin: 0 0 10px;
 }
+.hw-folder-node__action--shared-active {
+    background: color-mix(in srgb, var(--web-accent) 28%, transparent);
+    color: var(--web-accent);
+}
+.hw-folder-node__badge {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    color: var(--web-text-muted);
+    border: 1px solid var(--web-border);
+    border-radius: 8px;
+    padding: 1px 6px;
+}
+.hw-assign-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 95;
+}
+.hw-assign-modal.is-open {
+    display: flex;
+}
+.hw-assign-modal__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+.hw-assign-modal__box {
+    position: relative;
+    width: min(94vw, 560px);
+    max-height: 88dvh;
+    overflow: hidden;
+    background: var(--web-bg-card);
+    border: 1px solid var(--web-border);
+    border-radius: 14px;
+    padding: 16px;
+    color: var(--web-text);
+    display: flex;
+    flex-direction: column;
+}
+.hw-assign-modal__title {
+    margin: 0 0 8px;
+    font-size: 1rem;
+}
+.hw-assign-modal__subtitle {
+    margin: 0 0 10px;
+    font-size: 0.85rem;
+    color: var(--web-text-muted);
+}
+.hw-assign-modal__label {
+    display: block;
+    margin: 0 0 6px;
+    font-size: 0.8rem;
+    color: var(--web-text-muted);
+}
+.hw-assign-modal__input {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 10px;
+    border: 1px solid var(--web-input-border);
+    background: var(--web-input-bg);
+    color: var(--web-text);
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+}
+.hw-assign-modal__msg {
+    min-height: 1.1em;
+    margin: 0 0 8px;
+    font-size: 0.8rem;
+    color: var(--web-text-muted);
+}
+.hw-assign-modal__table-wrap {
+    max-height: 280px;
+    overflow: auto;
+    border: 1px solid var(--web-border);
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+.hw-assign-modal__table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.hw-assign-modal__table th,
+.hw-assign-modal__table td {
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--web-border);
+}
+.hw-assign-modal__table tbody tr {
+    cursor: pointer;
+}
+.hw-assign-modal__table tbody tr:hover {
+    background: var(--web-ghost-hover);
+}
+.hw-assign-modal__table tbody tr.is-selected {
+    background: color-mix(in srgb, var(--web-accent) 22%, transparent);
+}
+.hw-assign-modal__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}

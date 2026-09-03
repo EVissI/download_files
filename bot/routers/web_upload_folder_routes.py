@@ -21,7 +21,7 @@ from bot.common.tasks.hint_web_folder_schedule import (
     upsert_hint_web_folder_schedule_job,
 )
 from bot.db.database import async_session_maker
-from bot.db.dao import HintViewerWebUploadDAO, HintWebFolderDAO
+from bot.db.dao import HintViewerWebUploadDAO, HintWebFolderDAO, WebUserDAO
 from bot.db.models import HintWebFolder, HintWebFolderSchedule
 
 
@@ -51,6 +51,16 @@ class FolderScheduleSaveBody(BaseModel):
     issue_time_msk: str
     labels: list[str] = Field(default_factory=list)
     is_active: bool = True
+
+
+class FolderSetSharedBody(BaseModel):
+    folder_id: int
+    is_shared: bool
+
+
+class FolderShareBody(BaseModel):
+    folder_id: int
+    target_user_id: int
 
 
 async def _require_session(request: Request) -> dict[str, Any]:
@@ -87,17 +97,29 @@ def _serialize_folder_schedule(
     }
 
 
+def _require_admin(session: dict[str, Any]) -> None:
+    if not session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Только для администраторов")
+
+
 def _serialize_folder(
     folder: HintWebFolder,
     direct_files_count: int = 0,
     schedule: HintWebFolderSchedule | None = None,
+    *,
+    viewer_id: int | None = None,
 ) -> dict[str, Any]:
+    is_granted = (
+        viewer_id is not None and int(folder.user_id) != int(viewer_id)
+    )
     return {
         "id": folder.id,
         "name": folder.name,
         "parent_id": folder.parent_id,
         "sort_order": folder.sort_order,
         "direct_files_count": int(direct_files_count or 0),
+        "is_shared": bool(folder.is_shared),
+        "is_granted": is_granted,
         "schedule": _serialize_folder_schedule(schedule),
     }
 
@@ -120,13 +142,17 @@ def _build_folder_tree(
     folders: list[HintWebFolder],
     direct_counts: dict[int, int],
     schedules_by_folder: dict[int, HintWebFolderSchedule] | None = None,
+    viewer_id: int | None = None,
 ) -> list[dict]:
     schedules_by_folder = schedules_by_folder or {}
     by_id: dict[int, dict] = {}
     for f in folders:
         by_id[f.id] = {
             **_serialize_folder(
-                f, direct_counts.get(f.id, 0), schedules_by_folder.get(f.id)
+                f,
+                direct_counts.get(f.id, 0),
+                schedules_by_folder.get(f.id),
+                viewer_id=viewer_id,
             ),
             "children": [],
         }
@@ -151,7 +177,7 @@ async def resolve_scoped_folder_id(
 ) -> int:
     async with async_session_maker() as db:
         dao = HintWebFolderDAO(db)
-        folder = await dao.get_folder_for_user(int(folder_id), int(user_id), service)
+        folder = await dao.get_accessible_folder(int(folder_id), int(user_id), service)
         if not folder:
             raise HTTPException(status_code=404, detail="Папка не найдена")
         return int(folder_id)
@@ -172,12 +198,14 @@ def register_web_upload_folder_routes(
         user_id = _require_user_id(session)
         async with async_session_maker() as db:
             dao = HintWebFolderDAO(db)
-            folders = await dao.get_all_folders(user_id, folder_service)
-            counts = await dao.get_direct_counts(user_id, folder_service)
+            folders = await dao.list_visible_folders(user_id, folder_service)
+            counts = await dao.get_direct_counts_for_ids([f.id for f in folders])
             schedules = await dao.get_schedules_by_folder_id(user_id, folder_service)
             return {
                 "ok": True,
-                "folders": _build_folder_tree(folders, counts, schedules),
+                "folders": _build_folder_tree(
+                    folders, counts, schedules, viewer_id=user_id
+                ),
             }
 
     @router.get(
@@ -188,17 +216,22 @@ def register_web_upload_folder_routes(
         user_id = _require_user_id(session)
         async with async_session_maker() as db:
             dao = HintWebFolderDAO(db)
-            folder = await dao.get_folder_for_user(folder_id, user_id, folder_service)
-            if not folder:
-                raise HTTPException(status_code=404, detail="Папка не найдена")
-            counts = await dao.get_direct_counts(user_id, folder_service)
-            children = await dao.get_child_folders(
+            folder = await dao.get_accessible_folder(
                 folder_id, user_id, folder_service
             )
-            schedules = await dao.get_schedules_by_folder_id(user_id, folder_service)
+            if not folder:
+                raise HTTPException(status_code=404, detail="Папка не найдена")
+            children = await dao.get_child_folders_of(folder)
+            child_ids = [child.id for child in children] + [folder.id]
+            if folder.parent_id:
+                child_ids.append(int(folder.parent_id))
+            counts = await dao.get_direct_counts_for_ids(child_ids)
+            schedules = await dao.get_schedules_by_folder_id(
+                int(folder.user_id), folder_service
+            )
             parent = None
             if folder.parent_id:
-                parent_folder = await dao.get_folder_for_user(
+                parent_folder = await dao.get_accessible_folder(
                     folder.parent_id, user_id, folder_service
                 )
                 if parent_folder:
@@ -206,16 +239,23 @@ def register_web_upload_folder_routes(
                         parent_folder,
                         counts.get(parent_folder.id, 0),
                         schedules.get(parent_folder.id),
+                        viewer_id=user_id,
                     )
             return {
                 "ok": True,
                 "folder": _serialize_folder(
-                    folder, counts.get(folder.id, 0), schedules.get(folder.id)
+                    folder,
+                    counts.get(folder.id, 0),
+                    schedules.get(folder.id),
+                    viewer_id=user_id,
                 ),
                 "parent": parent,
                 "child_folders": [
                     _serialize_folder(
-                        child, counts.get(child.id, 0), schedules.get(child.id)
+                        child,
+                        counts.get(child.id, 0),
+                        schedules.get(child.id),
+                        viewer_id=user_id,
                     )
                     for child in children
                 ],
@@ -456,3 +496,118 @@ def register_web_upload_folder_routes(
             await db.delete(schedule)
             await db.commit()
         return {"ok": True, "deleted": True}
+
+    @router.post(
+        f"{base}/api/folders/web_users", operation_id=_op("folder_web_users")
+    )
+    async def folder_web_users(request: Request):
+        session = await _require_session(request)
+        user_id = _require_user_id(session)
+        _require_admin(session)
+        async with async_session_maker() as db:
+            users = await WebUserDAO(db).list_share_targets(user_id)
+            return {
+                "ok": True,
+                "users": [
+                    {
+                        "id": row.id,
+                        "username": row.login,
+                        "assigned_name": "",
+                    }
+                    for row in users
+                ],
+            }
+
+    @router.post(
+        f"{base}/api/folders/set_shared", operation_id=_op("folder_set_shared")
+    )
+    async def folder_set_shared(request: Request, body: FolderSetSharedBody):
+        session = await _require_session(request)
+        user_id = _require_user_id(session)
+        _require_admin(session)
+        async with async_session_maker() as db:
+            async with db.begin():
+                dao = HintWebFolderDAO(db)
+                folder = await dao.set_folder_shared(
+                    body.folder_id, user_id, body.is_shared, folder_service
+                )
+                if not folder:
+                    raise HTTPException(status_code=404, detail="Папка не найдена")
+                return {
+                    "ok": True,
+                    "folder": _serialize_folder(folder, viewer_id=user_id),
+                }
+
+    @router.post(
+        f"{base}/api/folders/share", operation_id=_op("folder_share")
+    )
+    async def folder_share(request: Request, body: FolderShareBody):
+        session = await _require_session(request)
+        user_id = _require_user_id(session)
+        _require_admin(session)
+        if int(body.target_user_id) == int(user_id):
+            raise HTTPException(
+                status_code=400, detail="Нельзя выдать доступ самому себе"
+            )
+        from bot.common.service.web_support_service import (
+            add_message,
+            get_or_create_thread,
+        )
+        from bot.db.models import WebSupportAuthorRole, WebUser
+
+        async with async_session_maker() as db:
+            dao = HintWebFolderDAO(db)
+            folder = await dao.get_folder_for_user(
+                body.folder_id, user_id, folder_service
+            )
+            if not folder:
+                raise HTTPException(status_code=404, detail="Папка не найдена")
+            if not folder.is_shared:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Сначала сделайте папку общей",
+                )
+            target = await db.get(WebUser, int(body.target_user_id))
+            if not target or target.is_expired():
+                raise HTTPException(status_code=404, detail="Пользователь не найден")
+            grant, created = await dao.grant_folder_access(
+                folder.id, int(body.target_user_id), user_id
+            )
+            await db.commit()
+            notify_sent = False
+            notify_error = None
+            if created:
+                admin_row = await db.get(WebUser, user_id)
+                thread = await get_or_create_thread(db, int(body.target_user_id))
+                try:
+                    await add_message(
+                        db,
+                        thread=thread,
+                        author_user_id=user_id,
+                        author_role=WebSupportAuthorRole.ADMIN.value,
+                        author_login=getattr(admin_row, "login", None),
+                        body=(
+                            f"Вам открыт доступ к папке «{folder.name}»."
+                        ),
+                        source_path=(
+                            f"/web/{folder_service}/folder/{int(folder.id)}"
+                        ),
+                        files=[],
+                    )
+                    notify_sent = True
+                except Exception as exc:
+                    notify_error = str(exc)
+                    logger.warning(
+                        "Failed to notify web user {} about folder {}: {}",
+                        body.target_user_id,
+                        folder.id,
+                        exc,
+                    )
+            return {
+                "ok": True,
+                "created": created,
+                "already_had": not created,
+                "notify_sent": notify_sent,
+                "notify_error": notify_error,
+            }
+
