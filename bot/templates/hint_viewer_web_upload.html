@@ -940,7 +940,8 @@
             const labels = Array.isArray(item.labels) ? item.labels : [];
             const chips = labels.map((label) => `<span class="hw-label-chip">${escapeHtml(label)}</span>`).join('');
             const encoded = escapeHtml(JSON.stringify(labels));
-            return `<div class="history-item-labels">${chips}<button type="button" class="btn ghost history-pdf-btn" data-edit-labels="${item.id}" data-labels="${encoded}">Метки</button></div>`;
+            const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.5 3.2H5.2A1.7 1.7 0 0 0 3.5 4.9v7.3c0 .45.18.88.5 1.2l8.4 8.4a1.7 1.7 0 0 0 2.4 0l6.4-6.4a1.7 1.7 0 0 0 0-2.4l-8.4-8.4a1.7 1.7 0 0 0-1.2-.4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8.2" cy="8.2" r="1.35" fill="currentColor"/></svg>`;
+            return `<div class="history-item-labels">${chips}<button type="button" class="ghost history-labels-btn" data-edit-labels="${item.id}" data-labels="${encoded}" title="Метки" aria-label="Метки">${icon}</button></div>`;
         }
 
         function renderHistoryFile(item, nested) {

@@ -97,6 +97,20 @@
     align-items: center;
     margin-top: 8px;
 }
+.history-labels-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    padding: 0;
+    flex-shrink: 0;
+    border-radius: 8px;
+}
+.history-labels-btn svg {
+    display: block;
+}
 .hw-label-chip {
     display: inline-flex;
     align-items: center;
