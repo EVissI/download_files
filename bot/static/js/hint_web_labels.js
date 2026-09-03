@@ -194,11 +194,11 @@
             return;
         }
         presets.forEach(function (preset) {
-            var row = document.createElement('div');
-            row.className = 'hw-labels-preset-row';
+            var chip = document.createElement('span');
+            chip.className = 'hw-labels-preset-chip';
             var useBtn = document.createElement('button');
             useBtn.type = 'button';
-            useBtn.className = 'ghost hw-labels-preset-value';
+            useBtn.className = 'hw-labels-preset-value';
             useBtn.textContent = preset.value;
             useBtn.title = 'Добавить к меткам файла';
             useBtn.addEventListener('click', function () {
@@ -210,19 +210,22 @@
             });
             var del = document.createElement('button');
             del.type = 'button';
-            del.className = 'ghost hw-labels-preset-del';
+            del.className = 'hw-labels-preset-del';
             del.title = 'Удалить пресет';
+            del.setAttribute('aria-label', 'Удалить пресет');
             del.textContent = '×';
-            del.addEventListener('click', function () {
+            del.addEventListener('click', function (ev) {
+                ev.preventDefault();
+                ev.stopPropagation();
                 labelApi('POST', '/api/labels/presets/delete', { preset_id: preset.id }).then(function () {
                     return loadPresets();
                 }).catch(function (e) {
                     setPresetsMsg(e.message || String(e));
                 });
             });
-            row.appendChild(useBtn);
-            row.appendChild(del);
-            presetsList.appendChild(row);
+            chip.appendChild(useBtn);
+            chip.appendChild(del);
+            presetsList.appendChild(chip);
         });
     }
 

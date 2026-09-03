@@ -509,16 +509,16 @@
             </div>
         </div>
     </div>
-    <div id="labelPresetsModal" class="hw-link-modal" aria-hidden="true">
+    <div id="labelPresetsModal" class="hw-link-modal hw-presets-modal" aria-hidden="true">
         <div id="labelPresetsModalOverlay" class="hw-link-modal__overlay"></div>
-        <div class="hw-link-modal__box" role="dialog" aria-modal="true" aria-labelledby="labelPresetsModalTitle">
+        <div class="hw-link-modal__box hw-presets-modal__box" role="dialog" aria-modal="true" aria-labelledby="labelPresetsModalTitle">
             <h3 id="labelPresetsModalTitle" class="hw-link-modal__title">Пресеты меток</h3>
-            <p class="hw-link-modal__subtitle">Нажмите пресет — он добавится к меткам открытого файла. Список свой у каждого аккаунта.</p>
+            <p class="hw-link-modal__subtitle">Нажмите пресет — он добавится к меткам файла.</p>
             <div class="hw-labels-modal__input-row">
                 <input id="labelPresetsModalInput" type="text" maxlength="255" placeholder="Новый пресет" autocomplete="off">
-                <button id="labelPresetsModalAddBtn" type="button" class="hw-link-modal__btn">Сохранить</button>
+                <button id="labelPresetsModalAddBtn" type="button" class="hw-link-modal__btn hw-link-modal__btn--primary">Добавить</button>
             </div>
-            <p id="labelPresetsModalMsg" class="hw-link-modal__msg"></p>
+            <p id="labelPresetsModalMsg" class="hw-link-modal__msg hw-labels-modal__msg"></p>
             <div id="labelPresetsModalList" class="hw-labels-presets-list"></div>
             <div class="hw-link-modal__actions">
                 <button id="labelPresetsModalCloseBtn" type="button" class="hw-link-modal__btn">Закрыть</button>

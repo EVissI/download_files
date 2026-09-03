@@ -178,29 +178,97 @@
     font-size: 0.85rem;
     font-style: italic;
 }
+.hw-presets-modal {
+    z-index: 90;
+}
+.hw-presets-modal__box {
+    width: min(92vw, 420px);
+}
+.hw-presets-modal .hw-link-modal__title {
+    margin-bottom: 6px;
+}
+.hw-presets-modal .hw-link-modal__subtitle {
+    margin-bottom: 14px;
+    line-height: 1.4;
+}
+.hw-presets-modal .hw-labels-modal__input-row {
+    margin-bottom: 8px;
+}
+.hw-labels-modal__msg {
+    min-height: 0;
+    margin: 0 0 10px;
+    color: var(--web-error-fg);
+}
+.hw-labels-modal__msg:empty {
+    display: none;
+}
 .hw-labels-presets-list {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-height: 240px;
-    overflow: auto;
-}
-.hw-labels-preset-row {
-    display: flex;
-    align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
+    align-content: flex-start;
+    min-height: 44px;
+    max-height: 220px;
+    overflow: auto;
+    margin: 0 0 14px;
+    padding: 2px 0;
 }
-.hw-labels-preset-row button.hw-labels-preset-value {
+.hw-labels-presets-list .hw-labels-empty {
+    flex: 1 1 100%;
+    margin: 6px 0;
+}
+.hw-labels-preset-chip {
+    display: inline-flex;
+    align-items: stretch;
+    max-width: 100%;
+    border: 1px solid var(--web-border);
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--web-ghost-bg);
+}
+.hw-labels-preset-chip:hover {
+    border-color: var(--web-accent);
+}
+.hw-labels-preset-value {
     flex: 1;
     min-width: 0;
+    max-width: 240px;
+    margin: 0;
+    padding: 7px 10px 7px 12px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--web-text);
+    font-size: 0.82rem;
+    font-weight: 500;
+    line-height: 1.3;
     text-align: left;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    cursor: pointer;
 }
-.hw-labels-preset-row .hw-labels-preset-del {
+.hw-labels-preset-value:hover {
+    background: var(--web-ghost-hover);
+    color: var(--web-text);
+}
+.hw-labels-preset-del {
     flex-shrink: 0;
-    width: 32px;
-    min-width: 32px;
+    width: 28px;
+    min-width: 28px;
+    margin: 0;
     padding: 0;
+    border: 0;
+    border-left: 1px solid var(--web-border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--web-text-muted);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1;
+    cursor: pointer;
+}
+.hw-labels-preset-del:hover {
+    background: var(--web-error-bg);
+    color: var(--web-error-fg);
 }
