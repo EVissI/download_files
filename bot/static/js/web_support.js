@@ -203,13 +203,10 @@
     function filesFromTransfer(dt) {
         if (!dt) return [];
         var out = [];
-        var seen = {};
         function push(raw) {
             var file = normalizeFile(raw);
             if (!file || !isAllowedFile(file)) return;
-            var key = file.name + ':' + file.size + ':' + (file.lastModified || 0);
-            if (seen[key]) return;
-            seen[key] = 1;
+            if (out.indexOf(file) !== -1) return;
             out.push(file);
         }
         if (dt.files && dt.files.length) {
@@ -283,10 +280,8 @@
                 if (next.length >= MAX_ATTACH) return;
                 var file = normalizeFile(raw);
                 if (!file || !isAllowedFile(file)) return;
-                var dup = next.some(function (item) {
-                    return item.name === file.name
-                        && item.size === file.size
-                        && item.lastModified === file.lastModified;
+                var dup = next.indexOf(file) !== -1 || next.some(function (item) {
+                    return item === raw || item === file;
                 });
                 if (dup) return;
                 next.push(file);

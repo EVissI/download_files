@@ -30,17 +30,32 @@
     right: max(16px, env(safe-area-inset-right));
     bottom: max(16px, env(safe-area-inset-bottom));
     z-index: 40;
-    width: 52px;
-    height: 52px;
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    min-height: 52px !important;
+    padding: 0 !important;
     border: 0;
     border-radius: 50%;
     background: var(--web-accent);
     color: #fff;
     cursor: pointer;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
-    display: inline-flex;
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
+    font-size: 0;
+    line-height: 0;
+    box-sizing: border-box;
+}
+.support-fab svg {
+    display: block;
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px;
+    min-height: 22px;
+    flex: none;
+    overflow: visible;
 }
 .support-fab:hover { filter: brightness(1.08); }
 .support-fab-badge {

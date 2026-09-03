@@ -2,7 +2,7 @@
 <script src="/static/js/web_support.js?t={{ cache_timestamp }}" defer></script>
 {% if not hide_support_widget|default(false) and not is_admin|default(false) %}
 <button type="button" class="support-fab" id="supportFab" title="Поддержка" aria-label="Написать в поддержку" aria-expanded="false">
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
         <path d="M5 5h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
     </svg>
     <span class="support-fab-badge" data-support-fab-badge hidden>0</span>

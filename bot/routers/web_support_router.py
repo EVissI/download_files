@@ -6,7 +6,7 @@ import asyncio
 from typing import Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from loguru import logger
@@ -143,7 +143,6 @@ async def web_support_own_send(
     request: Request,
     text: str = Form(""),
     source_path: str = Form(""),
-    files: list[UploadFile] | None = File(None),
 ):
     _token, session = await _require_session(request)
     uid = _user_id(session)
@@ -158,7 +157,8 @@ async def web_support_own_send(
             status_code=429,
             detail={"message": "Слишком много сообщений", "wait_text": wait_text},
         )
-    uploads = await _read_uploads(files)
+    form = await request.form()
+    uploads = await _read_uploads(form.getlist("files"))
     async with async_session_maker() as db:
         thread = await get_or_create_thread(db, uid)
         login_row = await db.get(WebUser, uid)
@@ -231,11 +231,11 @@ async def web_support_admin_send(
     request: Request,
     thread_id: int,
     text: str = Form(""),
-    files: list[UploadFile] | None = File(None),
 ):
     _token, session = await _require_admin(request)
     uid = _user_id(session)
-    uploads = await _read_uploads(files)
+    form = await request.form()
+    uploads = await _read_uploads(form.getlist("files"))
     async with async_session_maker() as db:
         thread = await get_thread_by_id(db, thread_id)
         if not thread:
@@ -300,15 +300,22 @@ def _safe_ascii(name: str) -> str:
     return (cleaned or "file")[:180]
 
 
-async def _read_uploads(files: list[UploadFile] | None) -> list[tuple[str, bytes, str | None]]:
+async def _read_uploads(files) -> list[tuple[str, bytes, str | None]]:
+    if files is None:
+        items: list[Any] = []
+    elif isinstance(files, UploadFile):
+        items = [files]
+    else:
+        items = list(files)
     uploads: list[tuple[str, bytes, str | None]] = []
-    for upload in files or []:
-        if not upload or not upload.filename:
+    for upload in items:
+        if not isinstance(upload, UploadFile):
             continue
+        filename = upload.filename or "file"
         data = await upload.read()
         if not data:
             continue
-        uploads.append((upload.filename, data, upload.content_type))
+        uploads.append((filename, data, upload.content_type))
         if len(uploads) > MAX_FILES:
             raise HTTPException(
                 status_code=400,
