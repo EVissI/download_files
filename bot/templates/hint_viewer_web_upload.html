@@ -375,7 +375,11 @@
                     <select id="historyLabelFilter" class="history-label-filter" title="Фильтр по метке">
                         <option value="">Все метки</option>
                     </select>
-                    <button type="button" class="ghost" id="manageLabelPresetsBtn">Пресеты</button>
+                    <button type="button" class="ghost hw-icon-btn" id="manageLabelPresetsBtn" title="Пресеты меток" aria-label="Пресеты меток">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14.2L12 16.6 5.5 20.2V6A1.5 1.5 0 0 1 7 4.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
                     {% endif %}
                     {% if enable_user_folders|default(false) %}
                     <button type="button" class="ghost" id="historyRemoveFromFolderBtn" hidden>Убрать из папки</button>
@@ -495,7 +499,11 @@
         <div class="hw-link-modal__box" role="dialog" aria-modal="true" aria-labelledby="fileLabelsModalTitle">
             <div class="card-labels-modal-header-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
                 <h3 id="fileLabelsModalTitle" class="hw-link-modal__title" style="margin:0;text-align:left;">Метки файла</h3>
-                <button id="fileLabelsOpenPresetsBtn" type="button" class="ghost">Пресеты</button>
+                <button id="fileLabelsOpenPresetsBtn" type="button" class="ghost hw-icon-btn" title="Пресеты меток" aria-label="Пресеты меток">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14.2L12 16.6 5.5 20.2V6A1.5 1.5 0 0 1 7 4.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                    </svg>
+                </button>
             </div>
             <div class="hw-labels-modal__input-row">
                 <input id="fileLabelsModalInput" type="text" maxlength="255" placeholder="Введите метку и нажмите Enter" autocomplete="off">

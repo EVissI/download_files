@@ -108,8 +108,27 @@
     flex-shrink: 0;
     border-radius: 8px;
 }
-.history-labels-btn svg {
+.history-labels-btn svg,
+.hw-icon-btn svg {
     display: block;
+}
+.hw-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    flex-shrink: 0;
+    border-radius: 8px;
+}
+.card-head .ghost.hw-icon-btn {
+    width: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
 }
 .hw-label-chip {
     display: inline-flex;
