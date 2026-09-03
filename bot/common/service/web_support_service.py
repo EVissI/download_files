@@ -143,7 +143,8 @@ def serialize_message(
     *,
     author_login: str | None,
 ) -> dict[str, Any]:
-    created = _aware(message.created_at)
+    created = _aware(getattr(message, "created_at", None))
+    raw_attachments = message.__dict__.get("attachments") or []
     return {
         "id": message.id,
         "role": message.author_role,
@@ -151,7 +152,7 @@ def serialize_message(
         "body": message.body or "",
         "source_path": message.source_path,
         "created_at": created.isoformat() if created else None,
-        "attachments": [serialize_attachment(att) for att in (message.attachments or [])],
+        "attachments": [serialize_attachment(att) for att in raw_attachments],
     }
 
 
@@ -272,7 +273,7 @@ async def mark_read(session, thread: WebSupportThread, *, is_admin: bool) -> Non
         thread.admin_last_read_at = now
     else:
         thread.user_last_read_at = now
-    await session.commit()
+    await session.flush()
 
 
 def validate_upload(filename: str, size: int) -> str | None:
@@ -293,10 +294,11 @@ async def add_message(
     thread: WebSupportThread,
     author_user_id: int,
     author_role: str,
+    author_login: str | None,
     body: str,
     source_path: str | None,
     files: list[tuple[str, bytes, str | None]],
-) -> WebSupportMessage:
+) -> dict[str, Any]:
     text = (body or "").strip()[:MAX_BODY_LEN]
     if not text and not files:
         raise ValueError("Нужен текст или файл")
@@ -317,6 +319,7 @@ async def add_message(
         guessed = ctype or mimetypes.guess_type(filename)[0] or "application/octet-stream"
         prepared.append((filename, stored, guessed, data))
 
+    created_at = _now()
     message = WebSupportMessage(
         thread_id=thread.id,
         author_role=author_role,
@@ -324,6 +327,7 @@ async def add_message(
         body=text,
         source_path=source_path,
     )
+    message.created_at = created_at
     session.add(message)
     await session.flush()
 
@@ -348,18 +352,19 @@ async def add_message(
         session.add(att)
         attachments.append(att)
 
-    now = _now()
-    thread.last_message_at = now
+    thread.last_message_at = created_at
     thread.last_author_role = author_role
     thread.last_preview = _preview(text, [item[0] for item in prepared])
     if author_role == WebSupportAuthorRole.ADMIN.value:
-        thread.admin_last_read_at = now
+        thread.admin_last_read_at = created_at
     else:
-        thread.user_last_read_at = now
+        thread.user_last_read_at = created_at
     await session.flush()
     message.attachments = attachments
+    payload = serialize_message(message, author_login=author_login)
+    payload["created_at"] = created_at.isoformat()
     await session.commit()
-    return message
+    return payload
 
 
 async def _upload_bytes(

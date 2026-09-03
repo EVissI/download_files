@@ -30,7 +30,6 @@ from bot.common.service.web_support_service import (
     list_inbox,
     mark_read,
     sanitize_source_path,
-    serialize_message,
     serialize_thread_messages,
     serialize_thread_meta,
     user_unread,
@@ -134,6 +133,7 @@ async def web_support_own_thread(
             login=getattr(login_row, "login", None),
             is_admin=False,
         )
+        await db.commit()
     return {"ok": True, "thread": meta, "messages": messages}
 
 
@@ -160,22 +160,20 @@ async def web_support_own_send(
     uploads = await _read_uploads(files)
     async with async_session_maker() as db:
         thread = await get_or_create_thread(db, uid)
+        login_row = await db.get(WebUser, uid)
         try:
-            message = await add_message(
+            payload = await add_message(
                 db,
                 thread=thread,
                 author_user_id=uid,
                 author_role=WebSupportAuthorRole.USER.value,
+                author_login=getattr(login_row, "login", None),
                 body=text,
                 source_path=sanitize_source_path(source_path),
                 files=uploads,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        login_row = await db.get(WebUser, uid)
-        payload = serialize_message(
-            message, author_login=getattr(login_row, "login", None)
-        )
     return {"ok": True, "message": payload}
 
 
@@ -212,7 +210,7 @@ async def web_support_thread_detail(
         thread = await get_thread_by_id(db, thread_id)
         if not thread:
             raise HTTPException(status_code=404, detail="Диалог не найден")
-        login = getattr(thread.user, "login", None)
+        login = getattr(getattr(thread, "user", None), "login", None)
         if mark:
             await mark_read(db, thread, is_admin=True)
         messages = await serialize_thread_messages(db, thread, after_id=after_id)
@@ -221,6 +219,7 @@ async def web_support_thread_detail(
             login=login,
             is_admin=True,
         )
+        await db.commit()
     return {"ok": True, "thread": meta, "messages": messages}
 
 
@@ -238,22 +237,20 @@ async def web_support_admin_send(
         thread = await get_thread_by_id(db, thread_id)
         if not thread:
             raise HTTPException(status_code=404, detail="Диалог не найден")
+        login_row = await db.get(WebUser, uid)
         try:
-            message = await add_message(
+            payload = await add_message(
                 db,
                 thread=thread,
                 author_user_id=uid,
                 author_role=WebSupportAuthorRole.ADMIN.value,
+                author_login=getattr(login_row, "login", None),
                 body=text,
                 source_path=None,
                 files=uploads,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        login_row = await db.get(WebUser, uid)
-        payload = serialize_message(
-            message, author_login=getattr(login_row, "login", None)
-        )
     return {"ok": True, "message": payload}
 
 
@@ -270,23 +267,26 @@ async def web_support_file(request: Request, attachment_id: int):
             raise HTTPException(status_code=403, detail="Нет доступа")
         if not HintS3Storage.is_support_attachment_key(att.s3_key):
             raise HTTPException(status_code=404, detail="Файл не найден")
+        s3_key = att.s3_key
+        content_type = att.content_type or "application/octet-stream"
+        filename = att.original_filename
         s3 = HintS3Storage.from_settings()
         try:
-            data = await asyncio.to_thread(s3.download_bytes, att.s3_key)
+            data = await asyncio.to_thread(s3.download_bytes, s3_key)
         except Exception:
             logger.exception("support file download failed id={}", attachment_id)
             raise HTTPException(status_code=404, detail="Файл не найден") from None
-    inline = att.content_type.startswith("image/")
+    inline = content_type.startswith("image/")
     headers = {
         "Content-Disposition": (
-            f'inline; filename="{_safe_ascii(att.original_filename)}"'
+            f'inline; filename="{_safe_ascii(filename)}"'
             if inline
-            else _disposition(att.original_filename)
+            else _disposition(filename)
         )
     }
     return Response(
         content=data,
-        media_type=att.content_type or "application/octet-stream",
+        media_type=content_type,
         headers=headers,
     )
 
