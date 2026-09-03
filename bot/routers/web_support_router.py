@@ -34,6 +34,7 @@ from bot.common.service.web_support_service import (
     get_or_create_thread,
     get_thread_by_id,
     get_thread_by_user,
+    delete_thread,
     list_inbox,
     mark_read,
     sanitize_source_path,
@@ -234,6 +235,25 @@ async def web_support_thread_detail(
         )
         await db.commit()
     return {"ok": True, "thread": meta, "messages": messages}
+
+
+@web_support_api_router.delete("/web/support/api/threads/{thread_id}")
+async def web_support_delete_thread(request: Request, thread_id: int):
+    await _require_admin(request)
+    async with async_session_maker() as db:
+        thread = await get_thread_by_id(db, thread_id)
+        if not thread:
+            raise HTTPException(status_code=404, detail="Диалог не найден")
+        keys = await delete_thread(db, thread)
+    s3 = HintS3Storage.from_settings()
+    for key in keys:
+        if not HintS3Storage.is_support_attachment_key(key):
+            continue
+        try:
+            await asyncio.to_thread(s3.delete_object, key)
+        except Exception:
+            logger.warning("support attachment delete failed key={}", key)
+    return {"ok": True}
 
 
 @web_support_api_router.post("/web/support/api/threads/{thread_id}/messages")

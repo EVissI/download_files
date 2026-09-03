@@ -49,7 +49,14 @@
             padding: 10px 12px;
             border-bottom: 1px solid var(--web-border);
         }
-        .support-inbox-head strong { font-size: 0.95rem; }
+        .support-inbox-head strong {
+            font-size: 0.95rem;
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         .ghost {
             border: 0;
             background: var(--web-ghost-bg);
@@ -81,6 +88,7 @@
                 <div class="support-inbox-head">
                     <button type="button" class="ghost support-inbox-back" id="supportInboxBack">К списку</button>
                     <strong id="supportInboxTitle">Выберите обращение</strong>
+                    <button type="button" class="support-thread-delete" id="supportInboxDelete" hidden aria-label="Удалить чат" title="Удалить чат">×</button>
                 </div>
                 <div class="support-messages" id="supportInboxMessages">
                     <div class="support-inbox-placeholder">Слева список обращений пользователей.</div>
@@ -95,6 +103,17 @@
                     <input id="supportInboxFiles" type="file" multiple hidden accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.pdf,.txt,.zip,.mat,.sgf,.csv,.doc,.docx,.xlsx,image/*,application/pdf,application/zip">
                     <div class="support-status" id="supportInboxStatus"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+    <div id="supportDeleteModal" class="support-modal" hidden>
+        <div class="support-modal-overlay" id="supportDeleteOverlay"></div>
+        <div class="support-modal-box" role="dialog" aria-modal="true" aria-labelledby="supportDeleteTitle">
+            <h3 id="supportDeleteTitle">Удалить чат?</h3>
+            <p id="supportDeleteText">Диалог будет удалён без возможности восстановления.</p>
+            <div class="support-modal-actions">
+                <button type="button" class="support-modal-cancel" id="supportDeleteCancel">Отмена</button>
+                <button type="button" class="support-modal-danger" id="supportDeleteConfirm">Удалить</button>
             </div>
         </div>
     </div>

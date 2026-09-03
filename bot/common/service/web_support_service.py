@@ -238,6 +238,21 @@ async def get_thread_by_id(session, thread_id: int) -> WebSupportThread | None:
     return result.scalar_one_or_none()
 
 
+async def delete_thread(session, thread: WebSupportThread) -> list[str]:
+    result = await session.execute(
+        select(WebSupportAttachment.s3_key)
+        .join(
+            WebSupportMessage,
+            WebSupportAttachment.message_id == WebSupportMessage.id,
+        )
+        .where(WebSupportMessage.thread_id == int(thread.id))
+    )
+    keys = [str(row[0]) for row in result.all() if row[0]]
+    await session.delete(thread)
+    await session.commit()
+    return keys
+
+
 async def get_or_create_thread(session, user_id: int) -> WebSupportThread:
     thread = await get_thread_by_user(session, user_id)
     if thread:

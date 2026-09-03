@@ -660,16 +660,49 @@
         var titleEl = $('#supportInboxTitle');
         var box = $('#supportInboxMessages');
         var backBtn = $('#supportInboxBack');
+        var deleteBtn = $('#supportInboxDelete');
+        var deleteModal = $('#supportDeleteModal');
+        var deleteText = $('#supportDeleteText');
+        var deleteCancel = $('#supportDeleteCancel');
+        var deleteConfirm = $('#supportDeleteConfirm');
         var currentId = 0;
+        var currentLogin = '';
         var loaded = false;
         var page = 1;
+        var pendingDeleteId = 0;
+        var deleting = false;
+
+        function setDeleteBtn(show) {
+            if (!deleteBtn) return;
+            deleteBtn.hidden = !show;
+        }
+
+        function closeDeleteModal() {
+            pendingDeleteId = 0;
+            if (deleteModal) deleteModal.hidden = true;
+            if (deleteConfirm) deleteConfirm.disabled = false;
+        }
+
+        function askDeleteThread(id, login) {
+            pendingDeleteId = Number(id || 0);
+            if (!pendingDeleteId || !deleteModal) return;
+            if (deleteText) {
+                deleteText.textContent = login
+                    ? ('Диалог с «' + login + '» будет удалён без возможности восстановления.')
+                    : 'Диалог будет удалён без возможности восстановления.';
+            }
+            deleteModal.hidden = false;
+            if (deleteConfirm) deleteConfirm.focus();
+        }
 
         function openThread(id, login) {
             currentId = Number(id || 0);
+            currentLogin = login || '';
             loaded = false;
             root.classList.toggle('is-chat', !!currentId);
-            if (titleEl) titleEl.textContent = login ? ('Диалог · ' + login) : 'Диалог';
-            if (box) box.innerHTML = '<div class="support-empty">Загрузка…</div>';
+            if (titleEl) titleEl.textContent = currentLogin ? ('Диалог · ' + currentLogin) : (currentId ? 'Диалог' : 'Выберите обращение');
+            setDeleteBtn(!!currentId);
+            if (box) box.innerHTML = currentId ? '<div class="support-empty">Загрузка…</div>' : '<div class="support-inbox-placeholder">Слева список обращений пользователей.</div>';
             document.querySelectorAll('.support-thread-item').forEach(function (btn) {
                 btn.classList.toggle('is-active', Number(btn.getAttribute('data-id')) === currentId);
             });
@@ -687,13 +720,17 @@
                     return;
                 }
                 listEl.innerHTML = data.items.map(function (item) {
-                    return '<button type="button" class="support-thread-item' +
+                    return '<div class="support-thread-item' +
                         (item.unread ? ' is-unread' : '') +
                         (item.id === currentId ? ' is-active' : '') +
                         '" data-id="' + item.id + '" data-login="' + escapeHtml(item.login) + '">' +
+                        '<button type="button" class="support-thread-main">' +
                         '<span class="support-thread-login">' + escapeHtml(item.login || 'Пользователь') + '</span>' +
                         '<span class="support-thread-preview">' + escapeHtml(item.last_preview || '') + '</span>' +
-                        '</button>';
+                        '</button>' +
+                        '<button type="button" class="support-thread-delete" data-delete-thread="' + item.id +
+                        '" data-login="' + escapeHtml(item.login) + '" aria-label="Удалить чат" title="Удалить чат">×</button>' +
+                        '</div>';
                 }).join('');
             } catch (e) {
                 if (listEl) listEl.innerHTML = '<div class="support-empty">Не удалось загрузить список.</div>';
@@ -721,15 +758,55 @@
 
         if (listEl) {
             listEl.addEventListener('click', function (e) {
-                var btn = e.target.closest('.support-thread-item');
-                if (!btn) return;
-                openThread(btn.getAttribute('data-id'), btn.getAttribute('data-login'));
+                var del = e.target.closest('[data-delete-thread]');
+                if (del) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    askDeleteThread(del.getAttribute('data-delete-thread'), del.getAttribute('data-login'));
+                    return;
+                }
+                var item = e.target.closest('.support-thread-item');
+                if (!item) return;
+                openThread(item.getAttribute('data-id'), item.getAttribute('data-login'));
             });
         }
         if (backBtn) {
             backBtn.addEventListener('click', function () {
-                currentId = 0;
-                root.classList.remove('is-chat');
+                openThread(0, '');
+            });
+        }
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function () {
+                if (!currentId) return;
+                askDeleteThread(currentId, currentLogin);
+            });
+        }
+        if (deleteCancel) deleteCancel.addEventListener('click', closeDeleteModal);
+        var deleteOverlay = $('#supportDeleteOverlay');
+        if (deleteOverlay) deleteOverlay.addEventListener('click', closeDeleteModal);
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape' || !deleteModal || deleteModal.hidden) return;
+            closeDeleteModal();
+        });
+        if (deleteConfirm) {
+            deleteConfirm.addEventListener('click', function () {
+                if (!pendingDeleteId || deleting) return;
+                deleting = true;
+                deleteConfirm.disabled = true;
+                var statusEl = $('#supportInboxStatus');
+                api('/web/support/api/threads/' + pendingDeleteId, { method: 'DELETE' }).then(function () {
+                    var removedId = pendingDeleteId;
+                    closeDeleteModal();
+                    if (Number(currentId) === Number(removedId)) {
+                        openThread(0, '');
+                    }
+                    loadList();
+                }).catch(function (err) {
+                    if (statusEl) statusEl.textContent = (err && err.message) || 'Не удалось удалить чат';
+                    if (deleteConfirm) deleteConfirm.disabled = false;
+                }).then(function () {
+                    deleting = false;
+                });
             });
         }
         var searchTimer = 0;
