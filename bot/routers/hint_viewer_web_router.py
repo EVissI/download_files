@@ -63,6 +63,11 @@ from bot.common.service.hint_viewer_web_service import (
 from bot.common.service.webapp_settings_service import (
     get_hint_viewer_screenshot_font_scale_percent,
 )
+from bot.common.service.web_support_service import (
+    add_message,
+    check_rate_limit,
+    get_or_create_thread,
+)
 from bot.common.utils.static_assets import get_static_asset_version
 from bot.common.utils.http_security import (
     client_ip,
@@ -75,7 +80,7 @@ from bot.common.utils.http_security import (
 from bot.config import settings
 from bot.db.database import async_session_maker
 from bot.db.dao import HintViewerWebUploadDAO, HintWebFolderDAO
-from bot.db.models import HintViewerWebUploadStatus, HintWebFolder
+from bot.db.models import HintViewerWebUploadStatus, HintWebFolder, WebSupportAuthorRole, WebUser
 from bot.db.redis import redis_client
 
 hint_viewer_web_api_router = APIRouter()
@@ -93,6 +98,7 @@ batch_queue = Queue(
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
 MAX_MAT_FILES = 40
 WEB_JOB_TTL = 86400
+ORDER_ANALYSIS_CHAT_TEXT = "Здравствуйте, хочу заказать анализ"
 
 
 def _login_redirect() -> RedirectResponse:
@@ -1315,6 +1321,67 @@ async def web_hints_send_to_analyze(request: Request, game_id: str = ""):
         ) from exc
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
+
+
+@hint_viewer_web_api_router.post("/web/hints/api/order-analysis")
+async def web_hints_order_analysis(request: Request, game_id: str = ""):
+    _token, session = await _require_session(request)
+    user_id = _require_user_id(session)
+    gid = (game_id or "").strip()
+    if not gid:
+        raise HTTPException(status_code=400, detail="Нужен game_id")
+
+    allowed, wait_sec = await check_rate_limit(user_id)
+    if not allowed:
+        minutes = wait_sec // 60
+        seconds = wait_sec % 60
+        wait_text = (
+            f"{minutes} мин {seconds} сек" if minutes > 0 else f"{seconds} сек"
+        )
+        raise HTTPException(
+            status_code=429,
+            detail={"message": "Слишком много сообщений", "wait_text": wait_text},
+        )
+
+    async with async_session_maker() as db:
+        dao = HintViewerWebUploadDAO(db)
+        row = await dao.find_for_user_game(user_id, gid, "hints")
+        if not row:
+            raise HTTPException(status_code=404, detail="Анализ не найден")
+        filename = row.original_filename or f"{gid}.mat"
+
+    s3 = HintS3Storage.from_settings()
+    key = HintS3Storage.mat_key(gid)
+    if not await asyncio.to_thread(s3.exists, key):
+        raise HTTPException(status_code=404, detail="Исходный файл не найден")
+    try:
+        file_bytes = await asyncio.to_thread(s3.download_bytes, key)
+    except Exception:
+        logger.exception("order analysis download failed game_id={}", gid)
+        raise HTTPException(status_code=404, detail="Исходный файл не найден") from None
+    if not file_bytes:
+        raise HTTPException(status_code=404, detail="Исходный файл не найден")
+
+    if not str(filename).lower().endswith(".mat"):
+        filename = f"{Path(filename).stem}.mat"
+
+    async with async_session_maker() as db:
+        thread = await get_or_create_thread(db, user_id)
+        login_row = await db.get(WebUser, user_id)
+        try:
+            payload = await add_message(
+                db,
+                thread=thread,
+                author_user_id=user_id,
+                author_role=WebSupportAuthorRole.USER.value,
+                author_login=getattr(login_row, "login", None),
+                body=ORDER_ANALYSIS_CHAT_TEXT,
+                source_path="/web/hints",
+                files=[(filename, file_bytes, "application/octet-stream")],
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return JSONResponse({"ok": True, "message": payload})
 
 
 @hint_viewer_web_api_router.get("/web/hints/view", response_class=HTMLResponse)

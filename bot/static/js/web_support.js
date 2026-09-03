@@ -561,6 +561,12 @@
             attachFiles: function (files) {
                 if (composer && composer.addFiles) composer.addFiles(files);
             },
+            appendMessage: function (message) {
+                if (!box || !message) return;
+                appendMessages(box, [message], 'user');
+                loaded = true;
+                setBadge($('[data-support-fab-badge]'), 0);
+            },
         };
 
         var pollBusy = false;
