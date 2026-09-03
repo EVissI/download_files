@@ -156,19 +156,16 @@
             border-radius: 8px;
             background: #101010;
         }
+        html[data-theme="light"] .job,
+        html[data-theme="light"] .job-file,
+        html[data-theme="light"] .history-item {
+            border: 1px solid #6b7280;
+        }
         html[data-theme="light"] .job-file {
             background: #c8ccd4;
-            border-bottom: 2px solid #6b7280;
         }
-        html[data-theme="light"] .batch-files .history-item {
-            border-bottom: 2px solid #6b7280;
-        }
-        html[data-theme="light"] .batch-files .analyze-table {
-            border-bottom: 2px solid #6b7280;
-        }
-        html[data-theme="light"] .batch-files .analyze-table tr:last-child th,
-        html[data-theme="light"] .batch-files .analyze-table tr:last-child td {
-            border-bottom-color: #6b7280;
+        html[data-theme="light"] .history-item--nested:hover {
+            border-color: #6b7280;
         }
         .job-file-name {
             overflow-wrap: anywhere;
