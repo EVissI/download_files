@@ -161,10 +161,11 @@
         var form = new FormData();
         form.append('text', text || '');
         Object.keys(extra || {}).forEach(function (key) {
+            if (key === 'files' || key === 'file') return;
             form.append(key, extra[key]);
         });
-        Array.prototype.forEach.call(files || [], function (file) {
-            form.append('files', file);
+        Array.prototype.forEach.call(files || [], function (file, i) {
+            form.append('files', file, uniqueUploadName(file, i));
         });
         return api(url, { method: 'POST', body: form });
     }
@@ -180,6 +181,14 @@
         var lower = String(name || '').toLowerCase();
         var dot = lower.lastIndexOf('.');
         return dot >= 0 ? lower.slice(dot) : '';
+    }
+
+    function uniqueUploadName(file, index) {
+        var raw = String((file && file.name) || 'file').split(/[/\\]/).pop() || 'file';
+        var ext = fileExt(raw);
+        var base = ext ? raw.slice(0, -ext.length) : raw;
+        base = base.replace(/[^\w.\-()+ ]+/g, '_').slice(0, 80) || 'file';
+        return base + '-' + index + '-' + Date.now() + ext;
     }
 
     function isAllowedFile(file) {
@@ -267,9 +276,28 @@
 
         function refreshChips() {
             if (!chipsEl) return;
-            chipsEl.innerHTML = selected.map(function (file) {
-                return '<span class="support-chip">' + escapeHtml(file.name) + '</span>';
+            chipsEl.innerHTML = selected.map(function (file, i) {
+                return '<span class="support-chip">' +
+                    '<span class="support-chip-name">' + escapeHtml(file.name || 'файл') + '</span>' +
+                    '<button type="button" class="support-chip-remove" data-index="' + i + '" aria-label="Убрать файл">×</button>' +
+                    '</span>';
             }).join('');
+        }
+
+        if (chipsEl && !chipsEl.getAttribute('data-chip-bound')) {
+            chipsEl.setAttribute('data-chip-bound', '1');
+            chipsEl.addEventListener('click', function (e) {
+                var btn = e.target.closest('.support-chip-remove');
+                if (!btn) return;
+                e.preventDefault();
+                e.stopPropagation();
+                var idx = Number(btn.getAttribute('data-index'));
+                if (idx >= 0 && idx < selected.length) {
+                    selected.splice(idx, 1);
+                    refreshChips();
+                    if (statusEl) statusEl.textContent = '';
+                }
+            });
         }
 
         function addFiles(list) {
