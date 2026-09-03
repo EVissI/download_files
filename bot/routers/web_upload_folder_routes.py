@@ -570,14 +570,17 @@ def register_web_upload_folder_routes(
             target = await db.get(WebUser, int(body.target_user_id))
             if not target or target.is_expired():
                 raise HTTPException(status_code=404, detail="Пользователь не найден")
+            folder_id = int(folder.id)
+            folder_name = str(folder.name or "")
             grant, created = await dao.grant_folder_access(
-                folder.id, int(body.target_user_id), user_id
+                folder_id, int(body.target_user_id), user_id
             )
             await db.commit()
             notify_sent = False
             notify_error = None
             if created:
                 admin_row = await db.get(WebUser, user_id)
+                admin_login = getattr(admin_row, "login", None) if admin_row else None
                 thread = await get_or_create_thread(db, int(body.target_user_id))
                 try:
                     await add_message(
@@ -585,13 +588,9 @@ def register_web_upload_folder_routes(
                         thread=thread,
                         author_user_id=user_id,
                         author_role=WebSupportAuthorRole.ADMIN.value,
-                        author_login=getattr(admin_row, "login", None),
-                        body=(
-                            f"Вам открыт доступ к папке «{folder.name}»."
-                        ),
-                        source_path=(
-                            f"/web/{folder_service}/folder/{int(folder.id)}"
-                        ),
+                        author_login=admin_login,
+                        body=f"Вам открыт доступ к папке «{folder_name}».",
+                        source_path=f"/web/{folder_service}/folder/{folder_id}",
                         files=[],
                     )
                     notify_sent = True
@@ -600,7 +599,7 @@ def register_web_upload_folder_routes(
                     logger.warning(
                         "Failed to notify web user {} about folder {}: {}",
                         body.target_user_id,
-                        folder.id,
+                        folder_id,
                         exc,
                     )
             return {
