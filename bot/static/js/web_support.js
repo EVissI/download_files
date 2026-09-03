@@ -356,7 +356,7 @@
                 }
             });
         }
-        return { submit: submit };
+        return { submit: submit, addFiles: addFiles };
     }
 
     async function pollUnread() {
@@ -400,7 +400,7 @@
         });
         if (closeBtn) closeBtn.addEventListener('click', function () { setOpen(false); });
 
-        bindComposer({
+        var composer = bindComposer({
             textEl: $('#supportText'),
             fileEl: $('#supportFiles'),
             chipsEl: $('#supportChips'),
@@ -419,6 +419,20 @@
                 setBadge($('[data-support-fab-badge]'), 0);
             },
         });
+
+        window.WebSupportWidget = {
+            open: function () {
+                setOpen(true);
+                pollThread(true);
+                var textEl = $('#supportText');
+                if (textEl) {
+                    setTimeout(function () { textEl.focus(); }, 0);
+                }
+            },
+            attachFiles: function (files) {
+                if (composer && composer.addFiles) composer.addFiles(files);
+            },
+        };
 
         async function pollThread(force) {
             if (!box || (!open && !force)) return;

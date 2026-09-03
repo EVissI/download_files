@@ -129,12 +129,14 @@
                 Открыть редактор
             </button>
         </div>
+        {% if not (web_standalone_mode|default(false) and is_admin|default(false)) %}
         <div class="support-container">
             <button type="button" id="supportBtn" class="viewer-icon-btn" onclick="openSupportModal()" title="Техподержка" aria-label="Отправить скрин в техподдержку">
                 <i class="fa fa-camera" aria-hidden="true"></i>
             </button>
             <span>Отправить скрин в тех поддержку</span>
         </div>
+        {% endif %}
 
         <!-- Admin button container -->
         <div id="adminButtonContainer" style="margin-top: 20px; margin-bottom: 20px; text-align: center; display: none;">
@@ -189,6 +191,7 @@
         </div>
         </div>
 
+        {% if not web_standalone_mode|default(false) %}
         <div id="supportModal" class="modal">
             <div class="modal-content">
                 <h2>Техническая поддержка</h2>
@@ -200,6 +203,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Модальное окно настроек -->
         <div id="settingsModal" class="modal settings-modal">

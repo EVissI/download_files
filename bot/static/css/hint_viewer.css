@@ -1852,9 +1852,6 @@ html {
             }
         }
 
-        body.web-standalone .support-container {
-            display: none !important;
-        }
         .web-standalone-back {
             display: inline-block;
             margin: 12px 16px 0;
@@ -1864,6 +1861,9 @@ html {
         }
         .web-standalone-back:hover { text-decoration: underline; }
         body.screenshot-mode .web-standalone-back,
-        body.screenshot-mode .ma-header-actions {
+        body.screenshot-mode .ma-header-actions,
+        body.screenshot-mode .support-fab,
+        body.screenshot-mode .support-panel,
+        body.screenshot-mode .support-container {
             display: none !important;
         }

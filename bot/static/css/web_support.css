@@ -78,6 +78,10 @@
     overflow: hidden;
 }
 .support-panel[hidden] { display: none !important; }
+body.screenshot-mode .support-fab,
+body.screenshot-mode .support-panel {
+    display: none !important;
+}
 .support-drop-overlay {
     display: none;
     position: absolute;

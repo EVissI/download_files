@@ -2575,7 +2575,11 @@ async function ensureContentEditor() {
                 scrollY: 0,
                 scale: Math.min(window.devicePixelRatio || 1, 2),
                 ignoreElements: function (el) {
-                    return !!(el && el.classList && el.classList.contains('web-standalone-back'));
+                    if (!el || !el.classList) return false;
+                    return el.classList.contains('web-standalone-back')
+                        || el.classList.contains('support-fab')
+                        || el.classList.contains('support-panel')
+                        || el.classList.contains('support-container');
                 },
             };
         }
@@ -3014,17 +3018,90 @@ async function ensureContentEditor() {
         }
 
         function openSupportModal() {
+            if (isWebStandaloneHintViewer()) {
+                sendScreenshotToWebSupport();
+                return;
+            }
             document.getElementById('supportModal').style.display = 'block';
             document.getElementById('supportText').value = '';
         }
 
         function closeSupportModal() {
-            document.getElementById('supportModal').style.display = 'none';
+            const modal = document.getElementById('supportModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function sendScreenshotToWebSupport() {
+            const widget = window.WebSupportWidget;
+            if (!widget || typeof widget.attachFiles !== 'function' || typeof widget.open !== 'function') {
+                showMessageModal('Чат поддержки недоступен', 'error');
+                return;
+            }
+
+            const supportContainer = document.querySelector('.support-container');
+            const openEditorBtn = document.getElementById('openEditorBtn');
+            const adminButtonContainer = document.getElementById('adminButtonContainer');
+            const topRow = document.getElementById('top-row');
+            const pageTitle = document.querySelector('.container > h1');
+            const viewerBelowBoard = document.querySelector('.viewer-below-board');
+            const hintsButtons = document.querySelector('.hints-buttons');
+            const supportFab = document.getElementById('supportFab');
+            const supportPanel = document.getElementById('supportPanel');
+            const originalAdminButtonContainerDisplay = adminButtonContainer ? adminButtonContainer.style.display : null;
+            const originalSupportDisplay = supportContainer ? supportContainer.style.display : null;
+            const originalOpenEditorBtnDisplay = openEditorBtn ? openEditorBtn.style.display : null;
+            const originalTopRowDisplay = topRow ? topRow.style.display : null;
+            const originalPageTitleDisplay = pageTitle ? pageTitle.style.display : null;
+            const originalViewerBelowDisplay = viewerBelowBoard ? viewerBelowBoard.style.display : null;
+            const originalHintsButtonsDisplay = hintsButtons ? hintsButtons.style.display : null;
+            const originalFabDisplay = supportFab ? supportFab.style.display : null;
+            const originalPanelHidden = supportPanel ? supportPanel.hidden : null;
+
+            function restoreChrome() {
+                if (supportContainer && originalSupportDisplay !== null) supportContainer.style.display = originalSupportDisplay;
+                if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
+                if (topRow && originalTopRowDisplay !== null) topRow.style.display = originalTopRowDisplay;
+                if (pageTitle && originalPageTitleDisplay !== null) pageTitle.style.display = originalPageTitleDisplay;
+                if (viewerBelowBoard && originalViewerBelowDisplay !== null) viewerBelowBoard.style.display = originalViewerBelowDisplay;
+                if (hintsButtons && originalHintsButtonsDisplay !== null) hintsButtons.style.display = originalHintsButtonsDisplay;
+                if (supportFab && originalFabDisplay !== null) supportFab.style.display = originalFabDisplay;
+                if (supportPanel && originalPanelHidden !== null) supportPanel.hidden = originalPanelHidden;
+                restoreAdminButtonContainerAfterScreenshot(adminButtonContainer, originalAdminButtonContainerDisplay);
+                removeScreenshotFontScale();
+            }
+
+            if (supportContainer) supportContainer.style.display = 'none';
+            if (openEditorBtn) openEditorBtn.style.display = 'none';
+            if (adminButtonContainer) adminButtonContainer.style.display = 'none';
+            if (topRow) topRow.style.display = 'none';
+            if (pageTitle) pageTitle.style.display = 'none';
+            if (viewerBelowBoard) viewerBelowBoard.style.display = 'none';
+            if (hintsButtons) hintsButtons.style.display = 'none';
+            if (supportFab) supportFab.style.display = 'none';
+            if (supportPanel) supportPanel.hidden = true;
+
+            applyScreenshotFontScale();
+            captureHintViewerScreenshot().then(canvas => {
+                canvas.toBlob(blob => {
+                    restoreChrome();
+                    if (!blob) {
+                        showMessageModal('Ошибка при создании скриншота', 'error');
+                        return;
+                    }
+                    const file = new File([blob], screenshotImageFileName(), { type: 'image/png' });
+                    widget.attachFiles([file]);
+                    widget.open();
+                }, 'image/png');
+            }).catch(error => {
+                console.error('Error creating screenshot:', error);
+                restoreChrome();
+                showMessageModal('Ошибка при создании скриншота', 'error');
+            });
         }
 
         window.onclick = function (event) {
             const modal = document.getElementById('supportModal');
-            if (event.target == modal) {
+            if (modal && event.target == modal) {
                 closeSupportModal();
             }
         }
@@ -3196,10 +3273,10 @@ async function ensureContentEditor() {
                 const settingsModal = document.getElementById('settingsModal');
                 const supportModal = document.getElementById('supportModal');
 
-                if (settingsModal.style.display === 'block') {
+                if (settingsModal && settingsModal.style.display === 'block') {
                     closeSettingsModal();
                 }
-                if (supportModal.style.display === 'block') {
+                if (supportModal && supportModal.style.display === 'block') {
                     closeSupportModal();
                 }
             }
