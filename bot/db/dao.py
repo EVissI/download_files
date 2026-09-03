@@ -3190,17 +3190,22 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
 
 
 class HintWebFolderDAO(BaseDAO[HintWebFolder]):
-    """Персональные папки веб-ошибок: дерево на каждого WebUser."""
+    """Персональные папки веб-кабинета: отдельное дерево на пользователя и сервис."""
 
     model = HintWebFolder
 
-    def _user_filter(self, user_id: int):
-        return HintWebFolder.user_id == user_id
+    def _scope(self, user_id: int, service: str):
+        return (
+            HintWebFolder.user_id == user_id,
+            HintWebFolder.service == (service or "hints"),
+        )
 
-    async def get_all_folders(self, user_id: int) -> list[HintWebFolder]:
+    async def get_all_folders(
+        self, user_id: int, service: str = "hints"
+    ) -> list[HintWebFolder]:
         result = await self._session.execute(
             select(HintWebFolder)
-            .where(self._user_filter(user_id))
+            .where(*self._scope(user_id, service))
             .order_by(
                 HintWebFolder.parent_id.asc().nullsfirst(),
                 HintWebFolder.sort_order.asc(),
@@ -3210,17 +3215,19 @@ class HintWebFolderDAO(BaseDAO[HintWebFolder]):
         return list(result.scalars().all())
 
     async def get_folder_for_user(
-        self, folder_id: int, user_id: int
+        self, folder_id: int, user_id: int, service: str = "hints"
     ) -> HintWebFolder | None:
         result = await self._session.execute(
             select(HintWebFolder).where(
                 HintWebFolder.id == folder_id,
-                self._user_filter(user_id),
+                *self._scope(user_id, service),
             )
         )
         return result.scalar_one_or_none()
 
-    async def next_sort_order(self, user_id: int, parent_id: int | None) -> int:
+    async def next_sort_order(
+        self, user_id: int, parent_id: int | None, service: str = "hints"
+    ) -> int:
         parent_cond = (
             HintWebFolder.parent_id.is_(None)
             if parent_id is None
@@ -3228,7 +3235,7 @@ class HintWebFolderDAO(BaseDAO[HintWebFolder]):
         )
         result = await self._session.execute(
             select(func.coalesce(func.max(HintWebFolder.sort_order), -1)).where(
-                self._user_filter(user_id),
+                *self._scope(user_id, service),
                 parent_cond,
             )
         )
@@ -3240,21 +3247,26 @@ class HintWebFolderDAO(BaseDAO[HintWebFolder]):
         name: str,
         parent_id: int | None,
         sort_order: int | None = None,
+        service: str = "hints",
     ) -> HintWebFolder:
+        folder_service = service or "hints"
         if parent_id is not None:
-            parent = await self.get_folder_for_user(parent_id, user_id)
+            parent = await self.get_folder_for_user(
+                parent_id, user_id, folder_service
+            )
             if not parent:
                 raise ValueError("Родительская папка не найдена")
         order = (
             sort_order
             if sort_order is not None
-            else await self.next_sort_order(user_id, parent_id)
+            else await self.next_sort_order(user_id, parent_id, folder_service)
         )
         folder = HintWebFolder(
             user_id=user_id,
             name=name[:255],
             parent_id=parent_id,
             sort_order=order,
+            service=folder_service,
         )
         self._session.add(folder)
         await self._session.flush()
@@ -3266,8 +3278,9 @@ class HintWebFolderDAO(BaseDAO[HintWebFolder]):
         user_id: int,
         name: str | None = None,
         sort_order: int | None = None,
+        service: str = "hints",
     ) -> HintWebFolder | None:
-        folder = await self.get_folder_for_user(folder_id, user_id)
+        folder = await self.get_folder_for_user(folder_id, user_id, service)
         if not folder:
             return None
         if name is not None:
@@ -3284,15 +3297,20 @@ class HintWebFolderDAO(BaseDAO[HintWebFolder]):
         user_id: int,
         new_parent_id: int | None,
         new_sort_order: int | None = None,
+        service: str = "hints",
     ) -> HintWebFolder | None:
-        folder = await self.get_folder_for_user(folder_id, user_id)
+        folder = await self.get_folder_for_user(folder_id, user_id, service)
         if not folder:
             return None
         if new_parent_id is not None:
-            new_parent = await self.get_folder_for_user(new_parent_id, user_id)
+            new_parent = await self.get_folder_for_user(
+                new_parent_id, user_id, service
+            )
             if not new_parent:
                 raise ValueError("Родительская папка не найдена")
-            if await self._is_descendant(folder_id, new_parent_id, user_id):
+            if await self._is_descendant(
+                folder_id, new_parent_id, user_id, service
+            ):
                 raise ValueError(
                     f"Нельзя переместить папку {folder_id} внутрь своего потомка {new_parent_id}"
                 )
@@ -3300,16 +3318,16 @@ class HintWebFolderDAO(BaseDAO[HintWebFolder]):
         folder.sort_order = (
             new_sort_order
             if new_sort_order is not None
-            else await self.next_sort_order(user_id, new_parent_id)
+            else await self.next_sort_order(user_id, new_parent_id, service)
         )
         folder.updated_at = datetime.now(timezone.utc)
         await self._session.flush()
         return folder
 
     async def _collect_descendant_folder_ids(
-        self, root_folder_id: int, user_id: int
+        self, root_folder_id: int, user_id: int, service: str = "hints"
     ) -> list[int]:
-        all_folders = await self.get_all_folders(user_id)
+        all_folders = await self.get_all_folders(user_id, service)
         children_map: dict[int | None, list[int]] = {}
         for f in all_folders:
             children_map.setdefault(f.parent_id, []).append(f.id)
@@ -3321,15 +3339,20 @@ class HintWebFolderDAO(BaseDAO[HintWebFolder]):
             queue.extend(children_map.get(current, []))
         return result
 
-    async def delete_folder(self, folder_id: int, user_id: int) -> bool:
-        folder = await self.get_folder_for_user(folder_id, user_id)
+    async def delete_folder(
+        self, folder_id: int, user_id: int, service: str = "hints"
+    ) -> bool:
+        folder = await self.get_folder_for_user(folder_id, user_id, service)
         if not folder:
             return False
-        descendant_ids = await self._collect_descendant_folder_ids(folder_id, user_id)
+        descendant_ids = await self._collect_descendant_folder_ids(
+            folder_id, user_id, service
+        )
         ids_to_delete = descendant_ids + [folder_id]
         await self._session.execute(
             delete(HintWebFolder).where(
                 HintWebFolder.user_id == user_id,
+                HintWebFolder.service == (service or "hints"),
                 HintWebFolder.id.in_(ids_to_delete),
             )
         )
@@ -3337,7 +3360,11 @@ class HintWebFolderDAO(BaseDAO[HintWebFolder]):
         return True
 
     async def _is_descendant(
-        self, ancestor_id: int, candidate_id: int, user_id: int
+        self,
+        ancestor_id: int,
+        candidate_id: int,
+        user_id: int,
+        service: str = "hints",
     ) -> bool:
         visited: set[int] = set()
         current_id: int | None = candidate_id
@@ -3350,31 +3377,33 @@ class HintWebFolderDAO(BaseDAO[HintWebFolder]):
             result = await self._session.execute(
                 select(HintWebFolder.parent_id).where(
                     HintWebFolder.id == current_id,
-                    self._user_filter(user_id),
+                    *self._scope(user_id, service),
                 )
             )
             current_id = result.scalar_one_or_none()
         return False
 
-    async def get_direct_counts(self, user_id: int) -> dict[int, int]:
+    async def get_direct_counts(
+        self, user_id: int, service: str = "hints"
+    ) -> dict[int, int]:
         result = await self._session.execute(
             select(
                 HintWebFolderItem.folder_id,
                 func.count(HintWebFolderItem.id),
             )
             .join(HintWebFolder, HintWebFolder.id == HintWebFolderItem.folder_id)
-            .where(HintWebFolder.user_id == user_id)
+            .where(*self._scope(user_id, service))
             .group_by(HintWebFolderItem.folder_id)
         )
         return {int(row[0]): int(row[1]) for row in result.all()}
 
     async def get_child_folders(
-        self, folder_id: int, user_id: int
+        self, folder_id: int, user_id: int, service: str = "hints"
     ) -> list[HintWebFolder]:
         result = await self._session.execute(
             select(HintWebFolder)
             .where(
-                self._user_filter(user_id),
+                *self._scope(user_id, service),
                 HintWebFolder.parent_id == folder_id,
             )
             .order_by(HintWebFolder.sort_order.asc(), HintWebFolder.id.asc())

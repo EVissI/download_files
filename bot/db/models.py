@@ -1702,11 +1702,16 @@ class HintViewerWebUpload(Base):
 
 
 class HintWebFolder(Base):
-    """Персональное дерево папок пользователя в веб-ошибках."""
+    """Персональное дерево папок пользователя в веб-кабинете (ошибки / плеер)."""
 
     __tablename__ = "hint_web_folders"
     __table_args__ = (
-        Index("ix_hint_web_folders_user_id_parent_id", "user_id", "parent_id"),
+        Index(
+            "ix_hint_web_folders_user_id_service_parent_id",
+            "user_id",
+            "service",
+            "parent_id",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -1717,6 +1722,13 @@ class HintWebFolder(Base):
         index=True,
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    service: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="hints",
+        server_default="hints",
+        index=True,
+    )
     parent_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("hint_web_folders.id", ondelete="SET NULL"),

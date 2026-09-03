@@ -32,6 +32,10 @@ from bot.common.service.webapp_settings_service import (
 from bot.common.utils.static_assets import get_static_asset_version
 from bot.common.utils.http_security import require_public_id
 from bot.db.models import HintViewerWebUploadStatus
+from bot.routers.web_upload_folder_routes import (
+    register_web_upload_folder_routes,
+    resolve_scoped_folder_id,
+)
 
 board_viewer_web_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
@@ -183,15 +187,21 @@ async def web_board_upload(request: Request, files: list[UploadFile] = File(...)
 
 
 @board_viewer_web_api_router.get("/web/board/api/history")
-async def web_board_history(request: Request, page: int = 1):
+async def web_board_history(request: Request, page: int = 1, folder_id: int | None = None):
     _token, session = await _require_session(request)
     user_id = session.get("user_id")
+    scoped_folder_id = None
+    if user_id and folder_id:
+        scoped_folder_id = await resolve_scoped_folder_id(
+            int(user_id), int(folder_id), WEB_SERVICE_BOARD
+        )
     payload = (
         await list_history_for_user(
             int(user_id),
             page=page,
             page_size=HISTORY_PAGE_SIZE,
             service=WEB_SERVICE_BOARD,
+            folder_id=scoped_folder_id,
         )
         if user_id
         else {
@@ -202,7 +212,7 @@ async def web_board_history(request: Request, page: int = 1):
             "total": 0,
         }
     )
-    return {"ok": True, **payload}
+    return {"ok": True, "folder_id": scoped_folder_id, **payload}
 
 
 @board_viewer_web_api_router.get("/web/board/view", response_class=HTMLResponse)
@@ -234,3 +244,8 @@ async def web_board_view(request: Request, game_id: str | None = None):
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
+
+
+register_web_upload_folder_routes(
+    board_viewer_web_api_router, service=WEB_SERVICE_BOARD, prefix="/web/board"
+)

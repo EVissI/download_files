@@ -266,6 +266,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
             "dropzone_hint": ".mat",
             "accept": ".mat",
             "dropzone_title": "Нажмите или перетащите файл сюда",
+            "enable_user_folders": True,
         }
     if service == WEB_SERVICE_ANALYZE:
         return {
