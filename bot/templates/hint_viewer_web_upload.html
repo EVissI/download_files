@@ -738,7 +738,7 @@
         function pdfLink(gameId) {
             if (!pdfDownload || !gameId) return '';
             const url = apiBase + '/api/pdf?game_id=' + encodeURIComponent(gameId);
-            return `<a class="btn ghost history-pdf-btn" href="${escapeHtml(url)}" title="Скачать PDF">Скачать</a>`;
+            return `<a class="btn ghost history-pdf-btn" href="${escapeHtml(url)}" title="Скачать PDF">Скачать PDF</a>`;
         }
 
         function hintsButton(gameId) {
@@ -990,7 +990,7 @@
         function pdfBatchLink(batchId) {
             if (!pdfDownload || !batchId) return '';
             const url = apiBase + '/api/pdf?batch_id=' + encodeURIComponent(batchId);
-            return `<a class="btn ghost history-pdf-btn" href="${escapeHtml(url)}" title="Скачать PDF">Скачать</a>`;
+            return `<a class="btn ghost history-pdf-btn" href="${escapeHtml(url)}" title="Скачать PDF">Скачать PDF</a>`;
         }
 
         function cacheBatchPayload(batchId, data) {
