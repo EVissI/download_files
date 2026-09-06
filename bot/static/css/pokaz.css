@@ -3115,7 +3115,7 @@ body {
                 width: 100%;
             }
 
-            /* При открытой таблице: доска слева, справа таблица; aux-панель — под доской */
+            /* При открытой таблице: доска слева, справа таблица; управление и aux — под таблицей */
             .container.pokaz-board-open .pokaz-workspace {
                 flex-direction: row;
                 align-items: flex-start;
@@ -3153,6 +3153,13 @@ body {
                 display: none;
             }
 
+            .container.pokaz-board-open .pokaz-side > .board-open-controls.active {
+                width: 100%;
+                margin-top: 0.35rem;
+                padding: 0.5rem 0 0;
+                box-sizing: border-box;
+            }
+
             .container.pokaz-board-open .pokaz-main-stage > .board-open-controls.active {
                 width: 100%;
                 margin-top: 0.35rem;
@@ -3160,7 +3167,8 @@ body {
                 box-sizing: border-box;
             }
 
-            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel {
+            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel,
+            .container.pokaz-board-open .pokaz-side > .pokaz-aux-panel {
                 display: flex;
                 flex-direction: column;
                 gap: 12px;
@@ -3175,20 +3183,25 @@ body {
 
             .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel .screenshot-controls,
             .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel .admin-comment-container,
-            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel #pokazScreenshotAdminContainer {
+            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel #pokazScreenshotAdminContainer,
+            .container.pokaz-board-open .pokaz-side > .pokaz-aux-panel .screenshot-controls,
+            .container.pokaz-board-open .pokaz-side > .pokaz-aux-panel .admin-comment-container,
+            .container.pokaz-board-open .pokaz-side > .pokaz-aux-panel #pokazScreenshotAdminContainer {
                 width: 100%;
                 max-width: none;
                 margin: 0;
             }
 
-            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel .screenshot-controls {
+            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel .screenshot-controls,
+            .container.pokaz-board-open .pokaz-side > .pokaz-aux-panel .screenshot-controls {
                 justify-content: center;
                 gap: 12px;
                 padding: 0;
                 border-top: none;
             }
 
-            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel .admin-comment-container {
+            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel .admin-comment-container,
+            .container.pokaz-board-open .pokaz-side > .pokaz-aux-panel .admin-comment-container {
                 justify-content: center;
                 flex-wrap: wrap;
                 gap: 10px;
@@ -3196,7 +3209,8 @@ body {
                 border-top: 1px solid #353535;
             }
 
-            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel #pokazScreenshotAdminContainer {
+            .container.pokaz-board-open .pokaz-main-stage > .pokaz-aux-panel #pokazScreenshotAdminContainer,
+            .container.pokaz-board-open .pokaz-side > .pokaz-aux-panel #pokazScreenshotAdminContainer {
                 margin: 0 !important;
                 padding-top: 4px;
                 border-top: 1px solid #353535;

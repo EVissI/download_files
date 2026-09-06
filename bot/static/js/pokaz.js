@@ -3770,8 +3770,8 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        // При открытой доске: скрыть selectors-wrapper и controls-row, показать board-open-controls
-        // Управление — всегда под доской; скриншоты — слева от стрелок; aux на широких — под доской
+        // При открытой таблице: скрыть selectors-wrapper и controls-row, показать board-open-controls
+        // ПК: управление и aux под таблицей; узкие экраны: управление под доской; скриншоты слева от стрелок
         function relocateScreenshotControls(boardOpen) {
             const screenshotControls = document.getElementById('screenshotControls');
             const boardOpenControls = document.getElementById('boardOpenControls');
@@ -3848,8 +3848,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const boardWrapper = mainStage ? mainStage.querySelector('.board-wrapper') : null;
             if (!mainStage || !side || !tools) return;
 
-            const placeControlsUnderBoard = !!boardOpen;
-            const placeAuxUnderBoard = !!(boardOpen && isWide);
+            const placeControlsUnderBoard = !!boardOpen && !isWide;
+            const placeAuxUnderTable = !!(boardOpen && isWide);
 
             if (placeControlsUnderBoard) {
                 if (boardOpenControls) {
@@ -3872,11 +3872,15 @@ document.addEventListener('DOMContentLoaded', function () {
             relocateHistoryNav(boardOpen);
             relocateScreenshotControls(boardOpen);
 
-            if (placeAuxUnderBoard) {
-                if (auxPanel && auxPanel.parentElement !== mainStage) {
-                    mainStage.appendChild(auxPanel);
-                } else if (auxPanel && boardOpenControls && auxPanel.previousElementSibling !== boardOpenControls) {
-                    mainStage.appendChild(auxPanel);
+            if (placeAuxUnderTable) {
+                if (auxPanel) {
+                    if (boardOpenControls && boardOpenControls.parentElement === side) {
+                        if (auxPanel.previousElementSibling !== boardOpenControls) {
+                            boardOpenControls.after(auxPanel);
+                        }
+                    } else if (auxPanel.parentElement !== side) {
+                        side.appendChild(auxPanel);
+                    }
                 }
                 tools.classList.add('is-aux-relocated');
             } else {
