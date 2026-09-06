@@ -1,4 +1,4 @@
-"""Веб-версия плеера (short board / board viewer): загрузка .mat без Telegram."""
+"""Веб-версия плеера (short board / board viewer): загрузка .mat и zip без Telegram."""
 
 from __future__ import annotations
 
@@ -152,32 +152,38 @@ async def web_board_upload_page(request: Request):
 async def web_board_upload(request: Request, files: list[UploadFile] = File(...)):
     token, session = await _require_session(request)
     uploads = [item for item in files if item and item.filename]
-    if len(uploads) != 1:
-        raise HTTPException(status_code=400, detail="Нужен один файл .mat")
-    upload = uploads[0]
-    filename = Path(upload.filename or "match.mat").name
-    if not filename.lower().endswith(".mat"):
-        raise HTTPException(status_code=400, detail="Нужен файл .mat")
-    data = await upload.read()
-    if not data:
-        raise HTTPException(status_code=400, detail="Файл пустой")
-    if len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=400, detail="Файл слишком большой (макс. 30 МБ)")
+    if not uploads:
+        raise HTTPException(status_code=400, detail="Файлы не выбраны")
+    from bot.routers.hint_viewer_web_router import _collect_mat_files
 
     workdir = tempfile.mkdtemp(prefix="board_web_")
     try:
-        local_mat = os.path.join(workdir, filename)
-        with open(local_mat, "wb") as f:
-            f.write(data)
+        collected = await _collect_mat_files(uploads, workdir)
+        if not collected:
+            raise HTTPException(status_code=400, detail="В загрузке нет .mat файлов")
         user_id = session.get("user_id")
         user_id = int(user_id) if user_id else None
-        payload = await _process_mat(local_mat, filename, token, user_id)
-        if payload.get("status") != HintViewerWebUploadStatus.DONE.value:
-            raise HTTPException(
-                status_code=400,
-                detail=payload.get("error") or "Не удалось разобрать матч",
-            )
-        return JSONResponse({"ok": True, "job": payload})
+        jobs: list[dict[str, Any]] = []
+        for local_mat, filename in collected:
+            payload = await _process_mat(local_mat, filename, token, user_id)
+            jobs.append(payload)
+        done_jobs = [
+            job
+            for job in jobs
+            if job.get("status") == HintViewerWebUploadStatus.DONE.value
+        ]
+        if not done_jobs:
+            first_error = (jobs[0].get("error") if jobs else None) or "Не удалось разобрать матч"
+            raise HTTPException(status_code=400, detail=first_error)
+        return JSONResponse(
+            {
+                "ok": True,
+                "job": done_jobs[0],
+                "jobs": jobs,
+                "done_count": len(done_jobs),
+                "total": len(jobs),
+            }
+        )
     except HTTPException:
         raise
     except Exception as e:

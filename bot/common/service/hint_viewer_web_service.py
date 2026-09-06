@@ -254,18 +254,19 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
             "api_base": "/web/board",
             "page_title": "Плеер",
             "intro_text": (
-                "Загрузите один .mat — сразу откроется просмотр партии."
+                "Можно загрузить один или несколько .mat, либо zip с матчами. "
+                "Один файл сразу откроется в плеере, несколько попадут в историю."
             ),
-            "upload_ok_message": "Открываем плеер…",
+            "upload_ok_message": "Матчи загружены в историю.",
             "login_url": "/web/hints/login?next=/web/board",
             "card_title": "Новый матч",
-            "upload_btn_label": "Открыть",
+            "upload_btn_label": "Загрузить",
             "show_current_jobs": False,
-            "allow_multiple": False,
+            "allow_multiple": True,
             "open_on_upload": True,
-            "dropzone_hint": ".mat",
-            "accept": ".mat",
-            "dropzone_title": "Нажмите или перетащите файл сюда",
+            "dropzone_hint": ".mat или .zip",
+            "accept": ".mat,.zip,application/zip",
+            "dropzone_title": "Нажмите или перетащите файлы сюда",
             "enable_user_folders": True,
             "enable_user_labels": True,
         }

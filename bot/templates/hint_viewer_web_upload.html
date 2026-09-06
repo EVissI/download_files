@@ -350,7 +350,7 @@
             <div class="drop" id="dropzone">{{ dropzone_title|default('Нажмите или перетащите файлы сюда') }}<br><span class="muted">{{ dropzone_hint|default('.mat или .zip') }}</span></div>
             <input id="fileInput" type="file" accept="{{ accept|default('.mat,.zip,application/zip') }}" {% if allow_multiple|default(true) %}multiple{% endif %}>
             <ul class="file-list" id="fileList"></ul>
-            <div class="actions"{% if not show_current_jobs|default(true) and open_on_upload|default(false) %} hidden{% endif %}>
+            <div class="actions"{% if not allow_multiple|default(true) and open_on_upload|default(false) %} hidden{% endif %}>
                 <button class="primary" id="uploadBtn" type="button" disabled>{{ upload_btn_label|default('Отправить на анализ') }}</button>
             </div>
             <p class="muted" id="uploadStatus"></p>
@@ -629,11 +629,28 @@
             if (uploadBtn) uploadBtn.disabled = selectedFiles.length === 0 || uploading;
         }
 
+        function isMatFile(file) {
+            return (file && file.name || '').toLowerCase().endsWith('.mat');
+        }
+
+        function isZipFile(file) {
+            return (file && file.name || '').toLowerCase().endsWith('.zip');
+        }
+
+        function isAllowedUpload(file) {
+            return isMatFile(file) || isZipFile(file);
+        }
+
         function addFiles(list) {
-            const incoming = Array.from(list || []).filter(Boolean);
-            if (!incoming.length) return;
+            const incoming = Array.from(list || []).filter(isAllowedUpload);
+            if (!incoming.length) {
+                uploadStatus.textContent = allowMultiple
+                    ? 'Нужны файлы .mat или .zip'
+                    : 'Нужен один файл .mat';
+                return;
+            }
             if (!allowMultiple) {
-                const mat = incoming.find((f) => (f.name || '').toLowerCase().endsWith('.mat'));
+                const mat = incoming.find(isMatFile);
                 if (!mat) {
                     uploadStatus.textContent = 'Нужен один файл .mat';
                     return;
@@ -645,6 +662,9 @@
             }
             selectedFiles = [...selectedFiles, ...incoming];
             renderFiles();
+            if (openOnUpload && selectedFiles.length === 1 && (isMatFile(selectedFiles[0]) || isZipFile(selectedFiles[0]))) {
+                startUpload();
+            }
         }
 
         dropzone.addEventListener('click', () => fileInput.click());
@@ -884,7 +904,9 @@
             if (!selectedFiles.length || uploading) return;
             uploading = true;
             if (uploadBtn) uploadBtn.disabled = true;
-            uploadStatus.textContent = openOnUpload ? 'Открываем…' : 'Загрузка…';
+            uploadStatus.textContent = (openOnUpload && selectedFiles.length === 1 && isMatFile(selectedFiles[0]))
+                ? 'Открываем…'
+                : 'Загрузка…';
             const fd = new FormData();
             selectedFiles.forEach((f) => fd.append('files', f));
             try {
@@ -898,23 +920,38 @@
                     return;
                 }
                 if (openOnUpload) {
-                    const job = data.job || {};
-                    const url = job.view_url || (job.open_links && job.open_links[0] && job.open_links[0].url);
-                    if (url) {
+                    const jobs = Array.isArray(data.jobs) && data.jobs.length
+                        ? data.jobs
+                        : (data.job ? [data.job] : []);
+                    const doneJobs = jobs.filter(function (job) {
+                        return job && job.status === 'done' && (
+                            job.view_url || (job.open_links && job.open_links[0] && job.open_links[0].url)
+                        );
+                    });
+                    if (jobs.length === 1 && doneJobs.length === 1) {
+                        const job = doneJobs[0];
+                        const url = job.view_url || job.open_links[0].url;
                         window.location.href = url;
                         return;
                     }
-                    uploadStatus.textContent = data.detail || job.error || 'Не удалось открыть матч';
-                    uploading = false;
-                    if (uploadBtn) uploadBtn.disabled = false;
-                    fileInput.value = '';
-                    return;
+                    if (!doneJobs.length) {
+                        const errJob = jobs[0] || {};
+                        uploadStatus.textContent = data.detail || errJob.error || 'Не удалось открыть матч';
+                        uploading = false;
+                        if (uploadBtn) uploadBtn.disabled = false;
+                        fileInput.value = '';
+                        return;
+                    }
                 }
                 selectedFiles = [];
                 fileInput.value = '';
                 uploading = false;
                 renderFiles();
-                uploadStatus.textContent = uploadOkMessage;
+                if (data.done_count && data.total && data.done_count < data.total) {
+                    uploadStatus.textContent = 'Загружено ' + data.done_count + ' из ' + data.total;
+                } else {
+                    uploadStatus.textContent = uploadOkMessage;
+                }
                 pollJobs();
                 historyPage = 1;
                 pollHistory();
