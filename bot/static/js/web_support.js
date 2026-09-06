@@ -642,7 +642,7 @@
                 if (!loaded) {
                     box.innerHTML = messages.length
                         ? ''
-                        : '<div class="support-empty">Напишите сообщение — ответит администратор.</div>';
+                        : '<div class="support-empty">Напишите сообщение</div>';
                     loaded = true;
                 }
                 if (messages.length) appendMessages(box, messages, 'user');
