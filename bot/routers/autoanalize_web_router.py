@@ -59,6 +59,10 @@ from bot.common.utils.static_assets import get_static_asset_version
 from bot.config import translator_hub
 from bot.db.models import HintViewerWebUploadStatus, WebSupportAuthorRole, WebUser
 from bot.db.redis import redis_client
+from bot.routers.web_upload_folder_routes import (
+    register_web_upload_folder_routes,
+    resolve_scoped_folder_id,
+)
 
 autoanalize_web_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
@@ -750,10 +754,20 @@ async def web_analyze_jobs_clear(request: Request):
 
 
 @autoanalize_web_api_router.get("/web/analyze/api/history")
-async def web_analyze_history(request: Request, page: int = 1):
+async def web_analyze_history(
+    request: Request,
+    page: int = 1,
+    folder_id: int | None = None,
+    label: str | None = None,
+):
     _token, session = await _require_session(request)
     ensure_web_analyze_worker()
     user_id = session.get("user_id")
+    scoped_folder_id = None
+    if user_id and folder_id:
+        scoped_folder_id = await resolve_scoped_folder_id(
+            int(user_id), int(folder_id), WEB_SERVICE_ANALYZE
+        )
     if user_id:
         await reconcile_open_analyze_history(int(user_id))
     payload = (
@@ -762,6 +776,8 @@ async def web_analyze_history(request: Request, page: int = 1):
             page=page,
             page_size=HISTORY_PAGE_SIZE,
             service=WEB_SERVICE_ANALYZE,
+            folder_id=scoped_folder_id,
+            label=label,
         )
         if user_id
         else {
@@ -772,7 +788,7 @@ async def web_analyze_history(request: Request, page: int = 1):
             "total": 0,
         }
     )
-    return {"ok": True, **payload}
+    return {"ok": True, "folder_id": scoped_folder_id, **payload}
 
 
 def _snowie_rate(metrics: dict[str, Any] | None, player: str) -> float:
@@ -1129,3 +1145,8 @@ async def web_analyze_order_analysis(request: Request, game_id: str = ""):
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
     return JSONResponse({"ok": True, "message": payload})
+
+
+register_web_upload_folder_routes(
+    autoanalize_web_api_router, service=WEB_SERVICE_ANALYZE, prefix="/web/analyze"
+)

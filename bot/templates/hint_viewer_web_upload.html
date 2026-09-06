@@ -1066,7 +1066,7 @@
             const extraClass = [
                 expandable ? ('history-item--expandable' + (isOpen ? ' is-open' : '')) : '',
                 nested ? 'history-item--nested' : '',
-                (enableUserFolders && !nested && item.id) ? 'has-select' : '',
+                (enableUserFolders && item.id) ? 'has-select' : '',
             ].filter(Boolean).join(' ');
             const chevron = expandable ? `<span class="chevron">${isOpen ? '▴' : '▾'}</span>` : '';
             const pdf = (item.status === 'done' && gameId) ? analyzeFileActions(gameId) : '';
@@ -1079,7 +1079,7 @@
             } else if (expandable) {
                 table = `<div class="history-table-wrap"${isOpen ? '' : ' hidden'}>${isOpen ? (cachedTable || '<div class="muted">Загрузка таблицы…</div>') : ''}</div>`;
             }
-            const select = (enableUserFolders && !nested && item.id)
+            const select = (enableUserFolders && item.id)
                 ? `<label class="history-item-select"><input type="checkbox" data-upload-id="${item.id}"></label>`
                 : '';
             const uploadAttr = (!nested && item.id) ? ` data-upload-id="${item.id}"` : '';
@@ -1106,12 +1106,23 @@
             return `${summary}<div class="batch-files">${nested}</div>`;
         }
 
+        function collectCheckedUploadIds(root) {
+            const ids = [];
+            (root || document).querySelectorAll('input[data-upload-id]:checked, input[data-upload-ids]:checked').forEach((el) => {
+                const one = parseInt(el.getAttribute('data-upload-id'), 10);
+                if (one > 0) ids.push(one);
+                String(el.getAttribute('data-upload-ids') || '').split(',').forEach((part) => {
+                    const n = parseInt(part, 10);
+                    if (n > 0) ids.push(n);
+                });
+            });
+            return ids;
+        }
+
         function renderHistory(data) {
             if (!historyEl) return;
             const selectedIds = enableUserFolders
-                ? new Set(Array.from(historyEl.querySelectorAll('input[data-upload-id]:checked'))
-                    .map((el) => parseInt(el.getAttribute('data-upload-id'), 10))
-                    .filter((n) => n > 0))
+                ? new Set(collectCheckedUploadIds(historyEl))
                 : new Set();
             const items = data.items || [];
             if (!items.length && !(data.total > 0)) {
@@ -1129,9 +1140,10 @@
                     const batchId = String(item.batch_id || '');
                     const expandable = !!(historyExpandable && item.expandable && batchId);
                     const isOpen = expandable && openBatchIds.has(batchId);
+                    const fileIds = (item.files || []).map((file) => file && file.id).filter((id) => id > 0);
                     const extraClass = 'history-item--batch' + (expandable
                         ? (' history-item--expandable' + (isOpen ? ' is-open' : ''))
-                        : '');
+                        : '') + ((enableUserFolders && fileIds.length) ? ' has-select' : '');
                     const chevron = expandable ? `<span class="chevron">${isOpen ? '▴' : '▾'}</span>` : '';
                     const pdf = (item.ready_count > 0 && batchId) ? pdfBatchLink(batchId) : '';
                     const cached = loadedBatches[batchId];
@@ -1144,8 +1156,12 @@
                     const countLabel = item.ready_count != null
                         ? `готово ${item.ready_count}/${item.total_files || 0}`
                         : '';
+                    const select = (enableUserFolders && fileIds.length)
+                        ? `<label class="history-item-select"><input type="checkbox" data-upload-ids="${fileIds.join(',')}"></label>`
+                        : '';
                     return `<div class="history-item ${extraClass}"${expandable ? ` data-batch-id="${escapeHtml(batchId)}"` : ''}>
                         <div class="history-item-head">
+                            ${select}
                             <div>
                                 <strong>${escapeHtml(item.original_filename || 'Пакет')}</strong>
                                 <div class="muted">${escapeHtml(countLabel || '—')} · ${historyStatusLabel(item.status)}</div>
@@ -1163,6 +1179,13 @@
                 historyEl.querySelectorAll('input[data-upload-id]').forEach((el) => {
                     const uid = parseInt(el.getAttribute('data-upload-id'), 10);
                     if (selectedIds.has(uid)) el.checked = true;
+                });
+                historyEl.querySelectorAll('input[data-upload-ids]').forEach((el) => {
+                    const ids = String(el.getAttribute('data-upload-ids') || '')
+                        .split(',')
+                        .map((part) => parseInt(part, 10))
+                        .filter((n) => n > 0);
+                    if (ids.length && ids.every((id) => selectedIds.has(id))) el.checked = true;
                 });
             }
             if (window.hintWebHistory && typeof window.hintWebHistory.afterRender === 'function') {
@@ -1489,7 +1512,7 @@
 
         if (historyEl && enableUserFolders) {
             historyEl.addEventListener('change', (event) => {
-                const input = event.target.closest('input[data-upload-id]');
+                const input = event.target.closest('input[data-upload-id], input[data-upload-ids]');
                 if (!input) return;
                 if (window.hintWebHistory && typeof window.hintWebHistory.onSelectionChange === 'function') {
                     window.hintWebHistory.onSelectionChange();
@@ -1546,13 +1569,11 @@
             },
             getSelectedUploadIds() {
                 if (!historyEl) return [];
-                return Array.from(historyEl.querySelectorAll('input[data-upload-id]:checked'))
-                    .map((el) => parseInt(el.getAttribute('data-upload-id'), 10))
-                    .filter((n) => n > 0);
+                return [...new Set(collectCheckedUploadIds(historyEl))];
             },
             clearSelection() {
                 if (!historyEl) return;
-                historyEl.querySelectorAll('input[data-upload-id]:checked').forEach((el) => {
+                historyEl.querySelectorAll('input[data-upload-id]:checked, input[data-upload-ids]:checked').forEach((el) => {
                     el.checked = false;
                 });
                 if (typeof window.hintWebHistory.onSelectionChange === 'function') {

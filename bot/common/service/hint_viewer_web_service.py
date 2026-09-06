@@ -293,6 +293,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
             "dropzone_hint": ".mat, .zip, .sgf, .gam и др.",
             "accept": ".mat,.zip,.txt,.sgf,.sgg,.bkg,.gam,.pos,.fibs,.tmg,application/zip",
             "dropzone_title": "Нажмите или перетащите файлы сюда",
+            "enable_user_folders": True,
         }
     return {
         "web_service": WEB_SERVICE_HINTS,
@@ -810,9 +811,11 @@ async def list_history_for_user(
     label_text = (label or "").strip() or None
     async with async_session_maker() as session:
         dao = HintViewerWebUploadDAO(session)
-        group_batches = service == WEB_SERVICE_ANALYZE
-        scoped_folder_id = None if group_batches else folder_id
-        scoped_label = None if group_batches else label_text
+        group_batches = (
+            service == WEB_SERVICE_ANALYZE and not folder_id and not label_text
+        )
+        scoped_folder_id = folder_id
+        scoped_label = label_text
         skip_owner_filter = False
         if scoped_folder_id:
             folder_row = await session.get(HintWebFolder, int(scoped_folder_id))
