@@ -937,6 +937,17 @@ html,
             display: none;
         }
 
+        /* Виджет поддержки: футер на всю ширину снизу и выше по z-index. */
+        body:has(.cabinet-footer:not(.is-feature-hidden):not(.is-modal-overlay-hidden)) .support-fab {
+            bottom: calc(16px + 52px + env(safe-area-inset-bottom, 0px));
+            z-index: 190010;
+        }
+        body:has(.cabinet-footer:not(.is-feature-hidden):not(.is-modal-overlay-hidden)) .support-panel {
+            bottom: calc(80px + 52px + env(safe-area-inset-bottom, 0px));
+            z-index: 190011;
+            height: min(560px, calc(100dvh - 172px - env(safe-area-inset-bottom, 0px)));
+        }
+
         .tile:active {
             background: #3d5a80;
             border-color: #5a7aaa;
