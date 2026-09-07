@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru"{% if web_standalone_mode|default(false) %} class="web-standalone"{% endif %}>
 
 <head>
     <meta charset="UTF-8">
@@ -56,21 +56,29 @@
             border: none;
             border-radius: 0;
             padding: 0;
-            padding-top: max(0px, env(safe-area-inset-top, 0px), var(--tg-safe-top, 0px));
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        /* Смартфоны: ~10vh; планшеты: ~5vh — внутри уже ограниченной высоты, футер не вытесняется. */
+        html.web-standalone #contentCardViewRoot {
+            top: 0;
+        }
+        html.web-standalone #contentCardViewRoot .card-preview-box {
+            padding-top: 0;
+        }
+
+        /* Telegram Mini App: место под статус-бар, чтобы футер не уезжал. */
+        html:not(.web-standalone) #contentCardViewRoot .card-preview-box {
+            padding-top: max(0px, env(safe-area-inset-top, 0px), var(--tg-safe-top, 0px));
+        }
         @media (max-width: 600px) {
-            #contentCardViewRoot .card-preview-box {
+            html:not(.web-standalone) #contentCardViewRoot .card-preview-box {
                 padding-top: max(10vh, 24px, env(safe-area-inset-top, 0px), var(--tg-safe-top, 0px));
             }
         }
-
         @media (min-width: 601px) and (max-width: 1024px) {
-            #contentCardViewRoot .card-preview-box {
+            html:not(.web-standalone) #contentCardViewRoot .card-preview-box {
                 padding-top: max(5vh, 24px, env(safe-area-inset-top, 0px), var(--tg-safe-top, 0px));
             }
         }
@@ -279,7 +287,7 @@
     <script type="module" src="/static/js/content-editor/bootstrap/index.js?t={{ cache_timestamp }}"></script>
 </head>
 
-<body>
+<body{% if web_standalone_mode|default(false) %} class="web-standalone"{% endif %}>
     <!-- Кнопки админа (добавление/удаление кадра и т.д.) — content_editor.js (initContentCardViewOnly + _ensureContentCardAddFrameUi). -->
     <script>
         if (window.Telegram && window.Telegram.WebApp) {
@@ -308,7 +316,11 @@
                 if (h > 0) {
                     document.documentElement.style.setProperty('--app-height', h + 'px');
                 }
-                document.documentElement.style.setProperty('--app-offset-top', top + 'px');
+                var isWebStandalone = document.documentElement.classList.contains('web-standalone');
+                document.documentElement.style.setProperty(
+                    '--app-offset-top',
+                    isWebStandalone ? '0px' : (top + 'px')
+                );
                 var tgApp = window.Telegram && window.Telegram.WebApp;
                 if (tgApp) {
                     var sa = tgApp.safeAreaInset || {};
