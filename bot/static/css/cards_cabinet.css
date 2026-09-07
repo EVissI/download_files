@@ -2297,3 +2297,23 @@ html,
         #cabinet-back-to-parent-btn.is-visible {
             display: inline-flex;
         }
+
+        .cabinet-card-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 240000;
+            background: #1a1a1a;
+        }
+        .cabinet-card-overlay[hidden] {
+            display: none !important;
+        }
+        .cabinet-card-overlay__frame {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: 0;
+            background: #1a1a1a;
+        }
+        body.cabinet-card-overlay-open {
+            overflow: hidden;
+        }

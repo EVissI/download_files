@@ -994,7 +994,14 @@
             uploadBtn.addEventListener('click', async () => {
                 if (!selectedFiles.length) return;
                 if (window.Notification && Notification.permission === 'default') {
-                    try { await Notification.requestPermission(); } catch (e) {}
+                    try {
+                        if (window.WebNotifyPrompt && typeof window.WebNotifyPrompt.ask === 'function') {
+                            await window.WebNotifyPrompt.ask();
+                        } else if (localStorage.getItem('web_notify_prompt') !== '1') {
+                            localStorage.setItem('web_notify_prompt', '1');
+                            await Notification.requestPermission();
+                        }
+                    } catch (e) {}
                 }
                 startUpload();
             });

@@ -1101,9 +1101,12 @@
             redirectBtn.innerHTML = '<i class="fa fa-external-link" aria-hidden="true"></i>';
             redirectBtn.addEventListener('click', function (ev) {
                 ev.stopPropagation();
-                window.location.assign(
-                    buildViewUrl(state.matchId, item.game_number, item.move_index)
-                );
+                var viewUrl = buildViewUrl(state.matchId, item.game_number, item.move_index);
+                if (typeof window.CardsCabinetOpenView === 'function') {
+                    window.CardsCabinetOpenView(viewUrl);
+                    return;
+                }
+                window.location.assign(viewUrl);
             });
 
             var editBtn = document.createElement('button');

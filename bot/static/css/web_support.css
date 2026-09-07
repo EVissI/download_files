@@ -153,6 +153,31 @@ body.screenshot-mode .support-panel {
     line-height: 1;
     padding: 4px 6px;
 }
+.support-notify-btn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-left: auto;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--web-text-muted);
+    cursor: pointer;
+    padding: 0;
+}
+.support-notify-btn:hover {
+    background: var(--web-ghost-bg);
+    color: var(--web-text);
+}
+.support-notify-btn.is-on {
+    color: #7eb6ff;
+}
+.support-inbox-head .support-notify-btn {
+    margin-left: 0;
+}
 .support-messages {
     flex: 1 1 auto;
     min-height: 0;

@@ -106,6 +106,7 @@
 
     var NOTIFY_KEY = 'web_support_last_msg_id';
     var USER_NOTIFY_KEY = 'web_support_user_last_msg_id';
+    var PROMPT_KEY = 'web_notify_prompt';
     var notifyGestureBound = false;
 
     function isTopWindow() {
@@ -116,13 +117,99 @@
         return (location.pathname.replace(/\/$/, '') || '/') === '/web/support';
     }
 
+    function notifyPermission() {
+        try {
+            if (!window.Notification) return 'unsupported';
+            return Notification.permission || 'default';
+        } catch (e) {
+            return 'unsupported';
+        }
+    }
+
+    function wasNotifyPrompted() {
+        try { return localStorage.getItem(PROMPT_KEY) === '1'; } catch (e) { return false; }
+    }
+
+    function markNotifyPrompted() {
+        try { localStorage.setItem(PROMPT_KEY, '1'); } catch (e) {}
+    }
+
+    function canAutoAskNotify() {
+        return notifyPermission() === 'default' && !wasNotifyPrompted();
+    }
+
+    function requestNotifyPermission(opts) {
+        var force = !!(opts && opts.force);
+        var perm = notifyPermission();
+        if (perm !== 'default') return Promise.resolve(perm);
+        if (!force && wasNotifyPrompted()) return Promise.resolve(perm);
+        markNotifyPrompted();
+        try {
+            return Notification.requestPermission().catch(function () {
+                return notifyPermission();
+            });
+        } catch (e) {
+            return Promise.resolve(notifyPermission());
+        }
+    }
+
+    function syncNotifyButtons() {
+        var perm = notifyPermission();
+        document.querySelectorAll('[data-support-notify]').forEach(function (btn) {
+            if (perm === 'unsupported') {
+                btn.hidden = true;
+                return;
+            }
+            btn.hidden = false;
+            btn.classList.toggle('is-on', perm === 'granted');
+            btn.setAttribute('aria-pressed', perm === 'granted' ? 'true' : 'false');
+            if (perm === 'granted') {
+                btn.title = 'Уведомления включены';
+                btn.setAttribute('aria-label', 'Уведомления включены');
+            } else if (perm === 'denied') {
+                btn.title = 'Уведомления запрещены в настройках браузера для этого сайта';
+                btn.setAttribute('aria-label', 'Уведомления выключены');
+            } else {
+                btn.title = 'Включить уведомления';
+                btn.setAttribute('aria-label', 'Включить уведомления');
+            }
+        });
+    }
+
+    function ensureNotifyButton(headEl, beforeEl) {
+        if (!headEl || headEl.querySelector('[data-support-notify]')) return;
+        if (notifyPermission() === 'unsupported') return;
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'support-notify-btn';
+        btn.setAttribute('data-support-notify', '1');
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+            '<path d="M12 22a2.2 2.2 0 0 0 2.2-2.2H9.8A2.2 2.2 0 0 0 12 22Zm8-6.2V11a8 8 0 1 0-16 0v4.8L2 18v1h20v-1l-2-2.2Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' +
+            '</svg>';
+        btn.addEventListener('click', function () {
+            requestNotifyPermission({ force: true }).then(syncNotifyButtons);
+        });
+        if (beforeEl && beforeEl.parentNode === headEl) {
+            headEl.insertBefore(btn, beforeEl);
+        } else {
+            headEl.appendChild(btn);
+        }
+        syncNotifyButtons();
+    }
+
+    window.WebNotifyPrompt = {
+        ask: function (opts) { return requestNotifyPermission(opts); },
+        canAutoAsk: canAutoAskNotify,
+    };
+
     function bindNotifyGesture() {
         if (notifyGestureBound || !isTopWindow()) return;
+        if (!canAutoAskNotify()) return;
         notifyGestureBound = true;
         function ask() {
             document.removeEventListener('pointerdown', ask, true);
-            if (!window.Notification || Notification.permission !== 'default') return;
-            Notification.requestPermission().catch(function () {});
+            if (!canAutoAskNotify()) return;
+            requestNotifyPermission().then(syncNotifyButtons);
         }
         document.addEventListener('pointerdown', ask, true);
     }
@@ -589,6 +676,7 @@
             if (open) pollThread(true);
         });
         if (closeBtn) closeBtn.addEventListener('click', function () { setOpen(false); });
+        ensureNotifyButton($('.support-panel-head', panel), closeBtn);
 
         var composer = bindComposer({
             textEl: $('#supportText', panel),
@@ -667,6 +755,7 @@
         var box = $('#supportInboxMessages');
         var backBtn = $('#supportInboxBack');
         var deleteBtn = $('#supportInboxDelete');
+        ensureNotifyButton($('.support-inbox-head', root), deleteBtn);
         var deleteModal = $('#supportDeleteModal');
         var deleteText = $('#supportDeleteText');
         var deleteCancel = $('#supportDeleteCancel');
@@ -880,8 +969,8 @@
     document.addEventListener('click', function (e) {
         if (!e.target.closest('[data-support-nav]')) return;
         if (!isTopWindow()) return;
-        if (!window.Notification || Notification.permission !== 'default') return;
-        Notification.requestPermission().catch(function () {});
+        if (!canAutoAskNotify()) return;
+        requestNotifyPermission().then(syncNotifyButtons);
     });
 
     pollUnread();
