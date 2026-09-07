@@ -956,10 +956,13 @@
                     if (jobs.length === 1 && doneJobs.length === 1) {
                         const job = doneJobs[0];
                         const url = job.view_url || job.open_links[0].url;
-                        window.location.href = url;
-                        return;
-                    }
-                    if (!doneJobs.length) {
+                        if (typeof window.webOpenPageOverlay === 'function') {
+                            window.webOpenPageOverlay(url);
+                        } else {
+                            window.location.href = url;
+                            return;
+                        }
+                    } else if (!doneJobs.length) {
                         const errJob = jobs[0] || {};
                         uploadStatus.textContent = data.detail || errJob.error || 'Не удалось открыть матч';
                         uploading = false;

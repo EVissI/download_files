@@ -303,7 +303,7 @@ html.web-is-fullscreen body {
 html.web-fs-embedded .web-cabinet-header {
     display: none !important;
 }
-body.web-fs-shell > *:not(.web-cabinet-header):not(.web-fs-frame):not(script) {
+body.web-fs-shell > *:not(.web-cabinet-header):not(.web-fs-frame):not(.web-page-overlay):not(script) {
     display: none !important;
 }
 body.web-fs-shell .web-cabinet-header {
@@ -321,6 +321,26 @@ iframe.web-fs-frame {
     z-index: 3;
     background: var(--web-bg);
     display: block !important;
+}
+
+.web-page-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 240000;
+    background: var(--web-bg);
+}
+.web-page-overlay[hidden] {
+    display: none !important;
+}
+.web-page-overlay__frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: var(--web-bg);
+}
+body.web-page-overlay-open {
+    overflow: hidden;
 }
 
 html[data-theme="light"] body {

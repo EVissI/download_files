@@ -107,92 +107,13 @@
                 window.location.assign(href);
             }
 
-            var cabinetViewOverlayBound = false;
-
-            function overlayPublicUrl(href) {
-                var url = new URL(href, location.href);
-                url.searchParams.delete('embed');
-                return url.pathname + url.search + url.hash;
-            }
-
-            function overlayEmbedUrl(href) {
-                var url = new URL(href, location.href);
-                url.searchParams.set('embed', '1');
-                return url.pathname + url.search + url.hash;
-            }
-
-            function isCabinetViewOverlayOpen() {
-                var wrap = document.getElementById('cabinet-card-overlay');
-                return !!(wrap && !wrap.hidden);
-            }
-
-            function closeCabinetViewOverlay(opts) {
-                var fromPop = !!(opts && opts.fromPopstate);
-                var wrap = document.getElementById('cabinet-card-overlay');
-                var wasOpen = wrap && !wrap.hidden;
-                if (wrap) {
-                    wrap.hidden = true;
-                    wrap.setAttribute('aria-hidden', 'true');
-                    document.body.classList.remove('cabinet-card-overlay-open');
-                    var frame = wrap.querySelector('iframe');
-                    if (frame) frame.src = 'about:blank';
-                }
-                if (wasOpen && !fromPop && history.state && history.state.cabinetViewOverlay) {
-                    history.back();
-                }
-            }
-
-            function openCabinetViewOverlay(href, opts) {
+            function openCabinetViewOverlay(href) {
                 if (!href) return;
-                var fromPop = !!(opts && opts.fromPopstate);
-                var wrap = document.getElementById('cabinet-card-overlay');
-                if (!wrap) {
-                    wrap = document.createElement('div');
-                    wrap.id = 'cabinet-card-overlay';
-                    wrap.className = 'cabinet-card-overlay';
-                    wrap.hidden = true;
-                    wrap.setAttribute('aria-hidden', 'true');
-                    var frame = document.createElement('iframe');
-                    frame.className = 'cabinet-card-overlay__frame';
-                    frame.title = 'Просмотр';
-                    frame.setAttribute('allow', 'fullscreen; autoplay; microphone');
-                    wrap.appendChild(frame);
-                    document.body.appendChild(wrap);
+                if (typeof window.webOpenPageOverlay === 'function') {
+                    window.webOpenPageOverlay(href);
+                    return;
                 }
-                if (!cabinetViewOverlayBound) {
-                    cabinetViewOverlayBound = true;
-                    window.addEventListener('message', function (e) {
-                        if (e.origin !== location.origin) return;
-                        if (!e.data || e.data.type !== 'web-cabinet-overlay-close') return;
-                        closeCabinetViewOverlay();
-                    });
-                    window.addEventListener('popstate', function () {
-                        if (history.state && history.state.cabinetViewOverlay) {
-                            openCabinetViewOverlay(
-                                history.state.href || location.href,
-                                { fromPopstate: true }
-                            );
-                            return;
-                        }
-                        if (isCabinetViewOverlayOpen()) {
-                            closeCabinetViewOverlay({ fromPopstate: true });
-                        }
-                    });
-                }
-                var already = isCabinetViewOverlayOpen();
-                var frameEl = wrap.querySelector('iframe');
-                var publicUrl = overlayPublicUrl(href);
-                wrap.hidden = false;
-                wrap.setAttribute('aria-hidden', 'false');
-                document.body.classList.add('cabinet-card-overlay-open');
-                frameEl.src = overlayEmbedUrl(href);
-                if (fromPop) return;
-                var overlayState = { cabinetViewOverlay: true, href: publicUrl };
-                if (already && history.state && history.state.cabinetViewOverlay) {
-                    history.replaceState(overlayState, '', publicUrl);
-                } else {
-                    history.pushState(overlayState, '', publicUrl);
-                }
+                window.location.assign(href);
             }
 
             window.CardsCabinetOpenView = openCabinetViewOverlay;

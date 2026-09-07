@@ -4380,12 +4380,9 @@ async function ensureContentEditor() {
 
         function goViewerHref(href) {
             if (!href) return;
-            try {
-                if (new URLSearchParams(location.search).get('embed') === '1' && window.parent !== window) {
-                    window.parent.postMessage({ type: 'web-cabinet-overlay-close' }, location.origin);
-                    return;
-                }
-            } catch (e) {}
+            if (typeof window.webCloseEmbeddedOverlay === 'function' && window.webCloseEmbeddedOverlay()) {
+                return;
+            }
             if (typeof window.webNavigateKeepFullscreen === 'function') {
                 window.webNavigateKeepFullscreen(href);
                 return;
