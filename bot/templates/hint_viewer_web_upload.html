@@ -1147,6 +1147,16 @@
                     const chevron = expandable ? `<span class="chevron">${isOpen ? '▴' : '▾'}</span>` : '';
                     const pdf = (item.ready_count > 0 && batchId) ? pdfBatchLink(batchId) : '';
                     const cached = loadedBatches[batchId];
+                    if (cached && Array.isArray(cached.files) && Array.isArray(item.files)) {
+                        const byId = {};
+                        item.files.forEach((file) => {
+                            if (file && file.id) byId[file.id] = file;
+                        });
+                        cached.files.forEach((file) => {
+                            const src = file && file.id ? byId[file.id] : null;
+                            if (src && Array.isArray(src.labels)) file.labels = src.labels;
+                        });
+                    }
                     const body = cached
                         ? renderBatchBody(batchId, cached.files, cached.summary_html)
                         : '<div class="muted">Загрузка пакета…</div>';

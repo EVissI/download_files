@@ -63,6 +63,7 @@ from bot.routers.web_upload_folder_routes import (
     register_web_upload_folder_routes,
     resolve_scoped_folder_id,
 )
+from bot.routers.web_upload_label_routes import register_web_upload_label_routes
 
 autoanalize_web_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
@@ -905,6 +906,14 @@ async def _load_batch_analyses(user_id: int, batch_id: str):
     summary_html = _format_batch_summary_html(
         _batch_pr_values(metrics_list), len(metrics_list), i18n
     )
+    from bot.db.database import async_session_maker
+    from bot.db.dao import HintWebLabelDAO
+
+    upload_ids = [int(row.id) for row in rows if row.id]
+    async with async_session_maker() as db:
+        labels_map = await HintWebLabelDAO(db).get_labels_map(user_id, upload_ids)
+    for item in items:
+        item["labels"] = list(labels_map.get(item.get("id"), []) or [])
     return rows, items, metrics_list, summary_html, i18n
 
 
@@ -1148,5 +1157,8 @@ async def web_analyze_order_analysis(request: Request, game_id: str = ""):
 
 
 register_web_upload_folder_routes(
+    autoanalize_web_api_router, service=WEB_SERVICE_ANALYZE, prefix="/web/analyze"
+)
+register_web_upload_label_routes(
     autoanalize_web_api_router, service=WEB_SERVICE_ANALYZE, prefix="/web/analyze"
 )

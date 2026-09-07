@@ -294,6 +294,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
             "accept": ".mat,.zip,.txt,.sgf,.sgg,.bkg,.gam,.pos,.fibs,.tmg,application/zip",
             "dropzone_title": "Нажмите или перетащите файлы сюда",
             "enable_user_folders": True,
+            "enable_user_labels": True,
         }
     return {
         "web_service": WEB_SERVICE_HINTS,
