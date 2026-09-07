@@ -2277,6 +2277,21 @@ class MatchAnalysisDAO(BaseDAO[MatchAnalysis]):
             logger.error(f"Ошибка при списке MatchAnalysis для user={user_id}: {e}")
             raise
 
+    async def existing_source_game_ids(self, game_ids: list[str]) -> set[str]:
+        ids = [str(gid).strip() for gid in game_ids if gid]
+        if not ids:
+            return set()
+        try:
+            result = await self._session.execute(
+                select(self.model.source_game_id).where(
+                    self.model.source_game_id.in_(ids)
+                )
+            )
+            return {str(row[0]) for row in result.all() if row[0]}
+        except SQLAlchemyError as e:
+            logger.error(f"Ошибка при поиске MatchAnalysis по source_game_id: {e}")
+            raise
+
     async def list_for_user_summaries(self, user_id: int) -> list:
         """Список кабинета без полного JSON analysis (только сводка для тайлов)."""
         try:

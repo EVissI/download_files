@@ -51,6 +51,7 @@ from bot.common.service.hint_viewer_web_service import (
     device_id_from_request,
     list_history_for_user,
     list_session_jobs,
+    mark_saved_to_match_analysis,
     prune_session_jobs,
     record_history,
     resolve_web_session,
@@ -832,6 +833,7 @@ async def web_hints_jobs(request: Request):
         finished_at_by_id=finished_at_by_id,
         file_finished_by_job=file_finished_by_job,
     )
+    await mark_saved_to_match_analysis(jobs)
     return {"ok": True, "jobs": jobs}
 
 

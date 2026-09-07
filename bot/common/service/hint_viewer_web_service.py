@@ -740,6 +740,7 @@ def _history_item(row) -> dict[str, Any]:
         "expandable": bool(is_analyze and row.status == "done" and game_id),
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+        "saved_to_match_analysis": False,
     }
 
 
@@ -797,6 +798,45 @@ def _history_batch_item(rows: list[Any]) -> dict[str, Any]:
         "created_at": created.isoformat() if created else None,
         "finished_at": finished.isoformat() if finished else None,
     }
+
+
+def _iter_history_nodes(items: list[dict[str, Any]]):
+    for item in items:
+        yield item
+        for nested in item.get("files") or []:
+            yield nested
+
+
+def _collect_history_game_ids(items: list[dict[str, Any]]) -> list[str]:
+    ids: list[str] = []
+    seen: set[str] = set()
+    for item in _iter_history_nodes(items):
+        gid = str(item.get("game_id") or "").strip()
+        if gid and gid not in seen:
+            seen.add(gid)
+            ids.append(gid)
+    return ids
+
+
+def _apply_saved_to_match_analysis(
+    items: list[dict[str, Any]], saved_ids: set[str]
+) -> None:
+    for item in _iter_history_nodes(items):
+        gid = str(item.get("game_id") or "").strip()
+        item["saved_to_match_analysis"] = bool(gid and gid in saved_ids)
+
+
+async def mark_saved_to_match_analysis(items: list[dict[str, Any]]) -> None:
+    game_ids = _collect_history_game_ids(items)
+    if not game_ids:
+        _apply_saved_to_match_analysis(items, set())
+        return
+    from bot.db.database import async_session_maker
+    from bot.db.dao import MatchAnalysisDAO
+
+    async with async_session_maker() as session:
+        saved = await MatchAnalysisDAO(session).existing_source_game_ids(game_ids)
+    _apply_saved_to_match_analysis(items, saved)
 
 
 async def list_history_for_user(
@@ -884,6 +924,13 @@ async def list_history_for_user(
                 nested["labels"] = list(labels_map.get(nested.get("id"), []) or [])
             if item.get("kind") == "batch":
                 item["labels"] = _labels_union(item.get("files") or [])
+        if service == WEB_SERVICE_HINTS:
+            from bot.db.dao import MatchAnalysisDAO
+
+            saved = await MatchAnalysisDAO(session).existing_source_game_ids(
+                _collect_history_game_ids(items)
+            )
+            _apply_saved_to_match_analysis(items, saved)
         return {
             "items": items,
             "page": current,

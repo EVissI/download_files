@@ -132,6 +132,16 @@
             background: var(--web-ghost-hover);
             color: var(--web-text);
         }
+        .open-modes .btn.primary,
+        .history-match-analysis-btn.primary {
+            background: var(--web-accent);
+            color: #fff;
+        }
+        .open-modes .btn.primary:hover,
+        .history-match-analysis-btn.primary:hover {
+            background: var(--web-accent-2);
+            color: #fff;
+        }
         .toast {
             position: fixed;
             right: 16px;
@@ -788,9 +798,13 @@
             return `<button type="button" class="btn ghost history-pdf-btn" data-order-analysis="${escapeHtml(gameId)}">Заказать анализ</button>`;
         }
 
-        function matchAnalysisButton(gameId) {
+        function matchAnalysisButton(gameId, saved) {
             if (!saveMatchAnalysisEnabled || !gameId) return '';
-            return `<button type="button" class="btn ghost history-pdf-btn" data-save-match-analysis="${escapeHtml(gameId)}">Анализ матча</button>`;
+            const cls = saved
+                ? 'btn primary history-pdf-btn history-match-analysis-btn'
+                : 'btn ghost history-pdf-btn history-match-analysis-btn';
+            const title = saved ? 'Уже сохранено в «Анализ матча»' : 'Анализ матча';
+            return `<button type="button" class="${cls}" data-save-match-analysis="${escapeHtml(gameId)}"${saved ? ' data-saved="1"' : ''} title="${escapeHtml(title)}">Анализ матча</button>`;
         }
 
         function analyzeFileActions(gameId) {
@@ -799,13 +813,13 @@
             return pdfLink(gameId) + hintsButton(gameId) + orderNextToHints;
         }
 
-        function fileActionButtons(openLinks, gameId) {
+        function fileActionButtons(openLinks, gameId, savedToMatchAnalysis) {
             const links = (openLinks || []).map((link) => {
                 return `<a class="btn ghost" href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a>`;
             });
             const extra = analyzeFileActions(gameId) + statsButton(gameId)
                 + (sendToAnalyzeEnabled ? orderAnalysisButton(gameId) : '')
-                + matchAnalysisButton(gameId);
+                + matchAnalysisButton(gameId, savedToMatchAnalysis);
             if (!links.length && !extra) return '';
             return `<div class="actions open-modes job-file-actions">${links.join('')}${extra}</div>`;
         }
@@ -815,7 +829,7 @@
             if (job.kind === 'batch') {
                 const files = (job.files || []).map((f) => {
                     const body = f.status === 'done'
-                        ? fileActionButtons(f.open_links, f.game_id)
+                        ? fileActionButtons(f.open_links, f.game_id, f.saved_to_match_analysis)
                         : `<div class="muted">${statusLabel(f.status)}</div>`;
                     const err = f.error ? `<div class="muted">${escapeHtml(f.error)}</div>` : '';
                     return `<li class="job-file">
@@ -842,7 +856,7 @@
                 ? `<div class="muted">${escapeHtml(players)}${players ? ' · ' : ''}${statusLabel(job.status)}</div>`
                 : (players ? `<div class="muted">${escapeHtml(players)}</div>` : '');
             const progress = pending ? progressHtml(job) : '';
-            const actions = pending ? '' : fileActionButtons(job.open_links, job.game_id);
+            const actions = pending ? '' : fileActionButtons(job.open_links, job.game_id, job.saved_to_match_analysis);
             return `<div class="job ${cls}">
                 <strong>${escapeHtml(job.filename || 'Матч')}</strong>
                 ${meta}
@@ -1078,7 +1092,7 @@
                 ? ''
                 : openMatchButtons(
                     item.open_links,
-                    item.status === 'done' ? statsButton(gameId) + orderAnalysisButton(gameId) + matchAnalysisButton(gameId) : ''
+                    item.status === 'done' ? statsButton(gameId) + orderAnalysisButton(gameId) + matchAnalysisButton(gameId, item.saved_to_match_analysis) : ''
                 );
             const err = item.error_message ? `<div class="muted">${escapeHtml(item.error_message)}</div>` : '';
             const expandable = !nested && !!(historyExpandable && item.expandable && gameId);
@@ -1507,6 +1521,16 @@
                 showToast(title
                     ? ('Сохранено в «Анализ матча»: ' + title)
                     : 'Сохранено в «Анализ матча»');
+                if (btn) {
+                    btn.classList.remove('ghost');
+                    btn.classList.add('primary');
+                    btn.setAttribute('data-saved', '1');
+                    btn.title = 'Уже сохранено в «Анализ матча»';
+                }
+                if (window.hintWebHistory && typeof window.hintWebHistory.pollHistory === 'function') {
+                    window.hintWebHistory.pollHistory();
+                }
+                if (jobsEl) pollJobs();
             } catch (e) {
                 showToast('Сеть недоступна');
             } finally {
