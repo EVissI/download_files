@@ -22,6 +22,7 @@
     {% if not web_standalone_mode|default(false) %}
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     {% endif %}
+    <script src="/static/js/web_theme.js?t={{ cache_timestamp }}" defer></script>
     <script src="/static/js/hint_viewer.js?t={{ cache_timestamp }}" defer></script>
 </head>
 
@@ -35,6 +36,7 @@
                     <button type="button" id="matchAnalysisCabinetBackBtn" class="ma-home-btn" onclick="openViewerHome()" title="К загрузке матчей" aria-label="К загрузке матчей">
                         <i class="fa fa-home" aria-hidden="true"></i>
                     </button>
+                    {% include "includes/web_viewer_fullscreen_btn.html" %}
                     <button type="button" id="matchAnalysisStatusBtn" class="ma-status-btn" title="В избранное" aria-label="Добавить в избранное" aria-pressed="false">
                         <i class="fa fa-star-o" aria-hidden="true"></i>
                     </button>

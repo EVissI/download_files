@@ -1423,7 +1423,10 @@ async function ensureContentEditor() {
                 scrollY: 0,
                 scale: Math.min(window.devicePixelRatio || 1, 2),
                 ignoreElements: function (el) {
-                    return !!(el && el.classList && el.classList.contains('web-standalone-back'));
+                    return !!(el && el.classList && (
+                        el.classList.contains('web-standalone-back')
+                        || el.classList.contains('ma-header-actions')
+                    ));
                 },
             };
         }
@@ -1443,7 +1446,10 @@ async function ensureContentEditor() {
                             backgroundColor: '#1a1a1a',
                             scale: Math.min(window.devicePixelRatio || 1, 2),
                             ignoreElements: function (el) {
-                                return !!(el && el.classList && el.classList.contains('web-standalone-back'));
+                                return !!(el && el.classList && (
+                                    el.classList.contains('web-standalone-back')
+                                    || el.classList.contains('ma-header-actions')
+                                ));
                             },
                         } : getBoardViewerHtml2CanvasOptions();
                         boardViewerHtml2Canvas(target, options)

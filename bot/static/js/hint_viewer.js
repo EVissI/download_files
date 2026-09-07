@@ -2577,6 +2577,7 @@ async function ensureContentEditor() {
                 ignoreElements: function (el) {
                     if (!el || !el.classList) return false;
                     return el.classList.contains('web-standalone-back')
+                        || el.classList.contains('ma-header-actions')
                         || el.classList.contains('support-fab')
                         || el.classList.contains('support-panel')
                         || el.classList.contains('support-container');

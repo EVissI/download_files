@@ -247,6 +247,31 @@ html.web-is-fullscreen .fullscreen-toggle .fs-enter {
 html.web-is-fullscreen .fullscreen-toggle .fs-exit {
     display: block;
 }
+.ma-fullscreen-btn svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+.ma-fullscreen-btn .fs-enter {
+    display: block;
+}
+.ma-fullscreen-btn .fs-exit {
+    display: none;
+}
+html.web-is-fullscreen .ma-fullscreen-btn .fs-enter {
+    display: none;
+}
+html.web-is-fullscreen .ma-fullscreen-btn .fs-exit {
+    display: block;
+}
+.ma-header-actions .ma-fullscreen-btn {
+    display: none;
+}
+@media (max-width: 760px), (hover: none) and (pointer: coarse) {
+    .ma-header-actions .ma-fullscreen-btn:not([hidden]):not(.is-unavailable) {
+        display: inline-flex;
+    }
+}
 .web-cabinet-header .header-actions .fullscreen-toggle {
     display: none;
 }

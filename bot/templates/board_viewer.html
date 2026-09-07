@@ -21,17 +21,23 @@
     {% if not web_standalone_mode|default(false) %}
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     {% endif %}
+    <script src="/static/js/web_theme.js?t={{ cache_timestamp }}" defer></script>
     <script src="/static/js/board_viewer.js?t={{ cache_timestamp }}" defer></script>
 </head>
 
 <body class="{% if web_standalone_mode|default(false) %}web-standalone{% endif %}">
-    {% if web_standalone_mode|default(false) %}
-    <a class="web-standalone-back" href="/web/board">← К загрузке матчей</a>
-    {% endif %}
     <div class="container">
         <div class="board-layout">
             <div class="board-block">
-                <div class="header">
+                <div class="header{% if web_standalone_mode|default(false) %} has-ma-header-actions{% endif %}">
+                    {% if web_standalone_mode|default(false) %}
+                    <div class="ma-header-actions">
+                        <a href="/web/board" class="ma-home-btn" title="К загрузке матчей" aria-label="К загрузке матчей">
+                            <i class="fa fa-home" aria-hidden="true"></i>
+                        </a>
+                        {% include "includes/web_viewer_fullscreen_btn.html" %}
+                    </div>
+                    {% endif %}
                     <div id="match-info"></div>
                     <div id="players-info"></div>
                     <div id="top-row">
