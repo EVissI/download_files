@@ -876,7 +876,7 @@ def _is_public_content_card_media_key(key: str) -> bool:
     mid = parts[2]
     if mid == HintS3Storage.CABINET_GALLERY_FOLDER:
         return True
-    if mid.isdigit():
+    if HintS3Storage.is_storage_user_id_segment(mid):
         return True
     return False
 

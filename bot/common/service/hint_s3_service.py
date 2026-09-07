@@ -101,6 +101,16 @@ class HintS3Storage:
         return f"{HintS3Storage.CONTENT_CARDS_MEDIA_PREFIX}/{user_id}/{fn}"
 
     @staticmethod
+    def is_storage_user_id_segment(part: str) -> bool:
+        """Сегмент пути S3: Telegram id или теневой веб-id (отрицательный)."""
+        raw = (part or "").strip()
+        if not raw:
+            return False
+        if raw[0] == "-":
+            return len(raw) > 1 and raw[1:].isdigit()
+        return raw.isdigit()
+
+    @staticmethod
     def match_analysis_media_key(user_id: int, filename: str) -> str:
         """Аудио/медиа для «Анализ матча»: ``match_analysis/media/{user_id}/{filename}``."""
         fn = filename.replace("\\", "/").split("/")[-1].strip()
@@ -116,7 +126,7 @@ class HintS3Storage:
             return False
         if parts[0] != "match_analysis" or parts[1] != "media":
             return False
-        if not parts[2].isdigit():
+        if not cls.is_storage_user_id_segment(parts[2]):
             return False
         name = parts[3]
         if not name or len(name) > 220 or ".." in name:

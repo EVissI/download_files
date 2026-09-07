@@ -4366,7 +4366,15 @@ async function ensureContentEditor() {
                 console.error(e);
                 matchAnalysisRecordStartedAt = null;
                 setMatchAnalysisRecordButtonState(false);
-                showMessageModal('Не удалось начать запись: ' + (e.message || e), 'error');
+                const name = String((e && e.name) || '');
+                const msg = String((e && e.message) || e || '');
+                let text = 'Не удалось начать запись: ' + msg;
+                if (name === 'NotAllowedError' || /permission denied/i.test(msg)) {
+                    text = 'Нет доступа к микрофону. Разрешите микрофон для этого сайта в настройках браузера и обновите страницу.';
+                } else if (name === 'NotFoundError') {
+                    text = 'Микрофон не найден.';
+                }
+                showMessageModal(text, 'error');
             }
         }
 

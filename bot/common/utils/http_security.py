@@ -128,7 +128,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         response.headers.setdefault(
-            "Permissions-Policy", "camera=(), microphone=(), geolocation=()"
+            "Permissions-Policy", "camera=(), microphone=(self), geolocation=()"
         )
         # Mini App в web.telegram.org открывается во iframe — глобальный
         # X-Frame-Options: SAMEORIGIN его сломает. Только админка.

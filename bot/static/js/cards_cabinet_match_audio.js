@@ -1684,6 +1684,18 @@
         state.recordStartedAt = null;
     }
 
+    function microphoneErrorMessage(err) {
+        var name = String((err && err.name) || '');
+        var msg = String((err && err.message) || err || '');
+        if (name === 'NotAllowedError' || /permission denied/i.test(msg)) {
+            return 'Нет доступа к микрофону. Разрешите микрофон для этого сайта в настройках браузера и обновите страницу.';
+        }
+        if (name === 'NotFoundError') {
+            return 'Микрофон не найден.';
+        }
+        return 'Нет доступа к микрофону: ' + msg;
+    }
+
     function startOrStopRecording() {
         if (state.busy) return;
         if (state.mediaRecorder && state.mediaRecorder.state === 'recording') {
@@ -1748,7 +1760,7 @@
             setEditMsg('Идёт запись… нажмите «Стоп», чтобы сохранить');
         }).catch(function (err) {
             console.error(err);
-            setEditMsg('Нет доступа к микрофону: ' + (err.message || err), true);
+            setEditMsg(microphoneErrorMessage(err), true);
         });
     }
 
