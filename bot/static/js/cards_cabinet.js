@@ -98,8 +98,17 @@
                 return CABINET_BASE_PATH + (qs ? '?' + qs : '');
             }
 
+            function goCabinetHref(href) {
+                if (!href) return;
+                if (typeof window.webNavigateKeepFullscreen === 'function') {
+                    window.webNavigateKeepFullscreen(href);
+                    return;
+                }
+                window.location.assign(href);
+            }
+
             function goToMainCabinet() {
-                window.location.assign(buildCardsCabinetUrl({ includeFolder: false }));
+                goCabinetHref(buildCardsCabinetUrl({ includeFolder: false }));
             }
 
             if (cabinetHomeBtn) {
@@ -2781,7 +2790,7 @@
                                     return;
                                 }
                                 var openMa = function () {
-                                    window.location.assign(buildMatchAnalysisViewUrl(id));
+                                    goCabinetHref(buildMatchAnalysisViewUrl(id));
                                 };
                                 var maStatus = String((row && row.status) || 'UNVIEWED').toUpperCase();
                                 if (maStatus !== 'UNVIEWED' && maStatus !== 'RECENT') {
@@ -2957,7 +2966,7 @@
                                     cardParams.set('folder_token', cabinetConfig.folderToken);
                                 }
                                 cardParams.set('pool', CABINET_POOL);
-                                window.location.assign(
+                                goCabinetHref(
                                     '/content-card-view?' + cardParams.toString()
                                 );
                             };
@@ -4213,7 +4222,7 @@
 
                 function navigateToFolder(folderId, childLinkToken) {
                     if (childLinkToken) {
-                        window.location.assign(buildFolderShareUrl(childLinkToken));
+                        goCabinetHref(buildFolderShareUrl(childLinkToken));
                         return;
                     }
                     if (cabinetConfig.mode === 'folder' && cabinetConfig.folderToken) {
@@ -4223,7 +4232,7 @@
                         }).then(function (data) {
                             var token = data && data.link_token;
                             if (!token) throw new Error('Не удалось открыть папку');
-                            window.location.assign(buildFolderShareUrl(token));
+                            goCabinetHref(buildFolderShareUrl(token));
                         }).catch(function (e) {
                             showErr(e.message || String(e));
                         });
@@ -4232,7 +4241,7 @@
                     folderApiPost('generate_link', { folder_id: folderId }).then(function (data) {
                         var token = data && data.link_token;
                         if (!token) throw new Error('Не удалось открыть папку');
-                        window.location.assign(buildFolderShareUrl(token));
+                        goCabinetHref(buildFolderShareUrl(token));
                     }).catch(function (e) {
                         showErr(e.message || String(e));
                     });

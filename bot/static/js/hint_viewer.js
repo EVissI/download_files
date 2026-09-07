@@ -4378,9 +4378,18 @@ async function ensureContentEditor() {
             }
         }
 
+        function goViewerHref(href) {
+            if (!href) return;
+            if (typeof window.webNavigateKeepFullscreen === 'function') {
+                window.webNavigateKeepFullscreen(href);
+                return;
+            }
+            window.location.href = href;
+        }
+
         function openMatchAnalysisCabinet() {
             var web = isWebStandaloneMode();
-            window.location.href = web ? '/web/match-analysis' : '/match-analysis-cabinet';
+            goViewerHref(web ? '/web/match-analysis' : '/match-analysis-cabinet');
         }
 
         function openViewerHome() {
@@ -4388,7 +4397,7 @@ async function ensureContentEditor() {
                 openMatchAnalysisCabinet();
                 return;
             }
-            window.location.href = isWebStandaloneMode() ? '/web/hints' : '/hints';
+            goViewerHref(isWebStandaloneMode() ? '/web/hints' : '/hints');
         }
 
         // Функция открытия редактора контента

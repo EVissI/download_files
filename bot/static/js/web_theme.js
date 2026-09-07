@@ -141,8 +141,21 @@
         frame.style.height = 'calc(100dvh - ' + top + 'px)';
     }
 
-    function syncNav(pathname) {
+    function canonicalNavPath(pathname, search) {
         var cur = String(pathname || '').replace(/\/$/, '') || '/';
+        if (cur === '/content-card-view') {
+            try {
+                var pool = new URLSearchParams(search || '').get('pool');
+                if (pool === 'pip_count') return '/web/pip-count';
+            } catch (e) {}
+            return '/web/cards';
+        }
+        if (cur === '/match-analysis-view') return '/web/match-analysis';
+        return cur;
+    }
+
+    function syncNav(pathname, search) {
+        var cur = canonicalNavPath(pathname, search);
         document.querySelectorAll('.web-cabinet-header .service-nav a[href]').forEach(function (a) {
             var path = '';
             try {
@@ -181,7 +194,7 @@
             var loc = frame.contentWindow.location;
             if (loc.origin === location.origin) {
                 history.replaceState({ webFsShell: true }, '', loc.pathname + loc.search + loc.hash);
-                syncNav(loc.pathname);
+                syncNav(loc.pathname, loc.search);
             }
         } catch (e) {}
         layoutFrame();
@@ -253,19 +266,26 @@
         Promise.resolve(requestFullscreen(document.documentElement)).catch(function () {});
     }
 
+    function samePage(hrefA, hrefB) {
+        try {
+            var a = new URL(hrefA, location.href);
+            var b = new URL(hrefB, location.href);
+            return a.pathname === b.pathname && a.search === b.search && a.hash === b.hash;
+        } catch (e) {
+            return pathOf(hrefA) === pathOf(hrefB);
+        }
+    }
+
     function goToService(href) {
         if (!href) return;
         if (fullscreenElement() || frame) {
-            var nextPath = pathOf(href);
-            var nowPath = frame
-                ? pathOf(currentFrameHref(), location.pathname)
-                : pathOf(location.href, location.pathname);
-            if (nextPath === nowPath) return;
+            var nowHref = frame ? currentFrameHref() : location.href;
+            if (samePage(href, nowHref)) return;
             openInShell(href);
             return;
         }
-        var here = pathOf(location.href, location.pathname);
-        if (pathOf(href, here) === here) return;
+        var here = location.href;
+        if (samePage(href, here)) return;
         markLeaving();
         location.href = href;
     }
@@ -372,6 +392,16 @@
 
     function currentIndex(links) {
         var path = (location.pathname || '/').replace(/\/$/, '') || '/';
+        if (path === '/content-card-view') {
+            try {
+                var pool = new URLSearchParams(location.search || '').get('pool');
+                path = pool === 'pip_count' ? '/web/pip-count' : '/web/cards';
+            } catch (e) {
+                path = '/web/cards';
+            }
+        } else if (path === '/match-analysis-view') {
+            path = '/web/match-analysis';
+        }
         var best = -1;
         var bestLen = -1;
         links.forEach(function (a, i) {
@@ -415,16 +445,22 @@
         return false;
     }
 
-    function navigate(href) {
+    function goKeepFullscreen(href) {
         if (!href) return;
-        try {
-            if (navigator.vibrate) navigator.vibrate(8);
-        } catch (e) {}
         if (window !== window.top) {
             window.top.postMessage({ type: 'web-service-nav', href: href }, location.origin);
             return;
         }
         window.dispatchEvent(new CustomEvent('web-go-service', { detail: { href: href } }));
+    }
+
+    window.webNavigateKeepFullscreen = goKeepFullscreen;
+
+    function navigate(href) {
+        try {
+            if (navigator.vibrate) navigator.vibrate(8);
+        } catch (e) {}
+        goKeepFullscreen(href);
     }
 
     function point(e) {

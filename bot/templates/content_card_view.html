@@ -275,6 +275,7 @@
     {% if not web_standalone_mode|default(false) %}
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     {% endif %}
+    <script src="/static/js/web_theme.js?t={{ cache_timestamp }}" defer></script>
     <script type="module" src="/static/js/content-editor/bootstrap/index.js?t={{ cache_timestamp }}"></script>
 </head>
 
@@ -396,6 +397,14 @@
 
             function getInitData() {
                 return (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || '';
+            }
+            function goHref(href) {
+                if (!href) return;
+                if (typeof window.webNavigateKeepFullscreen === 'function') {
+                    window.webNavigateKeepFullscreen(href);
+                    return;
+                }
+                window.location.assign(href);
             }
             function isWebStandalone() {
                 var meta = document.querySelector('meta[name="web-standalone-mode"]');
@@ -543,7 +552,7 @@
                     backLink.innerHTML = '<i class="fa fa-mail-reply" aria-hidden="true"></i>';
                     backLink.addEventListener('click', function (e) {
                         e.preventDefault();
-                        window.location.assign(buildCabinetReturnUrl());
+                        goHref(buildCabinetReturnUrl());
                     });
                     nav.insertBefore(backLink, nav.firstChild);
                 }
