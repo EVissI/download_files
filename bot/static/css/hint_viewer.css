@@ -1206,6 +1206,18 @@ html {
             display: inline-flex;
         }
 
+        @media (max-width: 1024px) {
+            body.web-standalone .board-block .header .ma-header-actions,
+            body.match-analysis-viewer .board-block .header .ma-header-actions {
+                position: relative;
+                left: auto;
+                top: auto;
+                align-self: flex-end;
+                order: -1;
+                margin: 0 0 6px;
+            }
+        }
+
         .ma-home-btn,
         .ma-status-btn {
             position: static;

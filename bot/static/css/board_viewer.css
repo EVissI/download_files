@@ -550,9 +550,12 @@ html {
                 word-spacing: 12px;
             }
 
-            /* Верхний отступ на смартфонах (как кабинет / hint_viewer) */
+            /* Telegram Mini App: место под статус-бар. В вебе канвас без сейв-зоны. */
             .container {
                 padding: max(10vh, 24px) 10px 0 10px;
+            }
+            body.web-standalone .container {
+                padding: 0 10px 0 10px;
             }
 
             .hints-table {
@@ -597,6 +600,9 @@ html {
 
             .container {
                 padding: max(5vh, 24px) 20px 0 20px;
+            }
+            body.web-standalone .container {
+                padding: 0 20px 0 20px;
             }
         }
 
@@ -702,6 +708,16 @@ html {
         .header.has-ma-header-actions .ma-header-actions,
         body.web-standalone .board-block .header .ma-header-actions {
             display: inline-flex;
+        }
+
+        @media (max-width: 1024px) {
+            body.web-standalone .board-block .header .ma-header-actions {
+                position: relative;
+                left: auto;
+                top: auto;
+                align-self: flex-end;
+                margin: 0 0 6px;
+            }
         }
 
         a.ma-home-btn {
