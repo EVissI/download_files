@@ -219,7 +219,20 @@
         .history-item--expandable.is-open { border-color: var(--web-accent); }
         .history-item-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
         .history-item-head > div:first-child { min-width: 0; flex: 1; }
-        .history-item-head .chevron { color: var(--web-text-muted); font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
+        .history-item-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            min-width: 0;
+        }
+        .history-item-title-row strong { min-width: 0; }
+        .history-toggle-btn {
+            font-size: 0.8rem;
+            padding: 6px 10px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
         .history-table-wrap { margin-top: 12px; overflow-x: auto; }
         .analyze-vs { margin: 0 0 10px; font-weight: 600; }
         .analyze-block { margin-bottom: 14px; }
@@ -292,7 +305,6 @@
                 flex-direction: column;
                 align-items: stretch;
                 gap: 10px;
-                padding-right: 22px;
             }
             .history-item-actions {
                 justify-content: stretch;
@@ -305,12 +317,10 @@
                 padding: 10px 12px;
                 font-size: 0.85rem;
             }
-            .history-item-head .chevron {
-                position: absolute;
-                top: 12px;
-                right: 12px;
-                margin-top: 0;
-                font-size: 1rem;
+            .history-toggle-btn {
+                min-height: 44px;
+                padding: 10px 12px;
+                font-size: 0.85rem;
             }
             .history-pdf-btn { white-space: nowrap; }
             .history-table-wrap { -webkit-overflow-scrolling: touch; }
@@ -1031,6 +1041,11 @@
             return `<a class="btn ghost history-pdf-btn" href="${escapeHtml(url)}" title="Скачать PDF">Скачать PDF</a>`;
         }
 
+        function historyToggleBtn(isOpen) {
+            const label = isOpen ? 'Свернуть' : 'Развернуть';
+            return `<button type="button" class="btn ghost history-toggle-btn" data-toggle-history aria-expanded="${isOpen ? 'true' : 'false'}">${label}</button>`;
+        }
+
         function cacheBatchPayload(batchId, data) {
             loadedBatches[batchId] = {
                 summary_html: data.summary_html || '',
@@ -1073,7 +1088,10 @@
                 nested ? 'history-item--nested' : '',
                 (enableUserFolders && item.id) ? 'has-select' : '',
             ].filter(Boolean).join(' ');
-            const chevron = expandable ? `<span class="chevron">${isOpen ? '▴' : '▾'}</span>` : '';
+            const toggle = expandable ? historyToggleBtn(isOpen) : '';
+            const titleHtml = expandable
+                ? `<div class="history-item-title-row"><strong>${escapeHtml(item.original_filename || 'Матч')}</strong>${toggle}</div>`
+                : `<strong>${escapeHtml(item.original_filename || 'Матч')}</strong>`;
             const pdf = (item.status === 'done' && gameId) ? analyzeFileActions(gameId) : '';
             const cachedTable = gameId && loadedTables[gameId]
                 ? loadedTables[gameId]
@@ -1092,13 +1110,13 @@
                 <div class="history-item-head">
                     ${select}
                     <div>
-                        <strong>${escapeHtml(item.original_filename || 'Матч')}</strong>
+                        ${titleHtml}
                         <div class="muted">${escapeHtml(players || '—')} · ${historyStatusLabel(item.status)}</div>
                         ${err}
                         ${open}
                         ${historyLabelsHtml(item)}
                     </div>
-                    <div class="history-item-actions">${pdf}${chevron}</div>
+                    <div class="history-item-actions">${pdf}</div>
                 </div>
                 ${table}
             </div>`;
@@ -1149,7 +1167,10 @@
                     const extraClass = 'history-item--batch' + (expandable
                         ? (' history-item--expandable' + (isOpen ? ' is-open' : ''))
                         : '') + ((enableUserFolders && fileIds.length) ? ' has-select' : '');
-                    const chevron = expandable ? `<span class="chevron">${isOpen ? '▴' : '▾'}</span>` : '';
+                    const toggle = expandable ? historyToggleBtn(isOpen) : '';
+                    const titleHtml = expandable
+                        ? `<div class="history-item-title-row"><strong>${escapeHtml(item.original_filename || 'Пакет')}</strong>${toggle}</div>`
+                        : `<strong>${escapeHtml(item.original_filename || 'Пакет')}</strong>`;
                     const pdf = (item.ready_count > 0 && batchId) ? pdfBatchLink(batchId) : '';
                     const cached = loadedBatches[batchId];
                     if (cached && Array.isArray(cached.files) && Array.isArray(item.files)) {
@@ -1179,11 +1200,11 @@
                         <div class="history-item-head">
                             ${select}
                             <div>
-                                <strong>${escapeHtml(item.original_filename || 'Пакет')}</strong>
+                                ${titleHtml}
                                 <div class="muted">${escapeHtml(countLabel || '—')} · ${historyStatusLabel(item.status)}</div>
                                 ${batchLabels}
                             </div>
-                            <div class="history-item-actions">${pdf}${chevron}</div>
+                            <div class="history-item-actions">${pdf}</div>
                         </div>
                         ${table}
                     </div>`;
@@ -1211,8 +1232,11 @@
         }
 
         function setItemChevron(itemEl, open) {
-            const chevron = itemEl.querySelector(':scope > .history-item-head .chevron');
-            if (chevron) chevron.textContent = open ? '▴' : '▾';
+            const btn = itemEl.querySelector(':scope > .history-item-head [data-toggle-history]');
+            if (btn) {
+                btn.textContent = open ? 'Свернуть' : 'Развернуть';
+                btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            }
         }
 
         async function fetchBatch(batchId) {
@@ -1544,6 +1568,14 @@
 
         if (historyEl && historyExpandable) {
             historyEl.addEventListener('click', (event) => {
+                const toggleBtn = event.target.closest('[data-toggle-history]');
+                if (toggleBtn) {
+                    const item = toggleBtn.closest('.history-item--expandable');
+                    if (!item) return;
+                    event.preventDefault();
+                    toggleHistoryTable(item);
+                    return;
+                }
                 if (event.target.closest('a, button, .history-item-select, .history-item-labels, input')) return;
                 const head = event.target.closest('.history-item-head');
                 if (!head) return;
