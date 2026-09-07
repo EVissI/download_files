@@ -14,7 +14,8 @@ from bot.db.dao import HintViewerWebUploadDAO, HintWebLabelDAO
 
 
 class LabelSetBody(BaseModel):
-    upload_id: int
+    upload_id: int | None = None
+    upload_ids: list[int] = Field(default_factory=list)
     labels: list[str] = Field(default_factory=list)
 
 
@@ -77,17 +78,34 @@ def register_web_upload_label_routes(
         session = await _require_session(request)
         user_id = _require_user_id(session)
         labels = normalize_labels(body.labels)
+        raw_ids = list(body.upload_ids or [])
+        if body.upload_id:
+            raw_ids.append(int(body.upload_id))
+        seen: set[int] = set()
+        upload_ids: list[int] = []
+        for raw in raw_ids:
+            try:
+                uid = int(raw)
+            except (TypeError, ValueError):
+                continue
+            if uid > 0 and uid not in seen:
+                seen.add(uid)
+                upload_ids.append(uid)
+        if not upload_ids:
+            raise HTTPException(status_code=400, detail="Нужен файл или пакет")
         async with async_session_maker() as db:
             async with db.begin():
                 upload_dao = HintViewerWebUploadDAO(db)
                 owned = await upload_dao.get_owned_upload_ids(
-                    user_id, [body.upload_id], service=label_service
+                    user_id, upload_ids, service=label_service
                 )
                 if not owned:
                     raise HTTPException(status_code=404, detail="Файл не найден")
                 dao = HintWebLabelDAO(db)
-                saved = await dao.set_labels(user_id, owned[0], labels)
-                return {"ok": True, "labels": saved}
+                saved: list[str] = []
+                for upload_id in owned:
+                    saved = await dao.set_labels(user_id, upload_id, labels)
+                return {"ok": True, "labels": saved, "updated_count": len(owned)}
 
     @router.post(f"{base}/api/labels/presets", operation_id=_op("label_presets"))
     async def label_presets(request: Request):

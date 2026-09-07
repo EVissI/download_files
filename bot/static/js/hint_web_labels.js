@@ -5,12 +5,14 @@
     var apiBase = historyApi.apiBase || '/web/hints';
     var loginUrl = historyApi.loginUrl || '/web/hints/login';
     var labelDraft = [];
-    var labelEditUploadId = null;
+    var labelEditUploadIds = [];
     var presets = [];
 
     var filterEl = document.getElementById('historyLabelFilter');
     var presetsBtn = document.getElementById('manageLabelPresetsBtn');
     var editModal = document.getElementById('fileLabelsModal');
+    var editTitle = document.getElementById('fileLabelsModalTitle');
+    var editHint = document.getElementById('fileLabelsModalHint');
     var editList = document.getElementById('fileLabelsModalList');
     var editInput = document.getElementById('fileLabelsModalInput');
     var editMsg = document.getElementById('fileLabelsModalMsg');
@@ -151,10 +153,39 @@
         editInput.focus();
     }
 
-    function openEditModal(uploadId, labels) {
-        labelEditUploadId = uploadId;
+    function parseUploadIds(raw, fallbackId) {
+        var ids = [];
+        var seen = {};
+        String(raw || '').split(',').forEach(function (part) {
+            var n = parseInt(part, 10);
+            if (n > 0 && !seen[n]) {
+                seen[n] = true;
+                ids.push(n);
+            }
+        });
+        var fallback = parseInt(fallbackId, 10);
+        if (!ids.length && fallback > 0) ids.push(fallback);
+        return ids;
+    }
+
+    function openEditModal(uploadIds, labels) {
+        labelEditUploadIds = (uploadIds || []).filter(function (id) {
+            return id > 0;
+        });
         labelDraft = (labels || []).slice();
         setEditMsg('');
+        if (editTitle) {
+            editTitle.textContent = labelEditUploadIds.length > 1 ? 'Метки пакета' : 'Метки файла';
+        }
+        if (editHint) {
+            if (labelEditUploadIds.length > 1) {
+                editHint.textContent = 'Выбранные метки применятся ко всем файлам пакета.';
+                editHint.hidden = false;
+            } else {
+                editHint.textContent = '';
+                editHint.hidden = true;
+            }
+        }
         renderEditList();
         if (editInput) editInput.value = '';
         setOpen(editModal, true);
@@ -163,15 +194,15 @@
 
     function closeEditModal() {
         setOpen(editModal, false);
-        labelEditUploadId = null;
+        labelEditUploadIds = [];
         labelDraft = [];
         setEditMsg('');
     }
 
     function saveEditModal() {
-        if (!labelEditUploadId) return;
+        if (!labelEditUploadIds.length) return;
         labelApi('POST', '/api/labels/set', {
-            upload_id: labelEditUploadId,
+            upload_ids: labelEditUploadIds.slice(),
             labels: labelDraft.slice(),
         }).then(function () {
             closeEditModal();
@@ -289,8 +320,11 @@
             if (!btn) return;
             ev.preventDefault();
             ev.stopPropagation();
-            var uploadId = parseInt(btn.getAttribute('data-edit-labels'), 10);
-            if (!(uploadId > 0)) return;
+            var uploadIds = parseUploadIds(
+                btn.getAttribute('data-edit-label-ids'),
+                btn.getAttribute('data-edit-labels')
+            );
+            if (!uploadIds.length) return;
             var labels = [];
             var raw = btn.getAttribute('data-labels');
             if (raw) {
@@ -307,13 +341,13 @@
             if (!labels.length) {
                 var itemEl = btn.closest('.history-item');
                 if (itemEl) {
-                    itemEl.querySelectorAll('.history-item-labels .hw-label-chip').forEach(function (chip) {
+                    itemEl.querySelectorAll(':scope > .history-item-head .history-item-labels .hw-label-chip').forEach(function (chip) {
                         var text = (chip.textContent || '').trim();
                         if (text) labels.push(text);
                     });
                 }
             }
-            openEditModal(uploadId, labels);
+            openEditModal(uploadIds, labels);
         });
     }
 

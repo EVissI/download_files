@@ -566,6 +566,7 @@
                     </svg>
                 </button>
             </div>
+            <p id="fileLabelsModalHint" class="hw-link-modal__subtitle" hidden></p>
             <div class="hw-labels-modal__input-row">
                 <input id="fileLabelsModalInput" type="text" maxlength="255" placeholder="Введите метку и нажмите Enter" autocomplete="off">
                 <button id="fileLabelsModalAddBtn" type="button" class="hw-link-modal__btn">Добавить</button>
@@ -1042,13 +1043,17 @@
             });
         }
 
-        function historyLabelsHtml(item) {
-            if (!enableUserLabels || !item || !item.id) return '';
+        function historyLabelsHtml(item, uploadIds) {
+            const ids = (uploadIds && uploadIds.length)
+                ? uploadIds.filter((id) => id > 0)
+                : (item && item.id ? [item.id] : []);
+            if (!enableUserLabels || !ids.length) return '';
             const labels = Array.isArray(item.labels) ? item.labels : [];
             const chips = labels.map((label) => `<span class="hw-label-chip">${escapeHtml(label)}</span>`).join('');
             const encoded = escapeHtml(JSON.stringify(labels));
             const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.5 3.2H5.2A1.7 1.7 0 0 0 3.5 4.9v7.3c0 .45.18.88.5 1.2l8.4 8.4a1.7 1.7 0 0 0 2.4 0l6.4-6.4a1.7 1.7 0 0 0 0-2.4l-8.4-8.4a1.7 1.7 0 0 0-1.2-.4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="8.2" cy="8.2" r="1.35" fill="currentColor"/></svg>`;
-            return `<div class="history-item-labels">${chips}<button type="button" class="ghost history-labels-btn" data-edit-labels="${item.id}" data-labels="${encoded}" title="Метки" aria-label="Метки">${icon}</button></div>`;
+            const title = ids.length > 1 ? 'Метки пакета' : 'Метки';
+            return `<div class="history-item-labels">${chips}<button type="button" class="ghost history-labels-btn" data-edit-labels="${ids[0]}" data-edit-label-ids="${ids.join(',')}" data-labels="${encoded}" title="${title}" aria-label="${title}">${icon}</button></div>`;
         }
 
         function renderHistoryFile(item, nested) {
@@ -1169,12 +1174,14 @@
                     const select = (enableUserFolders && fileIds.length)
                         ? `<label class="history-item-select"><input type="checkbox" data-upload-ids="${fileIds.join(',')}"></label>`
                         : '';
+                    const batchLabels = historyLabelsHtml(item, fileIds);
                     return `<div class="history-item ${extraClass}"${expandable ? ` data-batch-id="${escapeHtml(batchId)}"` : ''}>
                         <div class="history-item-head">
                             ${select}
                             <div>
                                 <strong>${escapeHtml(item.original_filename || 'Пакет')}</strong>
                                 <div class="muted">${escapeHtml(countLabel || '—')} · ${historyStatusLabel(item.status)}</div>
+                                ${batchLabels}
                             </div>
                             <div class="history-item-actions">${pdf}${chevron}</div>
                         </div>

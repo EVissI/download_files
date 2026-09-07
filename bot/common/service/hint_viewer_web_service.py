@@ -743,6 +743,18 @@ def _history_item(row) -> dict[str, Any]:
     }
 
 
+def _labels_union(items: list[dict[str, Any]]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in items:
+        for lab in item.get("labels") or []:
+            text = str(lab).strip()
+            if text and text not in seen:
+                seen.add(text)
+                out.append(text)
+    return out
+
+
 def _batch_group_status(rows: list[Any]) -> str:
     statuses = {row.status for row in rows}
     if statuses & {"queued", "processing"}:
@@ -870,6 +882,8 @@ async def list_history_for_user(
             item["labels"] = list(labels_map.get(item.get("id"), []) or [])
             for nested in item.get("files") or []:
                 nested["labels"] = list(labels_map.get(nested.get("id"), []) or [])
+            if item.get("kind") == "batch":
+                item["labels"] = _labels_union(item.get("files") or [])
         return {
             "items": items,
             "page": current,
