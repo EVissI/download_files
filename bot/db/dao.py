@@ -50,6 +50,7 @@ from bot.db.models import (
     HintWebFolderSchedule,
     HintWebLabelPreset,
     HintWebUploadLabel,
+    WebAnalyzePlayerStat,
     WebUser,
 )
 from sqlalchemy import String, cast, delete, func, insert, literal, not_, or_, select, text
@@ -3010,6 +3011,94 @@ class WebUserDAO(BaseDAO[WebUser]):
                     continue
             out.append(row)
         return out
+
+    async def list_active_ordered(self) -> list[WebUser]:
+        result = await self._session.execute(
+            select(WebUser).order_by(WebUser.login.asc(), WebUser.id.asc())
+        )
+        now = datetime.now(timezone.utc)
+        out: list[WebUser] = []
+        for row in result.scalars().all():
+            expires = row.expires_at
+            if expires is not None:
+                if expires.tzinfo is None:
+                    expires = expires.replace(tzinfo=timezone.utc)
+                if expires <= now:
+                    continue
+            out.append(row)
+        return out
+
+
+class WebAnalyzePlayerStatDAO(BaseDAO[WebAnalyzePlayerStat]):
+    model = WebAnalyzePlayerStat
+
+    def _owner_filter(self, web_user_id: int | None):
+        if web_user_id is None:
+            return []
+        return [self.model.web_user_id == int(web_user_id)]
+
+    async def list_players(self, web_user_id: int | None) -> list[dict]:
+        filters = self._owner_filter(web_user_id)
+        query = select(
+            self.model.player_name_norm,
+            func.max(self.model.player_name).label("player_name"),
+            func.count(self.model.id).label("games"),
+            func.avg(self.model.snowie_error_rate).label("avg_pr"),
+        )
+        if filters:
+            query = query.where(*filters)
+        result = await self._session.execute(
+            query.group_by(self.model.player_name_norm).order_by(
+                func.count(self.model.id).desc(),
+                func.max(self.model.player_name).asc(),
+            )
+        )
+        rows = []
+        for player_name_norm, player_name, games, avg_pr in result.all():
+            rows.append(
+                {
+                    "name": str(player_name or ""),
+                    "name_norm": str(player_name_norm or ""),
+                    "games": int(games or 0),
+                    "avg_pr": float(avg_pr or 0),
+                }
+            )
+        return rows
+
+    async def list_player_rows(
+        self,
+        player_name_norm: str,
+        web_user_id: int | None,
+        last: int | None = None,
+    ) -> list[WebAnalyzePlayerStat]:
+        filters = self._owner_filter(web_user_id)
+        filters.append(self.model.player_name_norm == player_name_norm)
+        query = (
+            select(self.model)
+            .where(*filters)
+            .order_by(self.model.created_at.desc(), self.model.id.desc())
+        )
+        if last is not None and last > 0:
+            query = query.limit(int(last))
+        result = await self._session.execute(query)
+        return list(result.scalars().all())
+
+    async def add_if_missing(self, **values) -> WebAnalyzePlayerStat | None:
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+        game_id = str(values.get("game_id") or "")
+        name_norm = str(values.get("player_name_norm") or "")
+        if not game_id or not name_norm:
+            return None
+        stmt = (
+            pg_insert(self.model)
+            .values(**values)
+            .on_conflict_do_nothing(
+                constraint="uq_web_analyze_player_stats_game_id_player_name_norm"
+            )
+        )
+        await self._session.execute(stmt)
+        return None
 
 
 _WEB_UPLOAD_DONE = HintViewerWebUploadStatus.DONE.value

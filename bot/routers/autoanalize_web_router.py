@@ -14,6 +14,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
@@ -21,6 +22,7 @@ from fastapi.templating import Jinja2Templates
 from loguru import logger
 
 from bot.common.func.analiz_func import analyze_mat_file
+from bot.common.func.excel_generate import generate_web_analyze_player_report
 from bot.common.func.func import format_detailed_analysis_html, get_analysis_data
 from bot.common.func.generate_pdf import (
     analysis_pdf_filename,
@@ -47,6 +49,11 @@ from bot.common.service.hint_viewer_web_service import (
     clear_finished_session_jobs,
     web_cabinet_page_vars,
     _history_item,
+)
+from bot.common.service.web_analyze_player_stats import (
+    normalize_player_name,
+    persist_web_analyze_player_stats,
+    serialize_player_detail,
 )
 from bot.common.service.web_support_service import (
     ALLOWED_EXT,
@@ -182,12 +189,13 @@ async def _process_file_item(item: dict[str, Any]) -> None:
     file_type = item["file_type"]
     game_id = item["game_id"]
     kind = item.get("kind") or "single"
+    user_id = item.get("user_id")
     await redis_client.set(
         ANALYZE_ACTIVE_KEY.format(game_id=game_id), "1", expire=ANALYZE_GNU_LOCK_TTL
     )
     try:
         await _process_file_item_inner(
-            token, job_id, filename, src_path, file_type, game_id, kind
+            token, job_id, filename, src_path, file_type, game_id, kind, user_id
         )
     finally:
         await redis_client.delete(ANALYZE_ACTIVE_KEY.format(game_id=game_id))
@@ -201,6 +209,7 @@ async def _process_file_item_inner(
     file_type: str | None,
     game_id: str,
     kind: str,
+    user_id: int | None = None,
 ) -> None:
     async def mark_processing() -> None:
         await update_history_status(
@@ -273,6 +282,12 @@ async def _process_file_item_inner(
             await fail("В файле должно быть ровно два игрока")
             return
         metrics = get_analysis_data(analysis_data)
+        await persist_web_analyze_player_stats(
+            web_user_id=int(user_id) if user_id else None,
+            game_id=game_id,
+            filename=filename,
+            metrics_by_player=metrics,
+        )
         s3 = HintS3Storage.from_settings()
         await asyncio.to_thread(
             s3.put_autoanalyze_json,
@@ -458,6 +473,7 @@ async def _prepare_analyze_file(
         "file_type": _file_type(filename),
         "game_id": game_id,
         "kind": kind,
+        "user_id": user_id,
     }
     return meta, work
 
@@ -1200,6 +1216,125 @@ async def web_analyze_order_analysis(request: Request, game_id: str = ""):
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
     return JSONResponse({"ok": True, "message": payload})
+
+
+def _xlsx_content_disposition(filename: str) -> str:
+    raw = (filename or "players.xlsx").replace("\\", "/").split("/")[-1].strip()
+    if not raw.lower().endswith(".xlsx"):
+        raw += ".xlsx"
+    ascii_name = (
+        "".join(c if c.isascii() and c not in '"\\' else "_" for c in raw)[:180]
+        or "players.xlsx"
+    )
+    return f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(raw)}"
+
+
+def _stats_scope_user_id(
+    session: dict[str, Any], owner_user_id: int | None
+) -> int | None:
+    self_id = int(session.get("user_id") or 0)
+    if not self_id:
+        raise HTTPException(status_code=401, detail="Нужна авторизация")
+    is_admin = bool(session.get("is_admin"))
+    if not is_admin:
+        return self_id
+    if owner_user_id is None or int(owner_user_id) <= 0:
+        return None
+    return int(owner_user_id)
+
+
+@autoanalize_web_api_router.get("/web/analyze/api/players")
+async def web_analyze_players(
+    request: Request,
+    owner_user_id: int | None = None,
+):
+    _token, session = await _require_session(request)
+    from bot.db.dao import WebAnalyzePlayerStatDAO
+    from bot.db.database import async_session_maker
+
+    scope_id = _stats_scope_user_id(session, owner_user_id)
+    async with async_session_maker() as db:
+        players = await WebAnalyzePlayerStatDAO(db).list_players(scope_id)
+    return {"ok": True, "players": players, "owner_user_id": scope_id}
+
+
+@autoanalize_web_api_router.get("/web/analyze/api/players/users")
+async def web_analyze_player_users(request: Request):
+    _token, session = await _require_session(request)
+    if not session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Только для администраторов")
+    from bot.db.dao import WebUserDAO
+    from bot.db.database import async_session_maker
+
+    async with async_session_maker() as db:
+        users = await WebUserDAO(db).list_active_ordered()
+    return {
+        "ok": True,
+        "users": [{"id": row.id, "username": row.login} for row in users],
+    }
+
+
+@autoanalize_web_api_router.get("/web/analyze/api/players/detail")
+async def web_analyze_player_detail(
+    request: Request,
+    name: str,
+    last: int | None = None,
+    owner_user_id: int | None = None,
+):
+    _token, session = await _require_session(request)
+    from bot.db.dao import WebAnalyzePlayerStatDAO
+    from bot.db.database import async_session_maker
+
+    name_norm = normalize_player_name(name)
+    if not name_norm:
+        raise HTTPException(status_code=400, detail="Укажите игрока")
+    last_n = None
+    if last is not None:
+        try:
+            last_n = int(last)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail="Некорректное число матчей") from exc
+        if last_n < 1:
+            last_n = None
+    scope_id = _stats_scope_user_id(session, owner_user_id)
+    async with async_session_maker() as db:
+        dao = WebAnalyzePlayerStatDAO(db)
+        all_rows = await dao.list_player_rows(name_norm, scope_id)
+        rows = all_rows[:last_n] if last_n else all_rows
+        payload = serialize_player_detail(
+            rows, last=last_n, total_games=len(all_rows)
+        )
+    if not payload["name"] and all_rows:
+        payload["name"] = name
+    return {"ok": True, "owner_user_id": scope_id, **payload}
+
+
+@autoanalize_web_api_router.get("/web/analyze/api/players/excel")
+async def web_analyze_player_excel(
+    request: Request,
+    name: str,
+    owner_user_id: int | None = None,
+):
+    _token, session = await _require_session(request)
+    from bot.db.dao import WebAnalyzePlayerStatDAO
+    from bot.db.database import async_session_maker
+
+    name_norm = normalize_player_name(name)
+    if not name_norm:
+        raise HTTPException(status_code=400, detail="Укажите игрока")
+    scope_id = _stats_scope_user_id(session, owner_user_id)
+    async with async_session_maker() as db:
+        rows = await WebAnalyzePlayerStatDAO(db).list_player_rows(name_norm, scope_id)
+    if not rows:
+        raise HTTPException(status_code=404, detail="Нет данных по игроку")
+    display_name = rows[0].player_name or name
+    buf = await generate_web_analyze_player_report(rows, display_name)
+    filename = f"{display_name}_detailed_statistics.xlsx"
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": _xlsx_content_disposition(filename)},
+    )
 
 
 register_web_upload_folder_routes(

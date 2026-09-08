@@ -129,6 +129,60 @@
             word-break: break-word;
         }
         .history-item a { color: var(--web-link); }
+        .analyze-page-tabs {
+            display: flex;
+            gap: 8px;
+            margin: 0 0 16px;
+        }
+        .analyze-page-tabs button {
+            background: var(--web-ghost-bg);
+            color: var(--web-ghost-fg);
+            padding: 8px 14px;
+            font-size: 0.9rem;
+        }
+        .analyze-page-tabs button.is-active {
+            background: var(--web-accent);
+            color: #fff;
+        }
+        .player-stats-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 12px;
+            align-items: flex-end;
+            margin-bottom: 12px;
+        }
+        .player-stats-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+            flex: 1 1 180px;
+        }
+        .player-stats-field label {
+            font-size: 0.8rem;
+            color: var(--web-text-muted);
+        }
+        .player-stats-field select,
+        .player-stats-field input {
+            width: 100%;
+            border: 1px solid var(--web-border);
+            border-radius: 8px;
+            background: var(--web-bg-sunken);
+            color: var(--web-text);
+            padding: 8px 10px;
+            font: inherit;
+        }
+        .player-stats-result {
+            margin: 8px 0 0;
+            padding: 12px 14px;
+            border: 1px solid var(--web-border);
+            border-radius: 10px;
+            background: var(--web-bg-sunken);
+            white-space: pre-wrap;
+            font-size: 0.95rem;
+            line-height: 1.45;
+            min-height: 3em;
+        }
         .open-modes { margin-top: 8px; }
         .open-modes .btn { font-size: 0.85rem; padding: 8px 10px; }
         .open-modes .btn:hover {
@@ -408,6 +462,13 @@
 <body>
     {% include "includes/web_cabinet_header.html" %}
     <div class="wrap">
+        {% if enable_player_stats|default(false) %}
+        <nav class="analyze-page-tabs" aria-label="Разделы анализа">
+            <button type="button" class="is-active" data-analyze-tab="uploads">Загрузки</button>
+            <button type="button" data-analyze-tab="players">Статистика</button>
+        </nav>
+        {% endif %}
+        <div id="analyzeUploadsPanel">
         <div class="card">
             <h2>{{ card_title|default('Новый анализ') }}</h2>
             <p class="muted">{{ intro_text|default('Можно загрузить один или несколько .mat, либо zip с матчами. Когда анализ будет готов, появится уведомление.') }}</p>
@@ -478,6 +539,38 @@
             <div id="history" class="muted">Загрузка истории…</div>
             <div id="historyPager" class="pager" hidden></div>
         </div>
+        </div>
+        {% if enable_player_stats|default(false) %}
+        <div id="analyzePlayersPanel" hidden>
+            <div class="card">
+                <h2>Статистика</h2>
+                <p class="muted">PR по загруженным в Анализ матчам. Новые значения слева, среднее — по выбранному числу игр.</p>
+                <div class="player-stats-row">
+                    {% if is_admin|default(false) %}
+                    <div class="player-stats-field">
+                        <label for="playerStatsOwner">Пользователь</label>
+                        <select id="playerStatsOwner">
+                            <option value="">Все пользователи</option>
+                        </select>
+                    </div>
+                    {% endif %}
+                    <div class="player-stats-field">
+                        <label for="playerStatsSelect">Игрок</label>
+                        <select id="playerStatsSelect">
+                            <option value="">Нет игроков</option>
+                        </select>
+                    </div>
+                    <div class="player-stats-field" style="flex: 0 1 140px;">
+                        <label for="playerStatsLast">Последних матчей</label>
+                        <input id="playerStatsLast" type="number" min="1" step="1" placeholder="Все игры">
+                    </div>
+                    <button type="button" class="primary" id="playerStatsShowBtn">Показать</button>
+                    <button type="button" class="ghost" id="playerStatsExcelBtn">Excel</button>
+                </div>
+                <div id="playerStatsResult" class="player-stats-result muted">Выберите игрока.</div>
+            </div>
+        </div>
+        {% endif %}
     </div>
     {% if enable_user_folders|default(false) %}
     <div id="folderActionModal" class="hw-link-modal" aria-hidden="true">
@@ -648,6 +741,7 @@
         const saveMatchAnalysisEnabled = {{ (is_admin|default(false) and (web_service|default('') == 'hints'))|tojson }};
         const enableUserFolders = {{ enable_user_folders|default(false)|tojson }};
         const enableUserLabels = {{ enable_user_labels|default(false)|tojson }};
+        const enablePlayerStats = {{ enable_player_stats|default(false)|tojson }};
         const isAdminUser = {{ is_admin|default(false)|tojson }};
         const fileInput = document.getElementById('fileInput');
         const dropzone = document.getElementById('dropzone');
@@ -1843,7 +1937,15 @@
                 pollHistory();
             }
         }, 4000);
+        window.WebAnalyzePlayerStatsConfig = {
+            apiBase: apiBase,
+            isAdmin: isAdminUser,
+            enabled: enablePlayerStats
+        };
     </script>
+    {% if enable_player_stats|default(false) %}
+    <script src="/static/js/web_analyze_players.js?t={{ cache_timestamp }}"></script>
+    {% endif %}
     {% if enable_user_folders|default(false) or send_to_user|default(false) %}
     <script src="/static/js/web_assign_user_modal.js?t={{ cache_timestamp }}"></script>
     {% endif %}

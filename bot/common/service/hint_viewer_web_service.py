@@ -296,6 +296,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
             "dropzone_title": "Нажмите или перетащите файлы сюда",
             "enable_user_folders": True,
             "enable_user_labels": True,
+            "enable_player_stats": True,
         }
     return {
         "web_service": WEB_SERVICE_HINTS,

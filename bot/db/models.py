@@ -1718,6 +1718,11 @@ class WebUser(Base):
         back_populates="user",
         uselist=False,
     )
+    analyze_player_stats: Mapped[list["WebAnalyzePlayerStat"]] = relationship(
+        "WebAnalyzePlayerStat",
+        back_populates="web_user",
+        cascade="all, delete-orphan",
+    )
 
     MAX_SESSIONS_MIN = 1
     MAX_SESSIONS_MAX = 99
@@ -1832,6 +1837,66 @@ class HintViewerWebUpload(Base):
         back_populates="upload",
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+
+
+class WebAnalyzePlayerStat(Base):
+    """PR и детальные метрики игрока по веб-анализу (не Telegram)."""
+
+    __tablename__ = "web_analyze_player_stats"
+    __table_args__ = (
+        UniqueConstraint(
+            "game_id",
+            "player_name_norm",
+            name="uq_web_analyze_player_stats_game_id_player_name_norm",
+        ),
+        Index("ix_web_analyze_player_stats_web_user_id", "web_user_id"),
+        Index("ix_web_analyze_player_stats_player_name_norm", "player_name_norm"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    web_user_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("web_users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    player_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    player_name_norm: Mapped[str] = mapped_column(String(100), nullable=False)
+    game_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    file_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    moves_marked_bad: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    moves_marked_very_bad: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error_rate_chequer: Mapped[float] = mapped_column(nullable=False, default=0)
+    chequerplay_rating: Mapped[str] = mapped_column(String(50), nullable=False, default="")
+
+    rolls_marked_very_lucky: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    rolls_marked_lucky: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    rolls_marked_unlucky: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    rolls_marked_very_unlucky: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    rolls_rate_chequer: Mapped[float] = mapped_column(nullable=False, default=0)
+    luck_rating: Mapped[str] = mapped_column(String(50), nullable=False, default="")
+
+    missed_doubles_below_cp: Mapped[float] = mapped_column(nullable=False, default=0)
+    missed_doubles_above_cp: Mapped[float] = mapped_column(nullable=False, default=0)
+    wrong_doubles_below_sp: Mapped[float] = mapped_column(nullable=False, default=0)
+    wrong_doubles_above_tg: Mapped[float] = mapped_column(nullable=False, default=0)
+    wrong_takes: Mapped[float] = mapped_column(nullable=False, default=0)
+    wrong_passes: Mapped[float] = mapped_column(nullable=False, default=0)
+    cube_error_rate: Mapped[float] = mapped_column(nullable=False, default=0)
+    cube_decision_rating: Mapped[str] = mapped_column(String(50), nullable=False, default="")
+
+    snowie_error_rate: Mapped[float] = mapped_column(nullable=False, default=0)
+    overall_rating: Mapped[str] = mapped_column(String(50), nullable=False, default="")
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    web_user: Mapped["WebUser"] = relationship(
+        "WebUser", back_populates="analyze_player_stats"
     )
 
 
