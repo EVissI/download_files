@@ -17,6 +17,10 @@
 #historyRemoveFromFolderBtn[hidden] {
     display: none !important;
 }
+#historyDeleteBtn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
 .hw-hint {
     position: fixed;
     z-index: 120;

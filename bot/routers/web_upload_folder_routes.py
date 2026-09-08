@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import shutil
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -10,7 +12,11 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
-from bot.common.service.hint_viewer_web_service import COOKIE_NAME, resolve_web_session
+from bot.common.service.hint_viewer_web_service import (
+    COOKIE_NAME,
+    WEB_SERVICE_ANALYZE,
+    resolve_web_session,
+)
 from bot.common.tasks.folder_schedule import (
     normalize_labels,
     normalize_weekdays,
@@ -42,6 +48,10 @@ class FolderIdBody(BaseModel):
 class FolderItemsBody(BaseModel):
     folder_id: int
     upload_ids: list[int] = Field(default_factory=list)
+
+
+class HistoryDeleteBody(BaseModel):
+    upload_ids: list[int] = Field(default_factory=list, max_length=500)
 
 
 class FolderScheduleSaveBody(BaseModel):
@@ -384,6 +394,33 @@ def register_web_upload_folder_routes(
                     ):
                         removed += 1
                 return {"ok": True, "removed_count": removed}
+
+    @router.post(
+        f"{base}/api/history/delete",
+        operation_id=_op("history_delete"),
+    )
+    async def history_delete(request: Request, body: HistoryDeleteBody):
+        session = await _require_session(request)
+        user_id = _require_user_id(session)
+        upload_ids = [int(x) for x in (body.upload_ids or []) if x]
+        if not upload_ids:
+            raise HTTPException(status_code=400, detail="Выберите файлы")
+        async with async_session_maker() as db:
+            async with db.begin():
+                upload_dao = HintViewerWebUploadDAO(db)
+                result = await upload_dao.delete_owned_uploads(
+                    user_id, upload_ids, service=folder_service
+                )
+        deleted = int(result.get("deleted") or 0)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Файлы не найдены")
+        unused = result.get("unused_game_ids") or []
+        if folder_service == WEB_SERVICE_ANALYZE:
+            for game_id in unused:
+                path = Path("files/web_analyze") / str(game_id)
+                if path.is_dir():
+                    shutil.rmtree(path, ignore_errors=True)
+        return {"ok": True, "deleted_count": deleted}
 
     @router.post(
         f"{base}/api/folders/schedule_get", operation_id=_op("folder_schedule_get")

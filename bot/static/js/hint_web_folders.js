@@ -18,6 +18,7 @@
     var manageBtn = document.getElementById('manageFoldersBtn');
     var foldersBtn = document.getElementById('historyFoldersBtn');
     var removeBtn = document.getElementById('historyRemoveFromFolderBtn');
+    var deleteBtn = document.getElementById('historyDeleteBtn');
     var titleEl = document.getElementById('historyCardTitle');
     var folderViewBar = document.getElementById('folderViewBar');
     var folderViewSubfolders = document.getElementById('folderViewSubfolders');
@@ -189,6 +190,9 @@
             removeBtn.hidden = !inFolder || granted;
             removeBtn.setAttribute('aria-hidden', (!inFolder || granted) ? 'true' : 'false');
             removeBtn.disabled = !inFolder || granted || !ids.length;
+        }
+        if (deleteBtn) {
+            deleteBtn.disabled = granted || !ids.length;
         }
     }
 
@@ -1209,9 +1213,32 @@
         });
     }
 
+    function deleteSelectedUploads() {
+        var ids = historyApi.getSelectedUploadIds();
+        if (!ids.length || (deleteBtn && deleteBtn.disabled)) return;
+        var n = ids.length;
+        if (!window.confirm(
+            'Удалить ' + n + ' ' + filesWord(n) +
+            '? Файлы пропадут из истории и из всех папок.'
+        )) return;
+        if (deleteBtn) deleteBtn.disabled = true;
+        folderApi('POST', '/api/history/delete', { upload_ids: ids }).then(function () {
+            historyApi.clearSelection();
+            updateSelectionUi();
+            historyApi.pollHistory();
+            return loadFolderTreeData().then(function () {
+                return loadCurrentFolderView();
+            });
+        }).catch(function (e) {
+            window.alert(e.message || String(e));
+            updateSelectionUi();
+        });
+    }
+
     if (manageBtn) manageBtn.addEventListener('click', openManageModal);
     if (foldersBtn) foldersBtn.addEventListener('click', openActionModal);
     if (removeBtn) removeBtn.addEventListener('click', removeSelectedFromFolder);
+    if (deleteBtn) deleteBtn.addEventListener('click', deleteSelectedUploads);
     document.addEventListener('click', function (ev) {
         if (!hintEl || !hintEl.classList.contains('is-visible')) return;
         if (foldersBtn && foldersBtn.contains(ev.target)) return;

@@ -3331,6 +3331,59 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         found = {int(x) for x in result.scalars().all()}
         return [uid for uid in ids if uid in found]
 
+    async def delete_owned_uploads(
+        self,
+        user_id: int,
+        upload_ids: list[int],
+        service: str | None = "hints",
+    ) -> dict:
+        ids = [int(x) for x in upload_ids if x is not None]
+        if not ids:
+            return {"deleted": 0, "unused_game_ids": []}
+        rows_result = await self._session.execute(
+            select(self.model).where(
+                *self._user_service_filter(user_id, service),
+                self.model.id.in_(ids),
+            )
+        )
+        rows = list(rows_result.scalars().all())
+        ids = [int(row.id) for row in rows]
+        game_ids = [str(row.game_id) for row in rows if row.game_id]
+        if not ids:
+            return {"deleted": 0, "unused_game_ids": []}
+        await self._session.execute(
+            delete(HintWebFolderItem).where(HintWebFolderItem.upload_id.in_(ids))
+        )
+        await self._session.execute(
+            delete(HintWebUploadLabel).where(HintWebUploadLabel.upload_id.in_(ids))
+        )
+        await self._session.execute(
+            delete(HintViewerWebUpload).where(HintViewerWebUpload.id.in_(ids))
+        )
+        unused_game_ids: list[str] = []
+        unique_game_ids = list(dict.fromkeys(game_ids))
+        if unique_game_ids:
+            leftover = await self._session.execute(
+                select(HintViewerWebUpload.game_id).where(
+                    HintViewerWebUpload.user_id == int(user_id),
+                    HintViewerWebUpload.service == (service or "hints"),
+                    HintViewerWebUpload.game_id.in_(unique_game_ids),
+                )
+            )
+            still_used = {str(gid) for gid in leftover.scalars().all() if gid}
+            unused_game_ids = [
+                gid for gid in unique_game_ids if gid not in still_used
+            ]
+            if service == "analyze" and unused_game_ids:
+                await self._session.execute(
+                    delete(WebAnalyzePlayerStat).where(
+                        WebAnalyzePlayerStat.web_user_id == int(user_id),
+                        WebAnalyzePlayerStat.game_id.in_(unused_game_ids),
+                    )
+                )
+        await self._session.flush()
+        return {"deleted": len(ids), "unused_game_ids": unused_game_ids}
+
     async def list_ids_for_schedule(
         self,
         user_id: int,
