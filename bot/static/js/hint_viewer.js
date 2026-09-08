@@ -2585,6 +2585,13 @@ async function ensureContentEditor() {
             };
         }
 
+        function shotErr(kind, cause) {
+            if (typeof window.webScreenshotErrorMessage === 'function') {
+                return window.webScreenshotErrorMessage(kind, cause);
+            }
+            return 'Плохое соединение с интернетом — проверьте связь';
+        }
+
         function applyHideInfoMatchHeaderKeepTopPips(matchInfo) {
             if (!matchInfo || !(matchLength > 0)) return;
             const pipsEl = document.getElementById('black-pips');
@@ -2810,18 +2817,18 @@ async function ensureContentEditor() {
                         } else if (response.status === 401) {
                             showMessageModal('Нужна авторизация', 'error');
                         } else {
-                            showMessageModal('Ошибка при сохранении скриншота', 'error');
+                            showMessageModal(shotErr('save', response), 'error');
                         }
                         restoreControls();
                     }).catch(error => {
                         console.error('Error saving screenshot:', error);
-                        showMessageModal('Ошибка при сохранении скриншота', 'error');
+                        showMessageModal(shotErr('save', error), 'error');
                         restoreControls();
                     });
                 });
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
-                showMessageModal('Ошибка при создании скриншота', 'error');
+                showMessageModal(shotErr('create', error), 'error');
                 restoreControls();
             });
         }
@@ -2838,7 +2845,7 @@ async function ensureContentEditor() {
                         return;
                     }
                     if (!response.ok) {
-                        showMessageModal('Ошибка при скачивании архива', 'error');
+                        showMessageModal(shotErr('archive', response), 'error');
                         return;
                     }
                     const blob = await response.blob();
@@ -2853,7 +2860,7 @@ async function ensureContentEditor() {
                     showMessageModal('Архив со скриншотами скачан', 'success');
                 }).catch(error => {
                     console.error('Error downloading screenshots:', error);
-                    showMessageModal('Ошибка при скачивании архива', 'error');
+                    showMessageModal(shotErr('archive', error), 'error');
                 });
                 return;
             }
@@ -2865,11 +2872,11 @@ async function ensureContentEditor() {
                     const msg = (data.detail && typeof data.detail === 'string') ? data.detail : 'Недостаточно баланса для отправки скриншотов. Активируйте промокод или приобретите услугу.';
                     showMessageModal(msg, 'warning');
                 } else {
-                    showMessageModal('Ошибка при отправке скриншотов', 'error');
+                    showMessageModal(shotErr('archive_send', response), 'error');
                 }
             }).catch(error => {
                 console.error('Error uploading screenshots:', error);
-                showMessageModal('Ошибка при отправке скриншотов', 'error');
+                showMessageModal(shotErr('archive_send', error), 'error');
             });
         }
 
@@ -3043,18 +3050,11 @@ async function ensureContentEditor() {
                                 const msg = (data.detail && typeof data.detail === 'string') ? data.detail : 'Недостаточно баланса для сохранения скриншота. Активируйте промокод или приобретите услугу.';
                                 showMessageModal(msg, 'warning');
                             } else {
-                                const text = await response.text();
-                                console.error('Server response:', text);
-                                try {
-                                    const errorData = JSON.parse(text);
-                                    showMessageModal('Ошибка при отправке скриншота: ' + (errorData.detail || text), 'error');
-                                } catch (e) {
-                                    showMessageModal('Ошибка при отправке скриншота', 'error');
-                                }
+                                showMessageModal(shotErr('send', response), 'error');
                             }
                         }).catch(error => {
                             console.error('Error sending screenshot:', error);
-                            showMessageModal('Ошибка при отправке скриншота', 'error');
+                            showMessageModal(shotErr('send', error), 'error');
                         });
                     } else {
                         const link = document.createElement('a');
@@ -3065,7 +3065,7 @@ async function ensureContentEditor() {
                 });
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
-                showMessageModal('Ошибка при создании скриншота: ' + error.message, 'error');
+                showMessageModal(shotErr('create', error), 'error');
                 restoreControls();
             });
         }
@@ -3138,7 +3138,7 @@ async function ensureContentEditor() {
                 canvas.toBlob(blob => {
                     restoreChrome();
                     if (!blob) {
-                        showMessageModal('Ошибка при создании скриншота', 'error');
+                        showMessageModal(shotErr('create'), 'error');
                         return;
                     }
                     const file = new File([blob], screenshotImageFileName(), { type: 'image/png' });
@@ -3148,7 +3148,7 @@ async function ensureContentEditor() {
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
                 restoreChrome();
-                showMessageModal('Ошибка при создании скриншота', 'error');
+                showMessageModal(shotErr('create', error), 'error');
             });
         }
 
@@ -3253,7 +3253,7 @@ async function ensureContentEditor() {
                 });
             }).catch(error => {
                 console.error('Error creating screenshot:', error);
-                showMessageModal('Ошибка при создании скриншота', 'error');
+                showMessageModal(shotErr('create', error), 'error');
                 modal.style.display = originalModalDisplay;
                 sendBtn.disabled = false;
                 sendBtn.innerText = originalBtnText;

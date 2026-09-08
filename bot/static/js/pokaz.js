@@ -4296,6 +4296,13 @@ document.addEventListener('DOMContentLoaded', function () {
         overlay.classList.add('show');
     }
 
+    function shotErr(kind, cause) {
+        if (typeof window.webScreenshotErrorMessage === 'function') {
+            return window.webScreenshotErrorMessage(kind, cause);
+        }
+        return 'Плохое соединение с интернетом — проверьте связь';
+    }
+
     // Функции для работы со скриншотами (в глобальной области видимости)
     let pokazScreenshotFontScale = (function () {
         const meta = document.querySelector('meta[name="pokaz-screenshot-font-scale"]');
@@ -4501,13 +4508,11 @@ document.addEventListener('DOMContentLoaded', function () {
                                 const msg = (data.detail && typeof data.detail === 'string') ? data.detail : 'Недостаточно баланса для сохранения скриншота. Активируйте промокод или приобретите услугу.';
                                 showMessageModal(msg, 'warning');
                             } else {
-                                const text = await response.text();
-                                console.error('Ошибка сервера:', text);
-                                showMessageModal('Ошибка при отправке скриншота', 'error');
+                                showMessageModal(shotErr('send', response), 'error');
                             }
                         }).catch(error => {
                             console.error('Error sending screenshot:', error);
-                            showMessageModal('Ошибка при отправке скриншота', 'error');
+                            showMessageModal(shotErr('send', error), 'error');
                         });
                     } else {
                         showMessageModal('Не удалось получить chat_id', 'info');
@@ -4523,7 +4528,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }).catch(error => {
             console.error('Error creating screenshot:', error);
-            showMessageModal('Ошибка при создании скриншота', 'error');
+            showMessageModal(shotErr('create', error), 'error');
             restoreControls();
         });
     }
@@ -4621,12 +4626,12 @@ document.addEventListener('DOMContentLoaded', function () {
                         } else if (response.status === 401) {
                             showMessageModal('Нужна авторизация', 'error');
                         } else {
-                            showMessageModal('Ошибка при сохранении скриншота', 'error');
+                            showMessageModal(shotErr('save', response), 'error');
                         }
                         restoreControls();
                     }).catch(error => {
                         console.error('Error saving screenshot:', error);
-                        showMessageModal('Ошибка при сохранении скриншота', 'error');
+                        showMessageModal(shotErr('save', error), 'error');
                         restoreControls();
                     });
                     return;
@@ -4644,12 +4649,12 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (response.ok) {
                             showMessageModal('Скриншот сохранён в буфер', 'success');
                         } else {
-                            showMessageModal('Ошибка при сохранении скриншота', 'error');
+                            showMessageModal(shotErr('save', response), 'error');
                         }
                         restoreControls();
                     }).catch(error => {
                         console.error('Error saving screenshot:', error);
-                        showMessageModal('Ошибка при сохранении скриншота', 'error');
+                        showMessageModal(shotErr('save', error), 'error');
                         restoreControls();
                     });
                 } else {
@@ -4659,7 +4664,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }).catch(error => {
             console.error('Error creating screenshot:', error);
-            showMessageModal('Ошибка при создании скриншота', 'error');
+            showMessageModal(shotErr('create', error), 'error');
             restoreControls();
         });
     }
@@ -4676,7 +4681,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
                 if (!response.ok) {
-                    showMessageModal('Ошибка при скачивании архива', 'error');
+                    showMessageModal(shotErr('archive', response), 'error');
                     return;
                 }
                 const blob = await response.blob();
@@ -4691,7 +4696,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 showMessageModal('Архив скачан', 'success');
             }).catch(error => {
                 console.error('Error downloading screenshots:', error);
-                showMessageModal('Ошибка при скачивании архива', 'error');
+                showMessageModal(shotErr('archive', error), 'error');
             });
             return;
         }
@@ -4707,11 +4712,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     const msg = (data.detail && typeof data.detail === 'string') ? data.detail : 'Недостаточно баланса для отправки скриншотов. Активируйте промокод или приобретите услугу.';
                     showMessageModal(msg, 'warning');
                 } else {
-                    showMessageModal('Ошибка при отправке скриншотов', 'error');
+                    showMessageModal(shotErr('archive_send', response), 'error');
                 }
             }).catch(error => {
                 console.error('Error uploading screenshots:', error);
-                showMessageModal('Ошибка при отправке скриншотов', 'error');
+                showMessageModal(shotErr('archive_send', error), 'error');
             });
         } else {
             showMessageModal('Не удалось получить chat_id', 'info');
@@ -4851,7 +4856,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }).catch(error => {
             console.error('Error creating screenshot:', error);
-            alert('Ошибка при создании скриншота');
+            alert(shotErr('create', error));
             document.body.classList.remove('screenshot-mode');
             modal.style.display = originalModalDisplay;
             sendBtn.disabled = false;

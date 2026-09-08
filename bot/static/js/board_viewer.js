@@ -1433,6 +1433,13 @@ async function ensureContentEditor() {
             };
         }
 
+        function shotErr(kind, cause) {
+            if (typeof window.webScreenshotErrorMessage === 'function') {
+                return window.webScreenshotErrorMessage(kind, cause);
+            }
+            return 'Плохое соединение с интернетом — проверьте связь';
+        }
+
         function captureBoardViewerScreenshot() {
             window.scrollTo(0, 0);
             applyScreenshotFontScale();
@@ -1591,11 +1598,11 @@ async function ensureContentEditor() {
                                 : 'Недостаточно баланса для сохранения скриншота. Активируйте промокод или приобретите услугу.';
                             showMessageModal(msg, 'warning');
                         } else {
-                            showMessageModal('Ошибка при сохранении скриншота', 'error');
+                            showMessageModal(shotErr('save', response), 'error');
                         }
                     }).catch(error => {
                         console.error('Error saving screenshot:', error);
-                        showMessageModal('Ошибка при сохранении скриншота', 'error');
+                        showMessageModal(shotErr('save', error), 'error');
                     });
                 });
             }).catch(error => {
@@ -1622,7 +1629,7 @@ async function ensureContentEditor() {
                 }
                 if (matchTypeEl) matchTypeEl.style.display = originalMatchTypeDisplay;
                 if (matchScoreEl) matchScoreEl.style.display = originalMatchScoreDisplay;
-                showMessageModal('Ошибка при создании скриншота', 'error');
+                showMessageModal(shotErr('create', error), 'error');
             });
         }
 
@@ -1638,7 +1645,7 @@ async function ensureContentEditor() {
                         return;
                     }
                     if (!response.ok) {
-                        showMessageModal('Ошибка при скачивании архива', 'error');
+                        showMessageModal(shotErr('archive', response), 'error');
                         return;
                     }
                     const blob = await response.blob();
@@ -1653,7 +1660,7 @@ async function ensureContentEditor() {
                     showMessageModal('Архив скачан', 'success');
                 }).catch(error => {
                     console.error('Error downloading screenshots:', error);
-                    showMessageModal('Ошибка при скачивании архива', 'error');
+                    showMessageModal(shotErr('archive', error), 'error');
                 });
                 return;
             }
@@ -1667,11 +1674,11 @@ async function ensureContentEditor() {
                         : 'Недостаточно баланса для отправки скриншотов. Активируйте промокод или приобретите услугу.';
                     showMessageModal(msg, 'warning');
                 } else {
-                    showMessageModal('Ошибка при отправке скриншотов', 'error');
+                    showMessageModal(shotErr('archive_send', response), 'error');
                 }
             }).catch(error => {
                 console.error('Error uploading screenshots:', error);
-                showMessageModal('Ошибка при отправке скриншотов', 'error');
+                showMessageModal(shotErr('archive_send', error), 'error');
             });
         }
 
@@ -1786,20 +1793,11 @@ async function ensureContentEditor() {
                                 : 'Недостаточно баланса для отправки скриншота. Активируйте промокод или приобретите услугу.';
                             showMessageModal(msg, 'warning');
                         } else {
-                            const text = await response.text();
-                            try {
-                                const errorData = JSON.parse(text);
-                                showMessageModal(
-                                    'Ошибка при отправке скриншота: ' + (errorData.detail || text),
-                                    'error'
-                                );
-                            } catch (e) {
-                                showMessageModal('Ошибка при отправке скриншота', 'error');
-                            }
+                            showMessageModal(shotErr('send', response), 'error');
                         }
                     }).catch(error => {
                         console.error('Error sending screenshot:', error);
-                        showMessageModal('Ошибка при отправке скриншота', 'error');
+                        showMessageModal(shotErr('send', error), 'error');
                     });
                 });
             }).catch(error => {
@@ -1826,7 +1824,7 @@ async function ensureContentEditor() {
                 }
                 if (matchTypeEl) matchTypeEl.style.display = originalMatchTypeDisplay;
                 if (matchScoreEl) matchScoreEl.style.display = originalMatchScoreDisplay;
-                showMessageModal('Ошибка при создании скриншота', 'error');
+                showMessageModal(shotErr('create', error), 'error');
             });
         }
 
@@ -2068,7 +2066,7 @@ async function ensureContentEditor() {
             }).catch(error => {
                 removeScreenshotFontScale();
                 console.error('Error creating screenshot:', error);
-                alert('Ошибка при создании скриншота');
+                alert(shotErr('create', error));
                 modal.style.display = originalModalDisplay;
                 sendBtn.disabled = false;
                 sendBtn.innerText = originalBtnText;

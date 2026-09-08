@@ -739,3 +739,43 @@
     window.webOpenPageOverlay = openOverlay;
     bindOverlay();
 })();
+
+(function () {
+    var NET = 'Плохое соединение с интернетом — проверьте связь';
+    var CREATE = 'Не удалось сделать скриншот. Попробуйте ещё раз.';
+    var SAVE = 'Не удалось сохранить скриншот. Попробуйте ещё раз.';
+    var SEND = 'Не удалось отправить скриншот. Попробуйте ещё раз.';
+    var ARCHIVE = 'Не удалось скачать архив со скриншотами. Попробуйте ещё раз.';
+    var ARCHIVE_SEND = 'Не удалось отправить архив со скриншотами. Попробуйте ещё раз.';
+    var SERVER = 'Сервер временно недоступен. Попробуйте позже.';
+
+    function byKind(kind) {
+        if (kind === 'save') return SAVE;
+        if (kind === 'send') return SEND;
+        if (kind === 'archive') return ARCHIVE;
+        if (kind === 'archive_send') return ARCHIVE_SEND;
+        return CREATE;
+    }
+
+    function isNetworkish(err) {
+        try {
+            if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+        } catch (e) {}
+        if (!err) return false;
+        var name = String(err.name || '');
+        var msg = String(err.message || err || '');
+        if (name === 'NetworkError' || name === 'AbortError') return true;
+        return /failed to fetch|networkerror|load failed|offline|internet|connection|timeout|таймаут|network/i.test(msg);
+    }
+
+    window.webScreenshotErrorMessage = function (kind, cause) {
+        var status = 0;
+        if (typeof cause === 'number') status = cause;
+        else if (cause && typeof cause.status === 'number') status = cause.status;
+        if (status === 401) return 'Нужна авторизация';
+        if (status >= 500) return SERVER;
+        if (status > 0) return byKind(kind);
+        if (isNetworkish(cause)) return NET;
+        return byKind(kind);
+    };
+})();

@@ -1076,6 +1076,52 @@ async def web_analyze_send_to_hints(request: Request, game_id: str = ""):
     return JSONResponse({"ok": True, "redirect": "/web/hints", "job": job})
 
 
+@autoanalize_web_api_router.post("/web/analyze/api/send-to-board")
+async def web_analyze_send_to_board(request: Request, game_id: str = ""):
+    token, session = await _require_session(request)
+    user_id = session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Нужна авторизация")
+    _metrics, payload, original_filename = await _load_analyze_for_user(
+        int(user_id), game_id
+    )
+    gid = (game_id or "").strip()
+    src = _find_analyze_source(
+        gid, original_filename or (payload or {}).get("filename")
+    )
+    if src is None or not src.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Исходный файл не найден. Загрузите матч заново.",
+        )
+    if src.suffix.lower() not in {".mat", ".txt"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Плеер принимает только файлы .mat",
+        )
+    filename = original_filename or src.name
+    if not str(filename).lower().endswith(".mat"):
+        filename = f"{Path(filename).stem}.mat"
+    from bot.routers.board_viewer_web_router import _process_mat
+
+    try:
+        job = await _process_mat(str(src), filename, token, int(user_id))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("send analyze file to board failed game_id={}: {}", gid, exc)
+        raise HTTPException(
+            status_code=500, detail="Не удалось отправить файл в плеер"
+        ) from exc
+    if job.get("status") != HintViewerWebUploadStatus.DONE.value:
+        raise HTTPException(
+            status_code=400,
+            detail=job.get("error") or "Не удалось разобрать матч для плеера",
+        )
+    redirect = job.get("view_url") or "/web/board"
+    return JSONResponse({"ok": True, "redirect": redirect, "job": job})
+
+
 @autoanalize_web_api_router.post("/web/analyze/api/order-analysis")
 async def web_analyze_order_analysis(request: Request, game_id: str = ""):
     _token, session = await _require_session(request)
