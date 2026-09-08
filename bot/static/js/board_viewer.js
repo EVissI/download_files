@@ -1538,7 +1538,6 @@ async function ensureContentEditor() {
                 if (blackPips) blackPips.style.display = 'none';
                 if (redPips) redPips.style.display = 'none';
             }
-
             captureBoardViewerScreenshot().then(canvas => {
                 // Restore after screenshot
                 if (controls) controls.style.display = originalControlsDisplay;
@@ -1737,7 +1736,6 @@ async function ensureContentEditor() {
                 if (blackPips) blackPips.style.display = 'none';
                 if (redPips) redPips.style.display = 'none';
             }
-
             captureBoardViewerScreenshot().then(canvas => {
                 // Restore after screenshot
                 if (controls) controls.style.display = originalControlsDisplay;

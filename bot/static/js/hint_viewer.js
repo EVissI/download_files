@@ -2585,6 +2585,23 @@ async function ensureContentEditor() {
             };
         }
 
+        function applyHideInfoMatchHeaderKeepTopPips(matchInfo) {
+            if (!matchInfo || !(matchLength > 0)) return;
+            const pipsEl = document.getElementById('black-pips');
+            matchInfo.innerHTML =
+                '<div class="match-info-row">' +
+                `<span class="match-length">Матч до ${matchLength}</span>` +
+                '<span class="game-select" aria-hidden="true" style="visibility:hidden;pointer-events:none;border:0;background:transparent;">&nbsp;</span>' +
+                '<div class="match-info-trailing">' +
+                `<span class="match-score">Счет: ${gameRedScore} - ${gameBlackScore}</span>` +
+                '<div class="right-group"></div>' +
+                '</div></div>';
+            const rightGroup = matchInfo.querySelector('.right-group');
+            if (pipsEl && rightGroup) {
+                rightGroup.appendChild(pipsEl);
+            }
+        }
+
         function captureHintViewerScreenshot() {
             window.scrollTo(0, 0);
             document.body.classList.add('screenshot-mode');
@@ -2733,9 +2750,7 @@ async function ensureContentEditor() {
                 if (playersInfo) {
                     playersInfo.style.display = 'none';
                 }
-                if (matchInfo && matchLength > 0) {
-                    matchInfo.innerHTML = `<div style="position: relative;"><span style="position: absolute; left: 0;">Матч до ${matchLength}</span><span style="position: absolute; left: 50%; transform: translateX(-50%);">Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
-                }
+                applyHideInfoMatchHeaderKeepTopPips(matchInfo);
                 if (gameSelect) gameSelect.style.display = 'none';
             }
 
@@ -2956,9 +2971,7 @@ async function ensureContentEditor() {
                 if (playersInfo) {
                     playersInfo.style.display = 'none';
                 }
-                if (matchInfo && matchLength > 0) {
-                    matchInfo.innerHTML = `<div style="position: relative;"><span style="position: absolute; left: 0;">Матч до ${matchLength}</span><span style="position: absolute; left: 50%; transform: translateX(-50%);">Счет: ${gameRedScore} - ${gameBlackScore}</span></div>`;
-                }
+                applyHideInfoMatchHeaderKeepTopPips(matchInfo);
                 if (gameSelect) gameSelect.style.display = 'none';
             }
 
