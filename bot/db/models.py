@@ -1894,6 +1894,9 @@ class WebAnalyzePlayerStat(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
     web_user: Mapped["WebUser"] = relationship(
         "WebUser", back_populates="analyze_player_stats"

@@ -445,6 +445,29 @@ html[data-theme="light"] .card-bg-modal__btn {
     border-color: #cfd3db;
     color: var(--web-ghost-fg);
 }
+html[data-theme="light"] .link-modal__title {
+    color: var(--web-text);
+}
+html[data-theme="light"] .link-modal__subtitle,
+html[data-theme="light"] .link-modal__body {
+    color: var(--web-text-soft);
+}
+html[data-theme="light"] .folder-create-parent-modal .folder-node__row {
+    background: var(--web-ghost-bg);
+    border: 1px solid var(--web-border);
+    margin-bottom: 4px;
+}
+html[data-theme="light"] .folder-create-parent-modal .folder-node__row:hover {
+    background: var(--web-ghost-hover);
+}
+html[data-theme="light"] .folder-create-parent-modal .folder-node__name {
+    color: var(--web-text);
+}
+html[data-theme="light"] .folder-create-parent-modal .folder-node__pick-label,
+html[data-theme="light"] .folder-create-parent-modal .folder-node__count,
+html[data-theme="light"] .folder-create-parent-modal .folder-node__toggle {
+    color: var(--web-text-muted);
+}
 html[data-theme="light"] .label-scroll-bottom-btn,
 html[data-theme="light"] .card-bg-open-btn {
     background: #fff;
