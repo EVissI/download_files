@@ -413,7 +413,7 @@ async def generate_web_analyze_player_report(
     rows,
     player_name: str,
 ) -> io.BytesIO:
-    """Excel по журналу веб-анализа: те же колонки, что в ТГ-выгрузке по игроку."""
+    """Excel по журналу веб-анализа без служебных id."""
     wb = Workbook()
     ws = wb.active
     title = f"Детальный анализ {player_name or ''}".strip()[:31] or "Анализ"
@@ -426,8 +426,6 @@ async def generate_web_analyze_player_report(
     center_align = Alignment(horizontal="center")
 
     headers = [
-        "ID анализа",
-        "ID пользователя",
         "Имя игрока",
         "Дата анализа",
         "Рейтинг ошибок",
@@ -460,38 +458,36 @@ async def generate_web_analyze_player_report(
     current_row = 2
     for analysis in rows or []:
         created = getattr(analysis, "created_at", None)
-        ws.cell(row=current_row, column=1).value = analysis.id
-        ws.cell(row=current_row, column=2).value = analysis.web_user_id
-        ws.cell(row=current_row, column=3).value = analysis.player_name
-        ws.cell(row=current_row, column=4).value = (
+        ws.cell(row=current_row, column=1).value = analysis.player_name
+        ws.cell(row=current_row, column=2).value = (
             created.strftime("%Y-%m-%d") if created else "N/A"
         )
-        ws.cell(row=current_row, column=5).value = float(analysis.snowie_error_rate or 0)
-        ws.cell(row=current_row, column=6).value = analysis.overall_rating
-        ws.cell(row=current_row, column=7).value = analysis.error_rate_chequer
-        ws.cell(row=current_row, column=8).value = analysis.chequerplay_rating
-        ws.cell(row=current_row, column=9).value = analysis.rolls_marked_very_lucky
-        ws.cell(row=current_row, column=10).value = analysis.rolls_marked_lucky
-        ws.cell(row=current_row, column=11).value = analysis.rolls_marked_unlucky
-        ws.cell(row=current_row, column=12).value = analysis.rolls_marked_very_unlucky
-        ws.cell(row=current_row, column=13).value = analysis.luck_rating
-        ws.cell(row=current_row, column=14).value = analysis.cube_decision_rating
-        ws.cell(row=current_row, column=15).value = analysis.missed_doubles_below_cp
-        ws.cell(row=current_row, column=16).value = analysis.missed_doubles_above_cp
-        ws.cell(row=current_row, column=17).value = analysis.wrong_doubles_below_sp
-        ws.cell(row=current_row, column=18).value = analysis.wrong_doubles_above_tg
-        ws.cell(row=current_row, column=19).value = analysis.wrong_takes
-        ws.cell(row=current_row, column=20).value = analysis.wrong_passes
-        ws.cell(row=current_row, column=21).value = analysis.cube_error_rate
-        ws.cell(row=current_row, column=22).value = analysis.moves_marked_bad
-        ws.cell(row=current_row, column=23).value = analysis.moves_marked_very_bad
-        for col in range(1, 24):
+        ws.cell(row=current_row, column=3).value = float(analysis.snowie_error_rate or 0)
+        ws.cell(row=current_row, column=4).value = analysis.overall_rating
+        ws.cell(row=current_row, column=5).value = analysis.error_rate_chequer
+        ws.cell(row=current_row, column=6).value = analysis.chequerplay_rating
+        ws.cell(row=current_row, column=7).value = analysis.rolls_marked_very_lucky
+        ws.cell(row=current_row, column=8).value = analysis.rolls_marked_lucky
+        ws.cell(row=current_row, column=9).value = analysis.rolls_marked_unlucky
+        ws.cell(row=current_row, column=10).value = analysis.rolls_marked_very_unlucky
+        ws.cell(row=current_row, column=11).value = analysis.luck_rating
+        ws.cell(row=current_row, column=12).value = analysis.cube_decision_rating
+        ws.cell(row=current_row, column=13).value = analysis.missed_doubles_below_cp
+        ws.cell(row=current_row, column=14).value = analysis.missed_doubles_above_cp
+        ws.cell(row=current_row, column=15).value = analysis.wrong_doubles_below_sp
+        ws.cell(row=current_row, column=16).value = analysis.wrong_doubles_above_tg
+        ws.cell(row=current_row, column=17).value = analysis.wrong_takes
+        ws.cell(row=current_row, column=18).value = analysis.wrong_passes
+        ws.cell(row=current_row, column=19).value = analysis.cube_error_rate
+        ws.cell(row=current_row, column=20).value = analysis.moves_marked_bad
+        ws.cell(row=current_row, column=21).value = analysis.moves_marked_very_bad
+        for col in range(1, 22):
             ws.cell(row=current_row, column=col).alignment = center_align
         current_row += 1
 
     if current_row > 2:
-        avg_cell = ws.cell(row=current_row, column=5)
-        avg_cell.value = f"=AVERAGE(E2:E{current_row - 1})"
+        avg_cell = ws.cell(row=current_row, column=3)
+        avg_cell.value = f"=AVERAGE(C2:C{current_row - 1})"
         avg_cell.font = Font(bold=True)
         avg_cell.alignment = center_align
 
@@ -506,19 +502,17 @@ async def generate_web_analyze_player_report(
         "H": 25,
         "I": 25,
         "J": 25,
-        "K": 25,
-        "L": 25,
+        "K": 35,
+        "L": 35,
         "M": 35,
         "N": 35,
         "O": 35,
         "P": 35,
-        "Q": 35,
+        "Q": 25,
         "R": 25,
         "S": 25,
         "T": 25,
         "U": 25,
-        "V": 25,
-        "W": 25,
     }
     for col, width in column_widths.items():
         ws.column_dimensions[col].width = width
