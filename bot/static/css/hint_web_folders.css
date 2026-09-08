@@ -237,6 +237,19 @@ html[data-theme="light"] .hw-hint__arrow {
     background: var(--web-accent-2);
     color: #fff;
 }
+.hw-link-modal__btn--danger {
+    background: #b91c1c;
+    color: #fff;
+}
+.hw-link-modal__btn--danger:hover {
+    background: #991b1b;
+    color: #fff;
+}
+.hw-link-modal__btn--danger:disabled,
+.hw-link-modal__btn--primary:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
 .hw-link-modal__choices {
     display: flex;
     flex-direction: column;

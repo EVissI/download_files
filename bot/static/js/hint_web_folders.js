@@ -38,6 +38,11 @@
     var insertText = document.getElementById('folderInsertConfirmModalText');
     var insertMsg = document.getElementById('folderInsertConfirmModalMsg');
     var insertSubmitBtn = document.getElementById('folderInsertConfirmSubmitBtn');
+    var deleteConfirmModal = document.getElementById('historyDeleteConfirmModal');
+    var deleteConfirmText = document.getElementById('historyDeleteConfirmModalText');
+    var deleteConfirmMsg = document.getElementById('historyDeleteConfirmModalMsg');
+    var deleteConfirmSubmitBtn = document.getElementById('historyDeleteConfirmSubmitBtn');
+    var deletePendingIds = [];
     var createParentModal = document.getElementById('folderCreateParentModal');
     var createParentMsg = document.getElementById('folderCreateParentMsg');
     var createParentTree = document.getElementById('folderCreateParentTree');
@@ -1213,16 +1218,37 @@
         });
     }
 
-    function deleteSelectedUploads() {
+    function closeDeleteConfirm() {
+        setOpen(deleteConfirmModal, false);
+        deletePendingIds = [];
+        if (deleteConfirmMsg) deleteConfirmMsg.textContent = '';
+        if (deleteConfirmSubmitBtn) deleteConfirmSubmitBtn.disabled = false;
+        updateSelectionUi();
+    }
+
+    function openDeleteConfirm() {
         var ids = historyApi.getSelectedUploadIds();
         if (!ids.length || (deleteBtn && deleteBtn.disabled)) return;
-        var n = ids.length;
-        if (!window.confirm(
-            'Удалить ' + n + ' ' + filesWord(n) +
-            '? Файлы пропадут из истории и из всех папок.'
-        )) return;
+        deletePendingIds = ids.slice();
+        var n = deletePendingIds.length;
+        if (deleteConfirmText) {
+            deleteConfirmText.textContent =
+                'Удалить ' + n + ' ' + filesWord(n) +
+                '? Файлы пропадут из истории и из всех папок.';
+        }
+        if (deleteConfirmMsg) deleteConfirmMsg.textContent = '';
+        if (deleteConfirmSubmitBtn) deleteConfirmSubmitBtn.disabled = false;
+        setOpen(deleteConfirmModal, true);
+    }
+
+    function submitDeleteConfirm() {
+        if (!deletePendingIds.length) return;
+        if (deleteConfirmSubmitBtn) deleteConfirmSubmitBtn.disabled = true;
         if (deleteBtn) deleteBtn.disabled = true;
+        if (deleteConfirmMsg) deleteConfirmMsg.textContent = 'Удаление…';
+        var ids = deletePendingIds.slice();
         folderApi('POST', '/api/history/delete', { upload_ids: ids }).then(function () {
+            closeDeleteConfirm();
             historyApi.clearSelection();
             updateSelectionUi();
             historyApi.pollHistory();
@@ -1230,9 +1256,14 @@
                 return loadCurrentFolderView();
             });
         }).catch(function (e) {
-            window.alert(e.message || String(e));
+            if (deleteConfirmMsg) deleteConfirmMsg.textContent = e.message || String(e);
+            if (deleteConfirmSubmitBtn) deleteConfirmSubmitBtn.disabled = false;
             updateSelectionUi();
         });
+    }
+
+    function deleteSelectedUploads() {
+        openDeleteConfirm();
     }
 
     if (manageBtn) manageBtn.addEventListener('click', openManageModal);
@@ -1298,6 +1329,13 @@
         document.getElementById('folderInsertConfirmModalOverlay').addEventListener('click', closeInsertConfirm);
     }
     if (insertSubmitBtn) insertSubmitBtn.addEventListener('click', submitInsertConfirm);
+    if (document.getElementById('historyDeleteConfirmCancelBtn')) {
+        document.getElementById('historyDeleteConfirmCancelBtn').addEventListener('click', closeDeleteConfirm);
+    }
+    if (document.getElementById('historyDeleteConfirmModalOverlay')) {
+        document.getElementById('historyDeleteConfirmModalOverlay').addEventListener('click', closeDeleteConfirm);
+    }
+    if (deleteConfirmSubmitBtn) deleteConfirmSubmitBtn.addEventListener('click', submitDeleteConfirm);
 
     if (document.getElementById('folderCreateRootBtn')) {
         document.getElementById('folderCreateRootBtn').addEventListener('click', function () {
