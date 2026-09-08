@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import HTTPException
+from loguru import logger
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
@@ -242,3 +243,48 @@ async def grant_match_analysis_to_cabinet_admins(
                 card_status=UserContentCardStatus.UNVIEWED,
             )
         )
+
+
+def web_cabinet_source_path_for_pool(pool) -> str:
+    from bot.db.models import ContentCardPool
+
+    if pool == ContentCardPool.PIP_COUNT or str(pool) == ContentCardPool.PIP_COUNT.value:
+        return "/web/pip-count"
+    if (
+        pool == ContentCardPool.MATCH_ANALYSIS
+        or str(pool) == ContentCardPool.MATCH_ANALYSIS.value
+    ):
+        return "/web/match-analysis"
+    return "/web/cards"
+
+
+async def notify_cabinet_assignment(
+    target_user_id: int,
+    *,
+    text: str,
+    source_path: str,
+    author_user_id: int = 0,
+    telegram_markup=None,
+) -> tuple[bool, str | None]:
+    """Telegram-уведомление или сообщение в веб-чат для теневого User."""
+    uid = int(target_user_id)
+    if uid == 0:
+        return False, "Некорректный пользователь"
+    try:
+        if uid < 0:
+            from bot.common.service.web_support_service import notify_web_grant_user
+
+            await notify_web_grant_user(
+                uid,
+                text=text,
+                source_path=source_path,
+                author_user_id=author_user_id,
+            )
+        else:
+            from bot.config import bot
+
+            await bot.send_message(chat_id=uid, text=text, reply_markup=telegram_markup)
+        return True, None
+    except Exception as e:
+        logger.warning("cabinet assign notify failed uid={}: {}", uid, e)
+        return False, str(e)

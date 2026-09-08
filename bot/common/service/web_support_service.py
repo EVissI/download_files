@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 
 from bot.common.service.hint_s3_service import HintS3Storage
 from bot.db.models import (
+    User,
     WebSupportAttachment,
     WebSupportAuthorRole,
     WebSupportMessage,
@@ -89,6 +90,11 @@ _SOURCE_TABS = (
     ("/web/pokaz", "Позиция"),
     ("/web/cards", "Карточки"),
 )
+_CABINET_OPEN_PATHS = {
+    "/web/match-analysis": "Открыть «Анализ матча»",
+    "/web/cards": "Открыть карточки",
+    "/web/pip-count": "Открыть «Подсчёт пипсов»",
+}
 
 
 def _identity_pk(obj) -> int | None:
@@ -135,6 +141,9 @@ def cabinet_open_from_source(value: str | None) -> tuple[str | None, str | None]
     match = _HINTS_GAME_OPEN_RE.match(path)
     if match:
         return f"/web/hints/view?game_id={match.group(1)}", "Открыть анализ"
+    label = _CABINET_OPEN_PATHS.get(path)
+    if label:
+        return path, label
     return None, None
 
 
@@ -282,6 +291,52 @@ async def delete_thread(session, thread: WebSupportThread) -> list[str]:
     await session.delete(thread)
     await session.commit()
     return keys
+
+
+async def notify_web_grant_user(
+    grant_uid: int,
+    *,
+    text: str,
+    source_path: str,
+    author_user_id: int = 0,
+    author_login: str | None = None,
+) -> None:
+    """Сообщение в веб-чат теневому User (id = −web_user.id)."""
+    from bot.db.database import async_session_maker
+
+    grant_uid = int(grant_uid)
+    if grant_uid >= 0:
+        raise ValueError("grant_uid must be negative")
+    web_user_id = -grant_uid
+    author_id = int(author_user_id or 0)
+    if author_id < 0:
+        author_id = -author_id
+    async with async_session_maker() as db:
+        target = await db.get(WebUser, web_user_id)
+        if not target:
+            raise ValueError("Веб-пользователь не найден")
+        if target.is_expired():
+            raise ValueError("Срок доступа веб-пользователя истёк")
+        login = author_login
+        if not login and author_id > 0:
+            web_admin = await db.get(WebUser, author_id)
+            if web_admin:
+                login = web_admin.login
+            else:
+                tg_user = await db.get(User, author_id)
+                if tg_user:
+                    login = tg_user.username or tg_user.admin_insert_name
+        thread = await get_or_create_thread(db, web_user_id)
+        await add_message(
+            db,
+            thread=thread,
+            author_user_id=author_id,
+            author_role=WebSupportAuthorRole.ADMIN.value,
+            author_login=login,
+            body=text,
+            source_path=source_path,
+            files=[],
+        )
 
 
 async def get_or_create_thread(session, user_id: int) -> WebSupportThread:

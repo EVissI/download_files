@@ -464,7 +464,7 @@
         if (!el || !el.closest) return true;
         if (el.closest('canvas, input, textarea, select, option, [contenteditable="true"]')) return true;
         if (el.closest('.web-cabinet-header, .service-nav, .header-actions')) return true;
-        if el.closest('.history-table-wrap, .analyze-table, .ma-audio-modal, .card-preview-modal, .link-modal, .hw-assign-modal, .hw-link-modal, .shuffle-modal, .web-page-overlay')) return true;
+        if (el.closest('.history-table-wrap, .analyze-table, .ma-audio-modal, .card-preview-modal, .link-modal, .hw-assign-modal, .hw-link-modal, .shuffle-modal, .web-page-overlay')) return true;
         var node = el;
         while (node && node !== document.body) {
             if (isHScrollable(node)) return true;

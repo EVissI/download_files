@@ -1056,7 +1056,11 @@ class ContentCardAssignToUserBody(BaseModel):
 
     init_data: str | None = None
     fab_token: str | None = None
-    target_user_id: int = Field(..., ge=1)
+    target_user_id: int = Field(
+        ...,
+        ne=0,
+        description="Telegram id или теневой id веб-пользователя (−web_user.id)",
+    )
     content_card_ids: list[int] = Field(..., min_length=1, max_length=3000)
     pool: str | None = None
 
@@ -1921,14 +1925,25 @@ async def content_cards_admin_users(body: ContentCardMyListBody):
         result = await session.execute(
             select(User.id, User.username, User.admin_insert_name).order_by(User.id.asc())
         )
-        users = [
-            {
-                "id": int(row_id),
-                "username": str(username or ""),
-                "assigned_name": str(admin_insert_name or ""),
-            }
-            for row_id, username, admin_insert_name in result.all()
-        ]
+        users = []
+        for row_id, username, admin_insert_name in result.all():
+            uid = int(row_id)
+            raw_username = str(username or "")
+            is_web = uid < 0 or raw_username.startswith("web:")
+            display_username = (
+                raw_username[4:] if raw_username.startswith("web:") else raw_username
+            )
+            assigned = str(admin_insert_name or "")
+            if is_web and not assigned:
+                assigned = "веб"
+            users.append(
+                {
+                    "id": uid,
+                    "username": display_username,
+                    "assigned_name": assigned,
+                    "is_web": is_web,
+                }
+            )
     return {"users": users}
 
 
@@ -2030,19 +2045,21 @@ async def content_cards_assign_to_user(body: ContentCardAssignToUserBody):
     notify_sent = False
     notify_error = None
     if issued_count > 0:
-        try:
-            await bot.send_message(
-                chat_id=body.target_user_id,
-                text=(
-                    f"Вам зачислено {issued_count} карточек, "
-                    "посмотреть их можете в личном кабинете."
-                ),
-                reply_markup=_cabinet_webapp_markup_for_pool(notify_pool),
-            )
-            notify_sent = True
-        except Exception as e:
-            notify_error = str(e)
-            logger.warning("Не удалось отправить уведомление о выдаче карточек: {}", e)
+        from bot.common.service.cabinet_admin import (
+            notify_cabinet_assignment,
+            web_cabinet_source_path_for_pool,
+        )
+
+        notify_sent, notify_error = await notify_cabinet_assignment(
+            body.target_user_id,
+            text=(
+                f"Вам зачислено {issued_count} карточек, "
+                "посмотреть их можете в личном кабинете."
+            ),
+            source_path=web_cabinet_source_path_for_pool(notify_pool),
+            author_user_id=user_id,
+            telegram_markup=_cabinet_webapp_markup_for_pool(notify_pool),
+        )
 
     return {
         "ok": True,

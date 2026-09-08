@@ -1986,7 +1986,10 @@
                         tr.appendChild(idTd);
 
                         var usernameTd = document.createElement('td');
-                        usernameTd.textContent = row.username ? ('@' + row.username) : '—';
+                        var isWeb = !!row.is_web || Number(row.id) < 0;
+                        usernameTd.textContent = row.username
+                            ? (isWeb ? String(row.username) : ('@' + row.username))
+                            : '—';
                         tr.appendChild(usernameTd);
 
                         var assignedNameTd = document.createElement('td');

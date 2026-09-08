@@ -5,7 +5,10 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from loguru import logger
 from sqlalchemy import select
 
-from bot.common.utils.notify import notify_user
+from bot.common.service.cabinet_admin import (
+    notify_cabinet_assignment,
+    web_cabinet_source_path_for_pool,
+)
 from bot.config import settings
 from bot.db.database import async_session_maker
 from bot.db.models import (
@@ -86,13 +89,14 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
                 await session.commit()
                 if issued_count <= 0:
                     return
-                await notify_user(
+                await notify_cabinet_assignment(
                     target_user_id,
-                    (
+                    text=(
                         f"Вам зачислено {issued_count} анализов матча.\n"
                         "Посмотрите их в кабинете «Анализ матча»."
                     ),
-                    _cabinet_webapp_markup(card_pool),
+                    source_path="/web/match-analysis",
+                    telegram_markup=_cabinet_webapp_markup(card_pool),
                 )
                 logger.info(
                     "Card issue schedule {} granted {} match analyses to user {}",
@@ -157,13 +161,14 @@ async def run_content_card_issue_schedule(schedule_id: int) -> None:
                 if card_pool == ContentCardPool.PIP_COUNT
                 else "карточек"
             )
-            await notify_user(
+            await notify_cabinet_assignment(
                 target_user_id,
-                (
+                text=(
                     f"Вам зачислено {issued_count} {pool_label}.\n"
                     "Посмотрите их в личном кабинете."
                 ),
-                _cabinet_webapp_markup(card_pool),
+                source_path=web_cabinet_source_path_for_pool(card_pool),
+                telegram_markup=_cabinet_webapp_markup(card_pool),
             )
             logger.info(
                 "Card issue schedule {} granted {} {} cards to user {}",

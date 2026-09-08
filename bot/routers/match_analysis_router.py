@@ -145,7 +145,11 @@ class MatchAnalysisAudioEnsureBody(BaseModel):
 class MatchAnalysisAssignBody(BaseModel):
     init_data: str | None = None
     fab_token: str | None = None
-    target_user_id: int = Field(..., ge=1)
+    target_user_id: int = Field(
+        ...,
+        ne=0,
+        description="Telegram id или теневой id веб-пользователя (−web_user.id)",
+    )
     match_analysis_ids: list[int]
 
 
@@ -1893,7 +1897,7 @@ async def match_analysis_update_meta(body: MatchAnalysisUpdateMetaBody):
 
 @match_analysis_api_router.post("/api/match_analysis/assign_to_user")
 async def match_analysis_assign_to_user(body: MatchAnalysisAssignBody):
-    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
+    admin_uid = await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
     ids = _normalize_ma_ids(body.match_analysis_ids)
     if not ids:
         raise HTTPException(
@@ -1950,19 +1954,18 @@ async def match_analysis_assign_to_user(body: MatchAnalysisAssignBody):
     notify_sent = False
     notify_error = None
     if issued_count > 0:
-        try:
-            await bot.send_message(
-                chat_id=body.target_user_id,
-                text=(
-                    f"Вам зачислено {issued_count} анализов матча.\n"
-                    "Посмотрите их в кабинете «Анализ матча»."
-                ),
-                reply_markup=_ma_cabinet_webapp_markup(),
-            )
-            notify_sent = True
-        except Exception as e:
-            notify_error = str(e)
-            logger.warning("MA assign notify failed: {}", e)
+        from bot.common.service.cabinet_admin import notify_cabinet_assignment
+
+        notify_sent, notify_error = await notify_cabinet_assignment(
+            body.target_user_id,
+            text=(
+                f"Вам зачислено {issued_count} анализов матча.\n"
+                "Посмотрите их в кабинете «Анализ матча»."
+            ),
+            source_path="/web/match-analysis",
+            author_user_id=admin_uid,
+            telegram_markup=_ma_cabinet_webapp_markup(),
+        )
 
     return {
         "ok": True,
