@@ -937,6 +937,37 @@ html,
             display: none;
         }
 
+        .cabinet-toast {
+            position: fixed;
+            right: 16px;
+            bottom: calc(16px + var(--cabinet-toast-footer-offset, 0px));
+            background: var(--web-toast-bg);
+            color: #fff;
+            padding: 12px 14px;
+            border-radius: 10px;
+            display: none;
+            max-width: 320px;
+            z-index: 190020;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+            pointer-events: none;
+        }
+
+        .cabinet-toast.is-visible {
+            display: block;
+        }
+
+        body:has(.cabinet-footer:not(.is-feature-hidden):not(.is-modal-overlay-hidden)) {
+            --cabinet-toast-footer-offset: 52px;
+        }
+
+        @media (max-width: 640px) {
+            .cabinet-toast {
+                left: 12px;
+                right: 12px;
+                max-width: none;
+            }
+        }
+
         /* Виджет поддержки: футер на всю ширину снизу и выше по z-index. */
         body:has(.cabinet-footer:not(.is-feature-hidden):not(.is-modal-overlay-hidden)) .support-fab {
             bottom: calc(16px + 52px + env(safe-area-inset-bottom, 0px));

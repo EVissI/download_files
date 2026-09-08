@@ -499,6 +499,37 @@
                 });
             }
 
+            var cabinetToastEl = document.getElementById('cabinetToast');
+            var cabinetToastTimer = null;
+
+            function cabinetFooterToastOffset() {
+                var footer = document.querySelector('.cabinet-footer');
+                if (!footer) return 0;
+                if (footer.classList.contains('is-feature-hidden')) return 0;
+                if (footer.classList.contains('is-modal-overlay-hidden')) return 0;
+                var height = footer.getBoundingClientRect().height;
+                return height > 0 ? Math.ceil(height) : 0;
+            }
+
+            function showCabinetToast(message) {
+                if (!cabinetToastEl) return;
+                cabinetToastEl.textContent = String(message || '');
+                document.documentElement.style.setProperty(
+                    '--cabinet-toast-footer-offset',
+                    cabinetFooterToastOffset() + 'px'
+                );
+                cabinetToastEl.classList.add('is-visible');
+                cabinetToastEl.style.display = 'block';
+                if (cabinetToastTimer) {
+                    clearTimeout(cabinetToastTimer);
+                }
+                cabinetToastTimer = setTimeout(function () {
+                    cabinetToastEl.classList.remove('is-visible');
+                    cabinetToastEl.style.display = 'none';
+                    cabinetToastTimer = null;
+                }, 6000);
+            }
+
             function closeCabinetConfirmModal(confirmed) {
                 if (!cabinetConfirmModal) return;
                 cabinetConfirmModal.classList.remove('is-open');
@@ -2158,11 +2189,10 @@
                         }
                         if (data && data.notify_sent === false && data.notify_error) {
                             pieces.push('Уведомление не отправлено: ' + data.notify_error + '.');
+                        } else if (data && data.notify_sent) {
+                            pieces.push('Сообщение отправлено в чат.');
                         }
-                        return showCabinetNotice(
-                            pieces.join(' '),
-                            IS_MATCH_ANALYSIS ? 'Анализы отправлены' : 'Карточки отправлены'
-                        );
+                        showCabinetToast(pieces.join(' '));
                     }
 
                     setAssignUsersLoadingState(true);
@@ -2179,10 +2209,10 @@
                                 }
                                 return r.json();
                             })
-                            .then(handleAssignResult)
-                            .then(function () {
+                            .then(function (data) {
                                 closeAssignModal();
                                 setSelectionMode(false);
+                                handleAssignResult(data);
                             })
                             .catch(function (e) {
                                 setAssignModalMsg(
@@ -2260,10 +2290,10 @@
                             }
                             return r.json();
                         })
-                        .then(handleAssignResult)
-                        .then(function () {
+                        .then(function (data) {
                             closeAssignModal();
                             setSelectionMode(false);
+                            handleAssignResult(data);
                         })
                         .catch(function (e) {
                             if (e && e.message === '__PREVIEW_CANCELLED__') {
