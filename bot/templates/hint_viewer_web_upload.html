@@ -224,7 +224,10 @@
         }
         .pager button.active { background: var(--web-accent); color: #fff; }
         .pager .pager-info { color: var(--web-text-muted); font-size: 0.85rem; margin-left: 4px; }
-        .history-item--expandable { cursor: pointer; }
+        .history-item--expandable {
+            cursor: pointer;
+            position: relative;
+        }
         .history-item--expandable:hover { border-color: #4caf50; }
         .history-item--expandable.is-open { border-color: var(--web-accent); }
         .history-item-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
@@ -239,9 +242,31 @@
         .history-item-title-row strong { min-width: 0; }
         .history-toggle-btn {
             font-size: 0.8rem;
-            padding: 6px 10px;
+            padding: 6px;
             white-space: nowrap;
             flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+        }
+        .history-toggle-btn svg {
+            display: block;
+            width: 18px;
+            height: 18px;
+        }
+        @media (min-width: 721px) {
+            .history-item--expandable {
+                padding-bottom: 44px;
+            }
+            .history-item--expandable > .history-item-head .history-toggle-btn {
+                position: absolute;
+                right: 10px;
+                bottom: 8px;
+                z-index: 2;
+            }
         }
         .history-table-wrap { margin-top: 12px; overflow-x: auto; }
         .analyze-vs { margin: 0 0 10px; font-weight: 600; color: var(--web-text); }
@@ -341,9 +366,12 @@
                 font-size: 0.85rem;
             }
             .history-toggle-btn {
+                position: static;
+                min-width: 44px;
                 min-height: 44px;
-                padding: 10px 12px;
-                font-size: 0.85rem;
+                width: 44px;
+                height: 44px;
+                padding: 8px;
             }
             .history-pdf-btn { white-space: nowrap; }
             .history-table-wrap { -webkit-overflow-scrolling: touch; }
@@ -1084,9 +1112,16 @@
             return `<a class="btn ghost history-pdf-btn" href="${escapeHtml(url)}" title="Скачать PDF">Скачать PDF</a>`;
         }
 
+        function historyToggleIcon(isOpen) {
+            if (isOpen) {
+                return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 15l6-6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+            }
+            return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        }
+
         function historyToggleBtn(isOpen) {
             const label = isOpen ? 'Свернуть' : 'Развернуть';
-            return `<button type="button" class="btn ghost history-toggle-btn" data-toggle-history aria-expanded="${isOpen ? 'true' : 'false'}">${label}</button>`;
+            return `<button type="button" class="btn ghost history-toggle-btn" data-toggle-history aria-expanded="${isOpen ? 'true' : 'false'}" title="${label}" aria-label="${label}">${historyToggleIcon(isOpen)}</button>`;
         }
 
         function cacheBatchPayload(batchId, data) {
@@ -1276,10 +1311,12 @@
 
         function setItemChevron(itemEl, open) {
             const btn = itemEl.querySelector(':scope > .history-item-head [data-toggle-history]');
-            if (btn) {
-                btn.textContent = open ? 'Свернуть' : 'Развернуть';
-                btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-            }
+            if (!btn) return;
+            const label = open ? 'Свернуть' : 'Развернуть';
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            btn.setAttribute('title', label);
+            btn.setAttribute('aria-label', label);
+            btn.innerHTML = historyToggleIcon(open);
         }
 
         async function fetchBatch(batchId) {
