@@ -79,6 +79,7 @@ ALLOWED_EXT = {
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
 _SOURCE_RE = re.compile(r"^/web(/[A-Za-z0-9._~-]+)*$")
 _FOLDER_OPEN_RE = re.compile(r"^/web/(hints|board|analyze)/folder/(\d+)$")
+_HINTS_GAME_OPEN_RE = re.compile(r"^/web/hints/game/([A-Za-z0-9._~-]{8,80})$")
 _SOURCE_TABS = (
     ("/web/match-analysis", "Анализ матча"),
     ("/web/pip-count", "Подсчёт пипсов"),
@@ -120,13 +121,21 @@ def sanitize_source_path(value: str | None) -> str | None:
 
 
 def folder_open_from_source(value: str | None) -> str | None:
+    url, _label = cabinet_open_from_source(value)
+    return url
+
+
+def cabinet_open_from_source(value: str | None) -> tuple[str | None, str | None]:
     path = sanitize_source_path(value)
     if not path:
-        return None
+        return None, None
     match = _FOLDER_OPEN_RE.match(path)
-    if not match:
-        return None
-    return f"/web/{match.group(1)}?folder_id={match.group(2)}"
+    if match:
+        return f"/web/{match.group(1)}?folder_id={match.group(2)}", "Открыть папку"
+    match = _HINTS_GAME_OPEN_RE.match(path)
+    if match:
+        return f"/web/hints/view?game_id={match.group(1)}", "Открыть анализ"
+    return None, None
 
 
 def source_tab_label(value: str | None) -> str | None:
@@ -218,10 +227,10 @@ def serialize_message(
         "created_at": created.isoformat() if created else None,
         "attachments": [serialize_attachment(att) for att in raw_attachments],
     }
-    folder_open = folder_open_from_source(message.source_path)
+    folder_open, folder_label = cabinet_open_from_source(message.source_path)
     if folder_open:
         payload["folder_open_url"] = folder_open
-        payload["folder_open_label"] = "Открыть папку"
+        payload["folder_open_label"] = folder_label or "Открыть папку"
     if include_source and message.author_role == WebSupportAuthorRole.USER.value:
         label = source_tab_label(message.source_path)
         if label:
@@ -508,10 +517,10 @@ async def add_message(
         "created_at": created_at.isoformat(),
         "attachments": att_payloads,
     }
-    folder_open = folder_open_from_source(stored_source)
+    folder_open, folder_label = cabinet_open_from_source(stored_source)
     if folder_open:
         payload["folder_open_url"] = folder_open
-        payload["folder_open_label"] = "Открыть папку"
+        payload["folder_open_label"] = folder_label or "Открыть папку"
     await session.commit()
     return payload
 

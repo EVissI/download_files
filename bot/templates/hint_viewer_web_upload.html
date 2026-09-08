@@ -9,6 +9,9 @@
     {% if enable_user_folders|default(false) %}
     <link rel="stylesheet" href="/static/css/hint_web_folders.css?t={{ cache_timestamp }}">
     {% endif %}
+    {% if enable_user_folders|default(false) or send_to_user|default(false) %}
+    <link rel="stylesheet" href="/static/css/web_assign_user_modal.css?t={{ cache_timestamp }}">
+    {% endif %}
     {% if enable_user_labels|default(false) %}
     <link rel="stylesheet" href="/static/css/hint_web_labels.css?t={{ cache_timestamp }}">
     {% endif %}
@@ -583,37 +586,9 @@
             </div>
         </div>
     </div>
-    <div id="folderShareModal" class="hw-assign-modal" aria-hidden="true">
-        <div id="folderShareModalOverlay" class="hw-assign-modal__overlay"></div>
-        <div class="hw-assign-modal__box" role="dialog" aria-modal="true" aria-labelledby="folderShareModalTitle">
-            <h3 id="folderShareModalTitle" class="hw-assign-modal__title">Выбор пользователя</h3>
-            <p id="folderShareModalSubtitle" class="hw-assign-modal__subtitle"></p>
-            <label for="folderShareSearchInput" class="hw-assign-modal__label">Поиск пользователя</label>
-            <input
-                id="folderShareSearchInput"
-                class="hw-assign-modal__input"
-                type="text"
-                placeholder="ID / логин"
-                autocomplete="off"
-            >
-            <p id="folderShareModalMsg" class="hw-assign-modal__msg"></p>
-            <div class="hw-assign-modal__table-wrap">
-                <table class="hw-assign-modal__table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Логин</th>
-                        </tr>
-                    </thead>
-                    <tbody id="folderShareUsersTbody"></tbody>
-                </table>
-            </div>
-            <div class="hw-assign-modal__actions">
-                <button type="button" id="folderShareCancelBtn" class="hw-link-modal__btn">Отмена</button>
-                <button type="button" id="folderShareSubmitBtn" class="hw-link-modal__btn hw-link-modal__btn--primary">Отправить</button>
-            </div>
-        </div>
-    </div>
+    {% endif %}
+    {% if enable_user_folders|default(false) or send_to_user|default(false) %}
+    {% include "includes/web_assign_user_modal.html" %}
     {% endif %}
     {% if enable_user_labels|default(false) %}
     <div id="fileLabelsModal" class="hw-link-modal" aria-hidden="true">
@@ -669,6 +644,7 @@
         const sendToHintsEnabled = {{ send_to_hints|default(false)|tojson }};
         const sendToBoardEnabled = {{ send_to_board|default(false)|tojson }};
         const sendToAnalyzeEnabled = {{ send_to_analyze|default(false)|tojson }};
+        const sendToUserEnabled = {{ (is_admin|default(false) and send_to_user|default(false))|tojson }};
         const saveMatchAnalysisEnabled = {{ (is_admin|default(false) and (web_service|default('') == 'hints'))|tojson }};
         const enableUserFolders = {{ enable_user_folders|default(false)|tojson }};
         const enableUserLabels = {{ enable_user_labels|default(false)|tojson }};
@@ -839,6 +815,12 @@
             return `<button type="button" class="btn ghost history-pdf-btn" data-send-analyze="${escapeHtml(gameId)}">Статистика</button>`;
         }
 
+        function sendToUserButton(gameId, filename) {
+            if (!sendToUserEnabled || !gameId) return '';
+            const name = filename ? String(filename) : '';
+            return `<button type="button" class="btn ghost history-pdf-btn" data-send-user="${escapeHtml(gameId)}" data-send-user-name="${escapeHtml(name)}">Отправить</button>`;
+        }
+
         function orderAnalysisButton(gameId) {
             if (!gameId) return '';
             if (!sendToAnalyzeEnabled && !sendToHintsEnabled) return '';
@@ -860,13 +842,14 @@
             return pdfLink(gameId) + hintsButton(gameId) + boardButton(gameId) + orderNextToHints;
         }
 
-        function fileActionButtons(openLinks, gameId, savedToMatchAnalysis) {
+        function fileActionButtons(openLinks, gameId, savedToMatchAnalysis, filename) {
             const links = (openLinks || []).map((link) => {
                 return `<a class="btn ghost" href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a>`;
             });
             const extra = analyzeFileActions(gameId) + statsButton(gameId)
                 + (sendToAnalyzeEnabled ? orderAnalysisButton(gameId) : '')
-                + matchAnalysisButton(gameId, savedToMatchAnalysis);
+                + matchAnalysisButton(gameId, savedToMatchAnalysis)
+                + sendToUserButton(gameId, filename);
             if (!links.length && !extra) return '';
             return `<div class="actions open-modes job-file-actions">${links.join('')}${extra}</div>`;
         }
@@ -876,7 +859,7 @@
             if (job.kind === 'batch') {
                 const files = (job.files || []).map((f) => {
                     const body = f.status === 'done'
-                        ? fileActionButtons(f.open_links, f.game_id, f.saved_to_match_analysis)
+                        ? fileActionButtons(f.open_links, f.game_id, f.saved_to_match_analysis, f.filename)
                         : `<div class="muted">${statusLabel(f.status)}</div>`;
                     const err = f.error ? `<div class="muted">${escapeHtml(f.error)}</div>` : '';
                     return `<li class="job-file">
@@ -903,7 +886,7 @@
                 ? `<div class="muted">${escapeHtml(players)}${players ? ' · ' : ''}${statusLabel(job.status)}</div>`
                 : (players ? `<div class="muted">${escapeHtml(players)}</div>` : '');
             const progress = pending ? progressHtml(job) : '';
-            const actions = pending ? '' : fileActionButtons(job.open_links, job.game_id, job.saved_to_match_analysis);
+            const actions = pending ? '' : fileActionButtons(job.open_links, job.game_id, job.saved_to_match_analysis, job.filename);
             return `<div class="job ${cls}">
                 <strong>${escapeHtml(job.filename || 'Матч')}</strong>
                 ${meta}
@@ -1156,7 +1139,7 @@
                 ? ''
                 : openMatchButtons(
                     item.open_links,
-                    item.status === 'done' ? statsButton(gameId) + orderAnalysisButton(gameId) + matchAnalysisButton(gameId, item.saved_to_match_analysis) : ''
+                    item.status === 'done' ? statsButton(gameId) + orderAnalysisButton(gameId) + matchAnalysisButton(gameId, item.saved_to_match_analysis) + sendToUserButton(gameId, item.original_filename) : ''
                 );
             const err = item.error_message ? `<div class="muted">${escapeHtml(item.error_message)}</div>` : '';
             const expandable = !nested && !!(historyExpandable && item.expandable && gameId);
@@ -1639,9 +1622,75 @@
             }
         }
 
+        function apiJson(url, opts) {
+            const headers = Object.assign({ Accept: 'application/json' }, (opts && opts.headers) || {});
+            return fetch(url, Object.assign({ credentials: 'same-origin' }, opts || {}, { headers })).then(async (res) => {
+                const data = await res.json().catch(() => ({}));
+                if (res.status === 401) {
+                    window.location.href = loginUrl;
+                    throw new Error('Нужна авторизация');
+                }
+                if (!res.ok) {
+                    const detail = data.detail;
+                    throw new Error(typeof detail === 'string' ? detail : 'Ошибка');
+                }
+                return data;
+            });
+        }
+
+        function sendHintsToUser(gameId, filename) {
+            if (!gameId || !sendToUserEnabled) return;
+            if (!window.WebAssignUserModal) {
+                showToast('Модалка выбора пользователя недоступна');
+                return;
+            }
+            const name = (filename || '').trim() || 'матч';
+            window.WebAssignUserModal.open({
+                title: 'Выбор пользователя',
+                subtitle: 'Файл «' + name + '»',
+                loadUsers: function () {
+                    return apiJson(apiBase + '/api/folders/web_users', {
+                        method: 'POST',
+                        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+                        body: '{}',
+                    }).then((data) => (data && data.users) || []);
+                },
+                onSubmit: function (userId) {
+                    return apiJson(apiBase + '/api/send-to-user', {
+                        method: 'POST',
+                        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ game_id: gameId, target_user_id: userId }),
+                    });
+                },
+                onSuccess: function (data) {
+                    if (data && data.notify_sent) {
+                        showToast(data.already_had
+                            ? 'Файл уже был в кабинете. Сообщение отправлено в чат.'
+                            : 'Файл отправлен. Пользователь получит сообщение в чат.');
+                    } else if (data && data.notify_error) {
+                        showToast('Файл добавлен в кабинет, но сообщение в чат не отправилось.');
+                    } else {
+                        showToast(data && data.already_had
+                            ? 'У пользователя уже есть этот файл.'
+                            : 'Файл отправлен.');
+                    }
+                }
+            });
+        }
+
         const wrapEl = document.querySelector('.wrap');
-        if (wrapEl && (sendToHintsEnabled || sendToBoardEnabled || sendToAnalyzeEnabled || saveMatchAnalysisEnabled)) {
+        if (wrapEl && (sendToHintsEnabled || sendToBoardEnabled || sendToAnalyzeEnabled || saveMatchAnalysisEnabled || sendToUserEnabled)) {
             wrapEl.addEventListener('click', (event) => {
+                const sendUserBtn = event.target.closest('[data-send-user]');
+                if (sendUserBtn) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    sendHintsToUser(
+                        sendUserBtn.getAttribute('data-send-user'),
+                        sendUserBtn.getAttribute('data-send-user-name')
+                    );
+                    return;
+                }
                 const hintsBtn = event.target.closest('[data-send-hints]');
                 if (hintsBtn) {
                     event.preventDefault();
@@ -1795,6 +1844,9 @@
             }
         }, 4000);
     </script>
+    {% if enable_user_folders|default(false) or send_to_user|default(false) %}
+    <script src="/static/js/web_assign_user_modal.js?t={{ cache_timestamp }}"></script>
+    {% endif %}
     {% if enable_user_folders|default(false) %}
     <script src="/static/js/hint_web_folders.js?t={{ cache_timestamp }}"></script>
     {% endif %}

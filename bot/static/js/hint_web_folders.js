@@ -92,16 +92,6 @@
         '<path d="M4 11.5L20 4l-6.8 16-2.4-6.4L4 11.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' +
         '</svg>';
     var isAdminUser = !!historyApi.isAdmin;
-    var shareModal = document.getElementById('folderShareModal');
-    var shareSubtitle = document.getElementById('folderShareModalSubtitle');
-    var shareSearchInput = document.getElementById('folderShareSearchInput');
-    var shareMsg = document.getElementById('folderShareModalMsg');
-    var shareTbody = document.getElementById('folderShareUsersTbody');
-    var shareSubmitBtn = document.getElementById('folderShareSubmitBtn');
-    var shareUsers = [];
-    var shareUsersLoaded = false;
-    var selectedShareUserId = null;
-    var sharePending = null;
 
     function folderApi(method, path, body) {
         var opts = {
@@ -640,111 +630,36 @@
         });
     }
 
-    function setFolderShareMsg(msg) {
-        if (shareMsg) shareMsg.textContent = msg || '';
-    }
-
-    function closeFolderShareModal() {
-        setOpen(shareModal, false);
-        sharePending = null;
-        selectedShareUserId = null;
-        setFolderShareMsg('');
-        if (shareSubmitBtn) shareSubmitBtn.disabled = false;
-    }
-
-    function renderFolderShareUsers() {
-        if (!shareTbody) return;
-        shareTbody.innerHTML = '';
-        var filterText = String(shareSearchInput ? shareSearchInput.value : '').trim().toLowerCase();
-        var rows = shareUsers.filter(function (row) {
-            if (!filterText) return true;
-            var idText = String((row && row.id) || '');
-            var username = String((row && row.username) || '').toLowerCase();
-            return idText.indexOf(filterText) !== -1 || username.indexOf(filterText) !== -1;
-        });
-        if (!rows.length) {
-            var emptyTr = document.createElement('tr');
-            var emptyTd = document.createElement('td');
-            emptyTd.colSpan = 2;
-            emptyTd.textContent = 'Пользователи не найдены.';
-            emptyTr.appendChild(emptyTd);
-            shareTbody.appendChild(emptyTr);
-            return;
-        }
-        rows.forEach(function (row) {
-            var tr = document.createElement('tr');
-            tr.classList.toggle('is-selected', row.id === selectedShareUserId);
-            tr.addEventListener('click', function () {
-                selectedShareUserId = row.id;
-                setFolderShareMsg('');
-                renderFolderShareUsers();
-            });
-            var idTd = document.createElement('td');
-            idTd.textContent = String(row.id);
-            tr.appendChild(idTd);
-            var loginTd = document.createElement('td');
-            loginTd.textContent = row.username || '—';
-            tr.appendChild(loginTd);
-            shareTbody.appendChild(tr);
-        });
-    }
-
-    function loadFolderShareUsers() {
-        if (shareUsersLoaded) {
-            renderFolderShareUsers();
-            return Promise.resolve();
-        }
-        if (shareSubmitBtn) shareSubmitBtn.disabled = true;
-        return folderApiPost('web_users').then(function (data) {
-            shareUsers = Array.isArray(data && data.users) ? data.users : [];
-            shareUsersLoaded = true;
-            renderFolderShareUsers();
-        }).finally(function () {
-            if (shareSubmitBtn) shareSubmitBtn.disabled = false;
-        });
-    }
-
     function openFolderShareModal(folderId, folderName) {
-        if (!shareModal || !isAdminUser) return;
-        sharePending = { folderId: folderId, folderName: folderName };
-        selectedShareUserId = null;
-        if (shareSearchInput) shareSearchInput.value = '';
-        if (shareSubtitle) shareSubtitle.textContent = 'Папка «' + folderName + '»';
-        setFolderShareMsg('');
-        setOpen(shareModal, true);
-        loadFolderShareUsers().catch(function (e) {
-            setFolderShareMsg(e && e.message ? e.message : 'Ошибка загрузки списка пользователей');
-        });
-    }
-
-    function submitFolderShare() {
-        if (!sharePending) return;
-        if (!selectedShareUserId) {
-            setFolderShareMsg('Выберите пользователя.');
-            return;
-        }
-        if (shareSubmitBtn) shareSubmitBtn.disabled = true;
-        setFolderShareMsg('Отправка...');
-        folderApiPost('share', {
-            folder_id: sharePending.folderId,
-            target_user_id: selectedShareUserId,
-        }).then(function (data) {
-            closeFolderShareModal();
-            if (!manageMsg) return;
-            if (data && data.notify_sent) {
-                manageMsg.textContent = data.already_had
-                    ? 'Доступ уже был. Уведомление отправлено в чат.'
-                    : 'Доступ отправлен. Пользователь получит сообщение в чат поддержки.';
-            } else if (data && data.notify_error) {
-                manageMsg.textContent = 'Доступ выдан, но сообщение в чат не отправилось.';
-            } else {
-                manageMsg.textContent = data && data.already_had
-                    ? 'У пользователя уже есть доступ к этой папке.'
-                    : 'Доступ отправлен.';
+        if (!isAdminUser || !window.WebAssignUserModal) return;
+        window.WebAssignUserModal.open({
+            title: 'Выбор пользователя',
+            subtitle: 'Папка «' + folderName + '»',
+            loadUsers: function () {
+                return folderApiPost('web_users').then(function (data) {
+                    return (data && data.users) || [];
+                });
+            },
+            onSubmit: function (userId) {
+                return folderApiPost('share', {
+                    folder_id: folderId,
+                    target_user_id: userId
+                });
+            },
+            onSuccess: function (data) {
+                if (!manageMsg) return;
+                if (data && data.notify_sent) {
+                    manageMsg.textContent = data.already_had
+                        ? 'Доступ уже был. Уведомление отправлено в чат.'
+                        : 'Доступ отправлен. Пользователь получит сообщение в чат поддержки.';
+                } else if (data && data.notify_error) {
+                    manageMsg.textContent = 'Доступ выдан, но сообщение в чат не отправилось.';
+                } else {
+                    manageMsg.textContent = data && data.already_had
+                        ? 'У пользователя уже есть доступ к этой папке.'
+                        : 'Доступ отправлен.';
+                }
             }
-        }).catch(function (e) {
-            setFolderShareMsg(e.message || String(e));
-            if (shareSubmitBtn) shareSubmitBtn.disabled = false;
         });
     }
 
@@ -1400,14 +1315,6 @@
     }
     if (scheduleSaveBtn) scheduleSaveBtn.addEventListener('click', submitFolderScheduleSave);
     if (scheduleDeleteBtn) scheduleDeleteBtn.addEventListener('click', submitFolderScheduleDelete);
-    if (document.getElementById('folderShareCancelBtn')) {
-        document.getElementById('folderShareCancelBtn').addEventListener('click', closeFolderShareModal);
-    }
-    if (document.getElementById('folderShareModalOverlay')) {
-        document.getElementById('folderShareModalOverlay').addEventListener('click', closeFolderShareModal);
-    }
-    if (shareSubmitBtn) shareSubmitBtn.addEventListener('click', submitFolderShare);
-    if (shareSearchInput) shareSearchInput.addEventListener('input', renderFolderShareUsers);
 
     window.addEventListener('popstate', function () {
         var folderId = readFolderIdFromUrl();

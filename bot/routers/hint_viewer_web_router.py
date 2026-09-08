@@ -18,6 +18,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from loguru import logger
+from pydantic import BaseModel
 from redis import Redis
 from rq import Queue
 from rq.exceptions import NoSuchJobError
@@ -124,6 +125,11 @@ def _require_user_id(session: dict[str, Any]) -> int:
     if not user_id:
         raise HTTPException(status_code=401, detail="Нужна авторизация")
     return int(user_id)
+
+
+class SendHintToUserBody(BaseModel):
+    game_id: str
+    target_user_id: int
 
 
 def _web_screenshots_dir(user_id: int) -> Path:
@@ -1180,6 +1186,94 @@ async def web_hints_send_to_analyze(request: Request, game_id: str = ""):
         ) from exc
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
+
+
+@hint_viewer_web_api_router.post("/web/hints/api/send-to-user")
+async def web_hints_send_to_user(request: Request, body: SendHintToUserBody):
+    _token, session = await _require_session(request)
+    if not session.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Только для администраторов")
+    user_id = _require_user_id(session)
+    gid = require_public_id((body.game_id or "").strip(), name="game")
+    target_user_id = int(body.target_user_id)
+    if target_user_id == user_id:
+        raise HTTPException(
+            status_code=400, detail="Нельзя отправить файл самому себе"
+        )
+
+    s3 = HintS3Storage.from_settings()
+    json_exists = await asyncio.to_thread(s3.exists, HintS3Storage.summary_json_key(gid))
+    mat_exists = await asyncio.to_thread(s3.exists, HintS3Storage.mat_key(gid))
+    if not json_exists and not mat_exists:
+        raise HTTPException(status_code=404, detail="Файл анализа не найден")
+
+    async with async_session_maker() as db:
+        dao = HintViewerWebUploadDAO(db)
+        source = await dao.find_for_user_game(user_id, gid, WEB_SERVICE_HINTS)
+        if source is None:
+            source = await dao.find_by_game(gid, WEB_SERVICE_HINTS)
+        if source is None or source.status != HintViewerWebUploadStatus.DONE.value:
+            raise HTTPException(status_code=404, detail="Анализ не найден")
+        filename = source.original_filename or f"{gid}.mat"
+        red_player = source.red_player
+        black_player = source.black_player
+
+        target = await db.get(WebUser, target_user_id)
+        if not target or target.is_expired():
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        existing = await dao.find_for_user_game(
+            target_user_id, gid, WEB_SERVICE_HINTS
+        )
+        created = False
+        if existing is None:
+            await dao.create_upload(
+                session_id=f"shared:{target_user_id}"[:64],
+                original_filename=filename,
+                user_id=target_user_id,
+                game_id=gid,
+                red_player=red_player,
+                black_player=black_player,
+                status=HintViewerWebUploadStatus.DONE.value,
+                service=WEB_SERVICE_HINTS,
+            )
+            created = True
+        await db.commit()
+
+    notify_sent = False
+    notify_error = None
+    try:
+        async with async_session_maker() as notify_db:
+            admin_row = await notify_db.get(WebUser, user_id)
+            admin_login = getattr(admin_row, "login", None) if admin_row else None
+            thread = await get_or_create_thread(notify_db, target_user_id)
+            await add_message(
+                notify_db,
+                thread=thread,
+                author_user_id=user_id,
+                author_role=WebSupportAuthorRole.ADMIN.value,
+                author_login=admin_login,
+                body=f"Вам отправлен анализ ошибок «{filename}».",
+                source_path=f"/web/hints/game/{gid}",
+                files=[],
+            )
+        notify_sent = True
+    except Exception as exc:
+        notify_error = str(exc)
+        logger.exception(
+            "Failed to notify web user {} about hint game {}",
+            target_user_id,
+            gid,
+        )
+    return JSONResponse(
+        {
+            "ok": True,
+            "created": created,
+            "already_had": not created,
+            "notify_sent": notify_sent,
+            "notify_error": notify_error,
+        }
+    )
 
 
 @hint_viewer_web_api_router.post("/web/hints/api/save-match-analysis")

@@ -3207,6 +3207,25 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         )
         return result.scalar_one_or_none()
 
+    async def find_by_game(
+        self,
+        game_id: str,
+        service: str | None = None,
+    ) -> HintViewerWebUpload | None:
+        gid = (game_id or "").strip()
+        if not gid:
+            return None
+        conditions = [HintViewerWebUpload.game_id == gid]
+        if service:
+            conditions.append(HintViewerWebUpload.service == service)
+        result = await self._session.execute(
+            select(HintViewerWebUpload)
+            .where(*conditions)
+            .order_by(HintViewerWebUpload.id.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
     async def list_for_session(
         self, session_id: str, limit: int = 50
     ) -> list[HintViewerWebUpload]:

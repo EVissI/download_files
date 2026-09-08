@@ -313,6 +313,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
         "allow_multiple": True,
         "open_on_upload": False,
         "send_to_analyze": True,
+        "send_to_user": True,
         "dropzone_hint": ".mat или .zip",
         "accept": ".mat,.zip,application/zip",
         "dropzone_title": "Нажмите или перетащите файлы сюда",
