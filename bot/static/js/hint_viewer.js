@@ -2602,6 +2602,33 @@ async function ensureContentEditor() {
             }
         }
 
+        function restoreHideInfoCheckboxAfterScreenshot(opts) {
+            const matchInfo = opts.matchInfo;
+            const originalMatchInfoHTML = opts.originalMatchInfoHTML;
+            const hideInfoWasChecked = opts.hideInfoWasChecked;
+            const matchHeaderRewritten = opts.matchHeaderRewritten;
+            const hideInfoCheckbox = opts.hideInfoCheckbox;
+            const originalHideInfoCheckboxDisplay = opts.originalHideInfoCheckboxDisplay;
+            if (matchHeaderRewritten && matchInfo && originalMatchInfoHTML != null) {
+                matchInfo.innerHTML = originalMatchInfoHTML;
+                const el = document.getElementById('hideInfoCheckbox');
+                if (el) {
+                    el.checked = hideInfoWasChecked;
+                    if (originalHideInfoCheckboxDisplay !== null) {
+                        el.style.display = originalHideInfoCheckboxDisplay;
+                    }
+                    el.addEventListener('change', () => {
+                        localStorage.setItem('hideInfoCheckbox', el.checked);
+                    });
+                }
+                return;
+            }
+            if (hideInfoCheckbox && originalHideInfoCheckboxDisplay !== null) {
+                hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
+            }
+            if (hideInfoCheckbox) hideInfoCheckbox.checked = hideInfoWasChecked;
+        }
+
         function captureHintViewerScreenshot() {
             window.scrollTo(0, 0);
             document.body.classList.add('screenshot-mode');
@@ -2680,6 +2707,8 @@ async function ensureContentEditor() {
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : '';
+            const hideInfoWasChecked = !!(hideInfoCheckbox && hideInfoCheckbox.checked);
+            const matchHeaderRewritten = hideInfoWasChecked && matchLength > 0;
             const crawfordLabel = document.getElementById('crawfordLabel');
             const originalCrawfordDisplay = crawfordLabel ? crawfordLabel.style.display : 'none';
             const blackPips = document.getElementById('black-pips');
@@ -2693,7 +2722,6 @@ async function ensureContentEditor() {
                 if (screenshotBtn && originalScreenshotDisplay !== null) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (gameSelect && originalGameSelectDisplay !== null) gameSelect.style.display = originalGameSelectDisplay;
                 if (hintsButtons && originalHintsButtonsDisplay !== null) hintsButtons.style.display = originalHintsButtonsDisplay;
-                if (hideInfoCheckbox && originalHideInfoCheckboxDisplay !== null) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
                 if (screenSaveBtn && originalScreenSaveBtnDisplay !== null) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
                 if (screenUploadBtn && originalScreenUploadBtnDisplay !== null) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (supportContainer && originalSupportDisplay !== null) supportContainer.style.display = originalSupportDisplay;
@@ -2715,9 +2743,14 @@ async function ensureContentEditor() {
                     if (originalPlayersInfoDisplay !== null) playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
                 }
-                if (matchInfo && originalMatchInfoHTML !== null) {
-                    matchInfo.innerHTML = originalMatchInfoHTML;
-                }
+                restoreHideInfoCheckboxAfterScreenshot({
+                    matchInfo: matchInfo,
+                    originalMatchInfoHTML: originalMatchInfoHTML,
+                    hideInfoWasChecked: hideInfoWasChecked,
+                    matchHeaderRewritten: matchHeaderRewritten,
+                    hideInfoCheckbox: hideInfoCheckbox,
+                    originalHideInfoCheckboxDisplay: originalHideInfoCheckboxDisplay,
+                });
                 if (crawfordLabel && originalCrawfordDisplay !== null) crawfordLabel.style.display = originalCrawfordDisplay;
                 if (blackPips && originalBlackPipsDisplay !== null) blackPips.style.display = originalBlackPipsDisplay;
                 if (redPips && originalRedPipsDisplay !== null) redPips.style.display = originalRedPipsDisplay;
@@ -2912,6 +2945,8 @@ async function ensureContentEditor() {
             const originalPlayersInfoHTML = playersInfo ? playersInfo.innerHTML : '';
             const matchInfo = document.getElementById('match-info');
             const originalMatchInfoHTML = matchInfo ? matchInfo.innerHTML : null;
+            const hideInfoWasChecked = !!(hideInfoCheckbox && hideInfoCheckbox.checked);
+            const matchHeaderRewritten = hideInfoWasChecked && matchLength > 0;
             const crawfordLabel = document.getElementById('crawfordLabel');
             const originalCrawfordDisplay = crawfordLabel ? crawfordLabel.style.display : null;
 
@@ -2921,7 +2956,6 @@ async function ensureContentEditor() {
                 if (screenshotBtn && originalScreenshotDisplay !== null) screenshotBtn.style.display = originalScreenshotDisplay;
                 if (gameSelect && originalGameSelectDisplay !== null) gameSelect.style.display = originalGameSelectDisplay;
                 if (hintsButtons && originalHintsButtonsDisplay !== null) hintsButtons.style.display = originalHintsButtonsDisplay;
-                if (hideInfoCheckbox && originalHideInfoCheckboxDisplay !== null) hideInfoCheckbox.style.display = originalHideInfoCheckboxDisplay;
                 if (screenSaveBtn && originalScreenSaveBtnDisplay !== null) screenSaveBtn.style.display = originalScreenSaveBtnDisplay;
                 if (screenUploadBtn && originalScreenUploadBtnDisplay !== null) screenUploadBtn.style.display = originalScreenUploadBtnDisplay;
                 if (supportContainer && originalSupportDisplay !== null) supportContainer.style.display = originalSupportDisplay;
@@ -2936,9 +2970,14 @@ async function ensureContentEditor() {
                     if (originalPlayersInfoDisplay !== null) playersInfo.style.display = originalPlayersInfoDisplay;
                     playersInfo.innerHTML = originalPlayersInfoHTML;
                 }
-                if (matchInfo && originalMatchInfoHTML !== null) {
-                    matchInfo.innerHTML = originalMatchInfoHTML;
-                }
+                restoreHideInfoCheckboxAfterScreenshot({
+                    matchInfo: matchInfo,
+                    originalMatchInfoHTML: originalMatchInfoHTML,
+                    hideInfoWasChecked: hideInfoWasChecked,
+                    matchHeaderRewritten: matchHeaderRewritten,
+                    hideInfoCheckbox: hideInfoCheckbox,
+                    originalHideInfoCheckboxDisplay: originalHideInfoCheckboxDisplay,
+                });
                 if (crawfordLabel && originalCrawfordDisplay !== null) crawfordLabel.style.display = originalCrawfordDisplay;
                 if (settingsContainer && originalSettingsDisplay !== null) settingsContainer.style.display = originalSettingsDisplay;
                 if (openEditorBtn && originalOpenEditorBtnDisplay !== null) openEditorBtn.style.display = originalOpenEditorBtnDisplay;
