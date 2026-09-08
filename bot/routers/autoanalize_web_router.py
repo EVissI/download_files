@@ -1312,24 +1312,33 @@ async def web_analyze_player_detail(
 @autoanalize_web_api_router.get("/web/analyze/api/players/excel")
 async def web_analyze_player_excel(
     request: Request,
-    name: str,
+    name: str | None = None,
     owner_user_id: int | None = None,
 ):
     _token, session = await _require_session(request)
     from bot.db.dao import WebAnalyzePlayerStatDAO
     from bot.db.database import async_session_maker
 
-    name_norm = normalize_player_name(name)
-    if not name_norm:
-        raise HTTPException(status_code=400, detail="Укажите игрока")
     scope_id = _stats_scope_user_id(session, owner_user_id)
+    name_raw = str(name or "").strip()
     async with async_session_maker() as db:
-        rows = await WebAnalyzePlayerStatDAO(db).list_player_rows(name_norm, scope_id)
-    if not rows:
-        raise HTTPException(status_code=404, detail="Нет данных по игроку")
-    display_name = rows[0].player_name or name
-    buf = await generate_web_analyze_player_report(rows, display_name)
-    filename = f"{display_name}_detailed_statistics.xlsx"
+        dao = WebAnalyzePlayerStatDAO(db)
+        if not name_raw:
+            rows = await dao.list_all_rows(scope_id)
+            if not rows:
+                raise HTTPException(status_code=404, detail="Нет данных для выгрузки")
+            buf = await generate_web_analyze_player_report(rows, "")
+            filename = "all_players_detailed_statistics.xlsx"
+        else:
+            name_norm = normalize_player_name(name_raw)
+            if not name_norm:
+                raise HTTPException(status_code=400, detail="Укажите игрока")
+            rows = await dao.list_player_rows(name_norm, scope_id)
+            if not rows:
+                raise HTTPException(status_code=404, detail="Нет данных по игроку")
+            display_name = rows[0].player_name or name_raw
+            buf = await generate_web_analyze_player_report(rows, display_name)
+            filename = f"{display_name}_detailed_statistics.xlsx"
     return Response(
         content=buf.getvalue(),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

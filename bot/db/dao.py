@@ -3083,6 +3083,19 @@ class WebAnalyzePlayerStatDAO(BaseDAO[WebAnalyzePlayerStat]):
         result = await self._session.execute(query)
         return list(result.scalars().all())
 
+    async def list_all_rows(
+        self,
+        web_user_id: int | None,
+    ) -> list[WebAnalyzePlayerStat]:
+        filters = self._owner_filter(web_user_id)
+        query = select(self.model).order_by(
+            self.model.created_at.desc(), self.model.id.desc()
+        )
+        if filters:
+            query = query.where(*filters)
+        result = await self._session.execute(query)
+        return list(result.scalars().all())
+
     async def add_if_missing(self, **values) -> WebAnalyzePlayerStat | None:
         from sqlalchemy.dialects.postgresql import insert as pg_insert
 

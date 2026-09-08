@@ -11,6 +11,7 @@
     var lastInput = document.getElementById('playerStatsLast');
     var showBtn = document.getElementById('playerStatsShowBtn');
     var excelBtn = document.getElementById('playerStatsExcelBtn');
+    var excelAllBtn = document.getElementById('playerStatsExcelAllBtn');
     var resultEl = document.getElementById('playerStatsResult');
     var tabs = document.querySelectorAll('[data-analyze-tab]');
     var players = [];
@@ -171,6 +172,14 @@
         window.location.assign(url);
     }
 
+    function downloadExcelAll() {
+        if (!players.length) {
+            setMsg('Пока нет игроков для выгрузки.', true);
+            return;
+        }
+        window.location.assign(withOwner(apiBase + '/api/players/excel'));
+    }
+
     tabs.forEach(function (btn) {
         btn.addEventListener('click', function () {
             setTab(btn.getAttribute('data-analyze-tab'));
@@ -201,6 +210,9 @@
     }
     if (excelBtn) {
         excelBtn.addEventListener('click', downloadExcel);
+    }
+    if (excelAllBtn) {
+        excelAllBtn.addEventListener('click', downloadExcelAll);
     }
 
     loadUsers();
