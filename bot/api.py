@@ -493,23 +493,12 @@ async def get_pokaz(
 
 @app.post("/api/pokaz_screenshot_font_scale")
 async def update_pokaz_screenshot_font_scale(request: Request):
-    """Сохраняет глобальный масштаб шрифта для скриншотов pokaz (только ROOT_ADMIN)."""
+    """Сохраняет глобальный масштаб шрифта для скриншотов pokaz (ROOT_ADMIN или веб-админ)."""
     try:
         data = await request.json()
-        init_data = data.get("initData")
-        if not init_data:
-            raise HTTPException(status_code=400, detail="Missing initData")
+        from bot.common.service.cabinet_admin import require_screenshot_font_scale_admin
 
-        user_data = verify_telegram_webapp_data(init_data)
-        if not user_data:
-            raise HTTPException(status_code=401, detail="Invalid Telegram data")
-
-        user_id = user_data.get("user", {}).get("id")
-        if not user_id:
-            raise HTTPException(status_code=400, detail="Invalid user data")
-        if user_id not in settings.ROOT_ADMIN_IDS:
-            raise HTTPException(status_code=403, detail="Forbidden")
-
+        await require_screenshot_font_scale_admin(request, data.get("initData"))
         font_scale_percent = clamp_hint_viewer_screenshot_font_scale_percent(
             data.get("fontScalePercent", 100)
         )
@@ -526,23 +515,12 @@ async def update_pokaz_screenshot_font_scale(request: Request):
 
 @app.post("/api/board_viewer_screenshot_font_scale")
 async def update_board_viewer_screenshot_font_scale(request: Request):
-    """Сохраняет глобальный масштаб шрифта для скриншотов board_viewer (только ROOT_ADMIN)."""
+    """Сохраняет глобальный масштаб шрифта для скриншотов board_viewer (ROOT_ADMIN или веб-админ)."""
     try:
         data = await request.json()
-        init_data = data.get("initData")
-        if not init_data:
-            raise HTTPException(status_code=400, detail="Missing initData")
+        from bot.common.service.cabinet_admin import require_screenshot_font_scale_admin
 
-        user_data = verify_telegram_webapp_data(init_data)
-        if not user_data:
-            raise HTTPException(status_code=401, detail="Invalid Telegram data")
-
-        user_id = user_data.get("user", {}).get("id")
-        if not user_id:
-            raise HTTPException(status_code=400, detail="Invalid user data")
-        if user_id not in settings.ROOT_ADMIN_IDS:
-            raise HTTPException(status_code=403, detail="Forbidden")
-
+        await require_screenshot_font_scale_admin(request, data.get("initData"))
         font_scale_percent = clamp_hint_viewer_screenshot_font_scale_percent(
             data.get("fontScalePercent", 100)
         )

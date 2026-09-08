@@ -3493,16 +3493,18 @@ async function ensureContentEditor() {
             if (window.Telegram && window.Telegram.WebApp) {
                 initData = window.Telegram.WebApp.initData;
             }
-            if (!initData) {
+            if (!initData && !isWebStandaloneMode()) {
                 showMessageModal('Не удалось сохранить: нет данных Telegram', 'error');
                 return;
             }
 
             try {
+                const body = { fontScalePercent: fontScalePercent };
+                if (initData) body.initData = initData;
                 const response = await fetch('/api/hint_viewer_screenshot_font_scale', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ initData, fontScalePercent })
+                    body: JSON.stringify(body)
                 });
                 if (response.ok) {
                     const data = await response.json();

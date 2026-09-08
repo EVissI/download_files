@@ -41,6 +41,32 @@ def require_cabinet_admin(user_id: int | None) -> int:
     return uid
 
 
+async def require_screenshot_font_scale_admin(request, init_data: str | None = None) -> None:
+    """ROOT_ADMIN через Telegram WebApp или веб-сессия с is_admin."""
+    raw = str(init_data or "").strip()
+    if raw:
+        from bot.common.utils.tg_auth import verify_telegram_webapp_data
+
+        user_data = verify_telegram_webapp_data(raw)
+        if not user_data:
+            raise HTTPException(status_code=401, detail="Invalid Telegram data")
+        user_id = (user_data.get("user") or {}).get("id")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Invalid user data")
+        if user_id not in (settings.ROOT_ADMIN_IDS or []):
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return
+
+    from bot.common.service.hint_viewer_web_service import resolve_web_session
+
+    session = await resolve_web_session(request)
+    if session and session.get("is_admin"):
+        return
+    if session:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    raise HTTPException(status_code=401, detail="Missing initData")
+
+
 _INSERT_MISSING_CARDS_SQL = text(
     """
     INSERT INTO user_content_cards (user_id, content_card_id)
