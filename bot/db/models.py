@@ -1060,6 +1060,15 @@ class ContentCardFolder(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
+    owner_user_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    is_shared: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_false()
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -1083,7 +1092,15 @@ class ContentCardFolder(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    created_by_admin: Mapped[Optional["User"]] = relationship("User")
+    grants: Mapped[list["ContentCardFolderGrant"]] = relationship(
+        "ContentCardFolderGrant",
+        back_populates="folder",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    created_by_admin: Mapped[Optional["User"]] = relationship(
+        "User", foreign_keys="ContentCardFolder.created_by_admin_id"
+    )
 
 
 class ContentCardFolderItem(Base):
@@ -1121,6 +1138,48 @@ class ContentCardFolderItem(Base):
         "ContentCard",
         back_populates="folder_items",
         passive_deletes=True,
+    )
+
+
+class ContentCardFolderGrant(Base):
+    """Доступ пользователя к общей папке карточек / пипсов."""
+
+    __tablename__ = "content_card_folder_grants"
+    __table_args__ = (
+        UniqueConstraint(
+            "folder_id",
+            "user_id",
+            name="uq_content_card_folder_grants_folder_id_user_id",
+        ),
+        Index("ix_content_card_folder_grants_user_id", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    folder_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("content_card_folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    granted_by: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    folder: Mapped["ContentCardFolder"] = relationship(
+        "ContentCardFolder",
+        back_populates="grants",
     )
 
 
@@ -1405,6 +1464,15 @@ class MatchAnalysisFolder(Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
+    owner_user_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    is_shared: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_false()
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -1428,7 +1496,15 @@ class MatchAnalysisFolder(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
-    created_by_admin: Mapped[Optional["User"]] = relationship("User")
+    grants: Mapped[list["MatchAnalysisFolderGrant"]] = relationship(
+        "MatchAnalysisFolderGrant",
+        back_populates="folder",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    created_by_admin: Mapped[Optional["User"]] = relationship(
+        "User", foreign_keys="MatchAnalysisFolder.created_by_admin_id"
+    )
 
 
 class MatchAnalysisFolderItem(Base):
@@ -1473,6 +1549,48 @@ class MatchAnalysisFolderItem(Base):
         "MatchAnalysis",
         back_populates="folder_items",
         passive_deletes=True,
+    )
+
+
+class MatchAnalysisFolderGrant(Base):
+    """Доступ пользователя к общей папке анализа матча."""
+
+    __tablename__ = "match_analysis_folder_grants"
+    __table_args__ = (
+        UniqueConstraint(
+            "folder_id",
+            "user_id",
+            name="uq_match_analysis_folder_grants_folder_id_user_id",
+        ),
+        Index("ix_match_analysis_folder_grants_user_id", "user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    folder_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("match_analysis_folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    granted_by: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    folder: Mapped["MatchAnalysisFolder"] = relationship(
+        "MatchAnalysisFolder",
+        back_populates="grants",
     )
 
 

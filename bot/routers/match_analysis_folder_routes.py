@@ -28,6 +28,8 @@ from bot.db.models import (
     MatchAnalysisFolder,
     MatchAnalysisFolderItem,
     MatchAnalysisFolderSchedule,
+    User,
+    UserMatchAnalysis,
 )
 from bot.routers.match_analysis_router import (
     _fill_missing_audio_durations,
@@ -107,13 +109,41 @@ class MaFolderScheduleDeleteBody(MaFolderBaseBody):
     folder_id: int
 
 
-def _serialize_ma_folder(f: MatchAnalysisFolder) -> dict[str, Any]:
+class MaFolderSetSharedBody(MaFolderBaseBody):
+    folder_id: int
+    is_shared: bool
+
+
+class MaFolderShareBody(MaFolderBaseBody):
+    folder_id: int
+    target_user_id: int = Field(..., ne=0)
+
+
+class MaFolderResolveBody(MaFolderBaseBody):
+    folder_id: int
+    direct_only: bool = True
+
+
+def _serialize_ma_folder(
+    f: MatchAnalysisFolder,
+    *,
+    viewer_id: int | None = None,
+    is_admin: bool = False,
+) -> dict[str, Any]:
+    is_granted = False
+    if viewer_id is not None:
+        from bot.common.service.cabinet_folder_acl import viewer_owns_folder
+
+        is_granted = not viewer_owns_folder(f, int(viewer_id), is_admin)
     return {
         "id": f.id,
         "name": f.name,
         "parent_id": f.parent_id,
         "sort_order": f.sort_order,
         "created_by_admin_id": f.created_by_admin_id,
+        "owner_user_id": f.owner_user_id,
+        "is_shared": bool(f.is_shared),
+        "is_granted": is_granted,
         "created_at": f.created_at.isoformat() if f.created_at else None,
     }
 
@@ -165,12 +195,15 @@ def _build_ma_folder_tree(
     folders: list[MatchAnalysisFolder],
     direct_counts: dict[int, int],
     schedules_by_folder: dict[int, MatchAnalysisFolderSchedule] | None = None,
+    *,
+    viewer_id: int | None = None,
+    is_admin: bool = False,
 ) -> list[dict]:
     schedules_by_folder = schedules_by_folder or {}
     nodes: dict[int, dict] = {}
     for f in folders:
         nodes[f.id] = {
-            **_serialize_ma_folder(f),
+            **_serialize_ma_folder(f, viewer_id=viewer_id, is_admin=is_admin),
             "children": [],
             "direct_cards_count": direct_counts.get(f.id, 0),
             "schedule": _serialize_ma_folder_schedule(schedules_by_folder.get(f.id)),
@@ -220,12 +253,25 @@ async def _build_ma_folder_start_link(link_token: str) -> str:
     return f"https://t.me/{me.username}?start={payload}"
 
 
+async def _ma_folder_actor(init_data: str | None, fab_token: str | None) -> tuple[int, bool]:
+    uid = await _resolve_ma_user_id(init_data, fab_token)
+    return uid, _is_ma_admin(uid)
+
+
+def _require_mutable_ma_folder(dao: MatchAnalysisFolderDAO, folder, user_id: int, is_admin: bool):
+    if folder is None:
+        raise HTTPException(status_code=404, detail="Папка не найдена")
+    if not dao.viewer_owns(folder, user_id, is_admin):
+        raise HTTPException(status_code=403, detail="Нельзя изменять эту папку")
+    return folder
+
+
 @match_analysis_api_router.post("/api/match_analysis/folders/tree")
 async def ma_folder_tree(body: MaFolderBaseBody):
-    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
+    user_id, is_admin = await _ma_folder_actor(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         dao = MatchAnalysisFolderDAO(session)
-        folders = await dao.get_all_folders()
+        folders = await dao.list_visible_folders(user_id, is_admin)
         counts_res = await session.execute(
             select(
                 MatchAnalysisFolderItem.folder_id,
@@ -237,37 +283,49 @@ async def ma_folder_tree(body: MaFolderBaseBody):
         schedules_by_folder = {
             schedule.folder_id: schedule for schedule in schedules_res.scalars().all()
         }
-        roots = _build_ma_folder_tree(folders, direct_counts, schedules_by_folder)
+        roots = _build_ma_folder_tree(
+            folders,
+            direct_counts,
+            schedules_by_folder,
+            viewer_id=user_id,
+            is_admin=is_admin,
+        )
     return {"folders": roots}
 
 
 @match_analysis_api_router.post("/api/match_analysis/folders/create")
 async def ma_folder_create(body: MaFolderCreateBody):
-    user_id = await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
+    user_id, is_admin = await _ma_folder_actor(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         async with session.begin():
             dao = MatchAnalysisFolderDAO(session)
             if body.parent_id is not None:
-                parent = await dao.get_folder_by_id(body.parent_id)
-                if not parent:
-                    raise HTTPException(
-                        status_code=404, detail="Родительская папка не найдена"
-                    )
+                parent = await dao.get_accessible_folder(
+                    body.parent_id, user_id, is_admin
+                )
+                _require_mutable_ma_folder(dao, parent, user_id, is_admin)
             folder = await dao.create_folder(
                 name=body.name,
                 parent_id=body.parent_id,
                 sort_order=body.sort_order,
-                admin_id=user_id,
+                admin_id=user_id if is_admin else None,
+                owner_user_id=user_id,
             )
-            return {"folder": _serialize_ma_folder(folder)}
+            return {
+                "folder": _serialize_ma_folder(
+                    folder, viewer_id=user_id, is_admin=is_admin
+                )
+            }
 
 
 @match_analysis_api_router.post("/api/match_analysis/folders/update")
 async def ma_folder_update(body: MaFolderUpdateBody):
-    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
+    user_id, is_admin = await _ma_folder_actor(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         async with session.begin():
             dao = MatchAnalysisFolderDAO(session)
+            folder = await dao.get_accessible_folder(body.folder_id, user_id, is_admin)
+            _require_mutable_ma_folder(dao, folder, user_id, is_admin)
             folder = await dao.update_folder(
                 folder_id=body.folder_id,
                 name=body.name,
@@ -275,21 +333,26 @@ async def ma_folder_update(body: MaFolderUpdateBody):
             )
             if not folder:
                 raise HTTPException(status_code=404, detail="Папка не найдена")
-            return {"folder": _serialize_ma_folder(folder)}
+            return {
+                "folder": _serialize_ma_folder(
+                    folder, viewer_id=user_id, is_admin=is_admin
+                )
+            }
 
 
 @match_analysis_api_router.post("/api/match_analysis/folders/move")
 async def ma_folder_move(body: MaFolderMoveBody):
-    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
+    user_id, is_admin = await _ma_folder_actor(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         async with session.begin():
             dao = MatchAnalysisFolderDAO(session)
+            folder = await dao.get_accessible_folder(body.folder_id, user_id, is_admin)
+            _require_mutable_ma_folder(dao, folder, user_id, is_admin)
             if body.new_parent_id is not None:
-                new_parent = await dao.get_folder_by_id(body.new_parent_id)
-                if not new_parent:
-                    raise HTTPException(
-                        status_code=404, detail="Родительская папка не найдена"
-                    )
+                new_parent = await dao.get_accessible_folder(
+                    body.new_parent_id, user_id, is_admin
+                )
+                _require_mutable_ma_folder(dao, new_parent, user_id, is_admin)
             try:
                 folder = await dao.move_folder(
                     folder_id=body.folder_id,
@@ -300,15 +363,21 @@ async def ma_folder_move(body: MaFolderMoveBody):
                 raise HTTPException(status_code=400, detail=str(e)) from e
             if not folder:
                 raise HTTPException(status_code=404, detail="Папка не найдена")
-            return {"folder": _serialize_ma_folder(folder)}
+            return {
+                "folder": _serialize_ma_folder(
+                    folder, viewer_id=user_id, is_admin=is_admin
+                )
+            }
 
 
 @match_analysis_api_router.post("/api/match_analysis/folders/delete")
 async def ma_folder_delete(body: MaFolderDeleteBody):
-    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
+    user_id, is_admin = await _ma_folder_actor(body.init_data, body.fab_token)
     async with async_session_maker() as session:
         async with session.begin():
             dao = MatchAnalysisFolderDAO(session)
+            folder = await dao.get_accessible_folder(body.folder_id, user_id, is_admin)
+            _require_mutable_ma_folder(dao, folder, user_id, is_admin)
             schedule = await session.scalar(
                 select(MatchAnalysisFolderSchedule).where(
                     MatchAnalysisFolderSchedule.folder_id == body.folder_id
@@ -322,7 +391,7 @@ async def ma_folder_delete(body: MaFolderDeleteBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/add_items")
 async def ma_folder_add_items(body: MaFolderItemsBody):
-    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
+    user_id, is_admin = await _ma_folder_actor(body.init_data, body.fab_token)
     match_ids = _normalize_ids(body.card_ids)
     if not match_ids:
         raise HTTPException(status_code=400, detail="Нужен хотя бы один id матча")
@@ -330,9 +399,22 @@ async def ma_folder_add_items(body: MaFolderItemsBody):
     async with async_session_maker() as session:
         async with session.begin():
             dao = MatchAnalysisFolderDAO(session)
-            folder = await dao.get_folder_by_id(body.folder_id)
-            if not folder:
-                raise HTTPException(status_code=404, detail="Папка не найдена")
+            folder = await dao.get_accessible_folder(body.folder_id, user_id, is_admin)
+            _require_mutable_ma_folder(dao, folder, user_id, is_admin)
+            if not is_admin:
+                owned = await session.execute(
+                    select(UserMatchAnalysis.match_analysis_id).where(
+                        UserMatchAnalysis.user_id == user_id,
+                        UserMatchAnalysis.match_analysis_id.in_(match_ids),
+                    )
+                )
+                owned_ids = {int(mid) for mid in owned.scalars().all() if mid is not None}
+                match_ids = [mid for mid in match_ids if mid in owned_ids]
+                if not match_ids:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Можно добавлять только свои анализы",
+                    )
             existing = await session.execute(
                 select(MatchAnalysis.id).where(MatchAnalysis.id.in_(match_ids))
             )
@@ -349,7 +431,7 @@ async def ma_folder_add_items(body: MaFolderItemsBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/remove_items")
 async def ma_folder_remove_items(body: MaFolderItemsBody):
-    await _resolve_ma_admin_user_id(body.init_data, body.fab_token)
+    user_id, is_admin = await _ma_folder_actor(body.init_data, body.fab_token)
     match_ids = _normalize_ids(body.card_ids)
     if not match_ids:
         raise HTTPException(status_code=400, detail="Нужен хотя бы один id матча")
@@ -357,9 +439,8 @@ async def ma_folder_remove_items(body: MaFolderItemsBody):
     async with async_session_maker() as session:
         async with session.begin():
             dao = MatchAnalysisFolderDAO(session)
-            folder = await dao.get_folder_by_id(body.folder_id)
-            if not folder:
-                raise HTTPException(status_code=404, detail="Папка не найдена")
+            folder = await dao.get_accessible_folder(body.folder_id, user_id, is_admin)
+            _require_mutable_ma_folder(dao, folder, user_id, is_admin)
             removed = 0
             for mid in match_ids:
                 if await dao.remove_match_from_folder(body.folder_id, mid):
@@ -382,6 +463,173 @@ async def ma_folder_set_items(body: MaFolderItemsBody):
                 match_ids_ordered=match_ids,
             )
     return {"ok": True}
+
+
+@match_analysis_api_router.post("/api/match_analysis/folders/set_shared")
+async def ma_folder_set_shared(body: MaFolderSetSharedBody):
+    user_id, is_admin = await _ma_folder_actor(body.init_data, body.fab_token)
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="Только для администраторов")
+    async with async_session_maker() as session:
+        async with session.begin():
+            dao = MatchAnalysisFolderDAO(session)
+            folder = await dao.get_accessible_folder(body.folder_id, user_id, True)
+            _require_mutable_ma_folder(dao, folder, user_id, True)
+            folder = await dao.set_folder_shared(body.folder_id, body.is_shared)
+            return {
+                "ok": True,
+                "folder": _serialize_ma_folder(folder, viewer_id=user_id, is_admin=True),
+            }
+
+
+@match_analysis_api_router.post("/api/match_analysis/folders/share")
+async def ma_folder_share(body: MaFolderShareBody):
+    user_id, is_admin = await _ma_folder_actor(body.init_data, body.fab_token)
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="Только для администраторов")
+    if int(body.target_user_id) == int(user_id):
+        raise HTTPException(status_code=400, detail="Нельзя выдать доступ самому себе")
+    async with async_session_maker() as session:
+        dao = MatchAnalysisFolderDAO(session)
+        folder = await dao.get_accessible_folder(body.folder_id, user_id, True)
+        _require_mutable_ma_folder(dao, folder, user_id, True)
+        if not folder.is_shared:
+            raise HTTPException(
+                status_code=400, detail="Сначала сделайте папку общей"
+            )
+        target_exists = await session.scalar(
+            select(User.id).where(User.id == body.target_user_id).limit(1)
+        )
+        if target_exists is None:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+        _grant, created = await dao.grant_folder_access(
+            int(folder.id), int(body.target_user_id), int(user_id)
+        )
+        match_ids = await dao.collect_match_ids_for_folder_tree(
+            int(folder.id), include_children=True
+        )
+        if match_ids:
+            existing = await session.execute(
+                select(UserMatchAnalysis.match_analysis_id).where(
+                    UserMatchAnalysis.user_id == body.target_user_id,
+                    UserMatchAnalysis.match_analysis_id.in_(match_ids),
+                )
+            )
+            already = {
+                int(mid) for mid in existing.scalars().all() if mid is not None
+            }
+            for mid in match_ids:
+                if mid in already:
+                    continue
+                session.add(
+                    UserMatchAnalysis(
+                        user_id=body.target_user_id,
+                        match_analysis_id=mid,
+                    )
+                )
+        folder_id = int(folder.id)
+        folder_name = str(folder.name or "")
+        await session.commit()
+
+    from aiogram.types import WebAppInfo
+    from aiogram.utils.keyboard import InlineKeyboardBuilder
+    from bot.common.service.cabinet_admin import notify_cabinet_assignment
+    from bot.config import settings
+
+    base = settings.MINI_APP_URL.rstrip("/")
+    kb = InlineKeyboardBuilder()
+    kb.button(
+        text="Открыть папку",
+        web_app=WebAppInfo(
+            url=f"{base}/match-analysis-cabinet?folder_id={folder_id}"
+        ),
+    )
+    kb.adjust(1)
+    notify_sent, notify_error = await notify_cabinet_assignment(
+        body.target_user_id,
+        text=f"Вам открыт доступ к папке «{folder_name}».",
+        source_path=f"/web/match-analysis/folder/{folder_id}",
+        author_user_id=user_id,
+        telegram_markup=kb.as_markup(),
+    )
+    return {
+        "ok": True,
+        "created": created,
+        "already_had": not created,
+        "notify_sent": notify_sent,
+        "notify_error": notify_error,
+    }
+
+
+@match_analysis_api_router.post("/api/match_analysis/folders/resolve")
+async def ma_folder_resolve(body: MaFolderResolveBody):
+    user_id, is_admin = await _ma_folder_actor(body.init_data, body.fab_token)
+    async with async_session_maker() as session:
+        folder_dao = MatchAnalysisFolderDAO(session)
+        folder = await folder_dao.get_accessible_folder(
+            body.folder_id, user_id, is_admin
+        )
+        if not folder:
+            raise HTTPException(status_code=404, detail="Папка не найдена")
+        if body.direct_only:
+            match_ids = await folder_dao.get_folder_match_ids(folder.id)
+        else:
+            match_ids = await folder_dao.collect_match_ids_for_folder_tree(
+                root_folder_id=folder.id, include_children=True
+            )
+        visible = await folder_dao.list_visible_folders(user_id, is_admin)
+        visible_ids = {int(f.id) for f in visible}
+        counts_res = await session.execute(
+            select(
+                MatchAnalysisFolderItem.folder_id,
+                func.count(MatchAnalysisFolderItem.id),
+            ).group_by(MatchAnalysisFolderItem.folder_id)
+        )
+        direct_counts = {row[0]: row[1] for row in counts_res.all()}
+        child_folders = []
+        for f in visible:
+            if f.parent_id == folder.id:
+                child_folders.append({
+                    "id": f.id,
+                    "name": f.name,
+                    "parent_id": f.parent_id,
+                    "direct_cards_count": direct_counts.get(f.id, 0),
+                    "is_granted": not folder_dao.viewer_owns(f, user_id, is_admin),
+                })
+        cards_data: list[dict] = []
+        if match_ids:
+            rows_res = await session.execute(
+                select(MatchAnalysis).where(MatchAnalysis.id.in_(match_ids))
+            )
+            by_id = {row.id: row for row in rows_res.scalars().all()}
+            match_ids = [mid for mid in match_ids if mid in by_id]
+            recent_cutoff = datetime.utcnow() - timedelta(days=1)
+            links_by_id = await _user_ma_links_by_id(session, user_id, match_ids)
+            for mid in match_ids:
+                row = by_id.get(mid)
+                if not row:
+                    continue
+                cards_data.append(
+                    _serialize_list_item(
+                        row,
+                        status=_list_status_for_link(
+                            links_by_id.get(mid), recent_cutoff
+                        ),
+                    )
+                )
+        parent_id = folder.parent_id
+        if parent_id and parent_id not in visible_ids:
+            parent_id = None
+        folder_payload = _serialize_ma_folder(
+            folder, viewer_id=user_id, is_admin=is_admin
+        )
+        folder_payload["parent_id"] = parent_id
+        return {
+            "folder": folder_payload,
+            "cards": cards_data,
+            "child_folders": child_folders,
+            "is_root_admin": is_admin,
+        }
 
 
 @match_analysis_api_router.post("/api/match_analysis/folders/generate_link")

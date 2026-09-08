@@ -79,7 +79,9 @@ ALLOWED_EXT = {
 }
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
 _SOURCE_RE = re.compile(r"^/web(/[A-Za-z0-9._~-]+)*$")
-_FOLDER_OPEN_RE = re.compile(r"^/web/(hints|board|analyze)/folder/(\d+)$")
+_FOLDER_OPEN_RE = re.compile(
+    r"^/web/(hints|board|analyze|cards|pip-count|match-analysis)/folder/(\d+)$"
+)
 _HINTS_GAME_OPEN_RE = re.compile(r"^/web/hints/game/([A-Za-z0-9._~-]{8,80})$")
 _SOURCE_TABS = (
     ("/web/match-analysis", "Анализ матча"),

@@ -12,6 +12,7 @@ from bot.db.models import (
     ContentCardActivationLinkStatus,
     ContentCard,
     ContentCardFolder,
+    ContentCardFolderGrant,
     ContentCardFolderItem,
     ContentCardFolderLink,
     ContentCardPool,
@@ -19,6 +20,7 @@ from bot.db.models import (
     MatchAnalysisActivationLink,
     MatchAnalysisActivationLinkStatus,
     MatchAnalysisFolder,
+    MatchAnalysisFolderGrant,
     MatchAnalysisFolderItem,
     MatchAnalysisFolderLink,
     MessagesTexts,
@@ -1481,6 +1483,107 @@ class ContentCardFolderDAO(BaseDAO[ContentCardFolder]):
         )
         return result.scalar_one_or_none()
 
+    async def get_folders_for_pool(
+        self, folder_pool: ContentCardPool
+    ) -> list[ContentCardFolder]:
+        result = await self._session.execute(
+            select(ContentCardFolder)
+            .where(ContentCardFolder.folder_pool == folder_pool)
+            .order_by(
+                ContentCardFolder.parent_id.asc().nullsfirst(),
+                ContentCardFolder.sort_order.asc(),
+                ContentCardFolder.id.asc(),
+            )
+        )
+        return list(result.scalars().all())
+
+    def viewer_owns(self, folder: ContentCardFolder, user_id: int, is_admin: bool) -> bool:
+        from bot.common.service.cabinet_folder_acl import viewer_owns_folder
+
+        return viewer_owns_folder(folder, user_id, is_admin)
+
+    async def get_accessible_folder(
+        self,
+        folder_id: int,
+        user_id: int,
+        is_admin: bool,
+        folder_pool: ContentCardPool | None = None,
+    ) -> ContentCardFolder | None:
+        from bot.common.service.cabinet_folder_acl import folder_has_shared_grant
+
+        folder = await self.get_folder_by_id(folder_id)
+        if not folder:
+            return None
+        if folder_pool is not None and folder.folder_pool != folder_pool:
+            return None
+        if self.viewer_owns(folder, user_id, is_admin):
+            return folder
+        ok = await folder_has_shared_grant(
+            self._session,
+            grant_model=ContentCardFolderGrant,
+            folder_model=ContentCardFolder,
+            folder=folder,
+            user_id=user_id,
+        )
+        return folder if ok else None
+
+    async def list_visible_folders(
+        self,
+        user_id: int,
+        is_admin: bool,
+        folder_pool: ContentCardPool,
+    ) -> list[ContentCardFolder]:
+        from bot.common.service.cabinet_folder_acl import collect_granted_subtree
+
+        pool_where = (ContentCardFolder.folder_pool == folder_pool,)
+        by_id: dict[int, ContentCardFolder] = {}
+        if is_admin:
+            for folder in await self.get_folders_for_pool(folder_pool):
+                if self.viewer_owns(folder, user_id, True):
+                    by_id[int(folder.id)] = folder
+        else:
+            own_res = await self._session.execute(
+                select(ContentCardFolder).where(
+                    ContentCardFolder.owner_user_id == int(user_id),
+                    *pool_where,
+                )
+            )
+            for folder in own_res.scalars().all():
+                by_id[int(folder.id)] = folder
+        granted = await collect_granted_subtree(
+            self._session,
+            folder_model=ContentCardFolder,
+            grant_model=ContentCardFolderGrant,
+            user_id=user_id,
+            extra_where=pool_where,
+        )
+        by_id.update(granted)
+        return list(by_id.values())
+
+    async def set_folder_shared(
+        self, folder_id: int, is_shared: bool
+    ) -> ContentCardFolder | None:
+        folder = await self.get_folder_by_id(folder_id)
+        if not folder:
+            return None
+        folder.is_shared = bool(is_shared)
+        folder.updated_at = datetime.now(timezone.utc)
+        await self._session.flush()
+        return folder
+
+    async def grant_folder_access(
+        self, folder_id: int, target_user_id: int, granted_by: int
+    ) -> tuple[ContentCardFolderGrant, bool]:
+        from bot.common.service.cabinet_folder_acl import grant_folder_access
+
+        return await grant_folder_access(
+            self._session,
+            grant_model=ContentCardFolderGrant,
+            folder_id=folder_id,
+            target_user_id=target_user_id,
+            granted_by=granted_by,
+        )
+
     async def create_folder(
         self,
         name: str,
@@ -1488,12 +1591,14 @@ class ContentCardFolderDAO(BaseDAO[ContentCardFolder]):
         sort_order: int,
         admin_id: int | None,
         folder_pool: ContentCardPool | None = None,
+        owner_user_id: int | None = None,
     ) -> ContentCardFolder:
         folder = ContentCardFolder(
             name=name[:255],
             parent_id=parent_id,
             sort_order=sort_order,
             created_by_admin_id=admin_id,
+            owner_user_id=owner_user_id if owner_user_id is not None else admin_id,
             folder_pool=folder_pool or ContentCardPool.CARDS,
         )
         self._session.add(folder)
@@ -2535,18 +2640,97 @@ class MatchAnalysisFolderDAO(BaseDAO[MatchAnalysisFolder]):
         )
         return result.scalar_one_or_none()
 
+    def viewer_owns(
+        self, folder: MatchAnalysisFolder, user_id: int, is_admin: bool
+    ) -> bool:
+        from bot.common.service.cabinet_folder_acl import viewer_owns_folder
+
+        return viewer_owns_folder(folder, user_id, is_admin)
+
+    async def get_accessible_folder(
+        self, folder_id: int, user_id: int, is_admin: bool
+    ) -> MatchAnalysisFolder | None:
+        from bot.common.service.cabinet_folder_acl import folder_has_shared_grant
+
+        folder = await self.get_folder_by_id(folder_id)
+        if not folder:
+            return None
+        if self.viewer_owns(folder, user_id, is_admin):
+            return folder
+        ok = await folder_has_shared_grant(
+            self._session,
+            grant_model=MatchAnalysisFolderGrant,
+            folder_model=MatchAnalysisFolder,
+            folder=folder,
+            user_id=user_id,
+        )
+        return folder if ok else None
+
+    async def list_visible_folders(
+        self, user_id: int, is_admin: bool
+    ) -> list[MatchAnalysisFolder]:
+        from bot.common.service.cabinet_folder_acl import collect_granted_subtree
+
+        by_id: dict[int, MatchAnalysisFolder] = {}
+        if is_admin:
+            for folder in await self.get_all_folders():
+                if self.viewer_owns(folder, user_id, True):
+                    by_id[int(folder.id)] = folder
+        else:
+            own_res = await self._session.execute(
+                select(MatchAnalysisFolder).where(
+                    MatchAnalysisFolder.owner_user_id == int(user_id)
+                )
+            )
+            for folder in own_res.scalars().all():
+                by_id[int(folder.id)] = folder
+        granted = await collect_granted_subtree(
+            self._session,
+            folder_model=MatchAnalysisFolder,
+            grant_model=MatchAnalysisFolderGrant,
+            user_id=user_id,
+        )
+        by_id.update(granted)
+        return list(by_id.values())
+
+    async def set_folder_shared(
+        self, folder_id: int, is_shared: bool
+    ) -> MatchAnalysisFolder | None:
+        folder = await self.get_folder_by_id(folder_id)
+        if not folder:
+            return None
+        folder.is_shared = bool(is_shared)
+        folder.updated_at = datetime.now(timezone.utc)
+        await self._session.flush()
+        return folder
+
+    async def grant_folder_access(
+        self, folder_id: int, target_user_id: int, granted_by: int
+    ) -> tuple[MatchAnalysisFolderGrant, bool]:
+        from bot.common.service.cabinet_folder_acl import grant_folder_access
+
+        return await grant_folder_access(
+            self._session,
+            grant_model=MatchAnalysisFolderGrant,
+            folder_id=folder_id,
+            target_user_id=target_user_id,
+            granted_by=granted_by,
+        )
+
     async def create_folder(
         self,
         name: str,
         parent_id: int | None,
         sort_order: int,
         admin_id: int | None,
+        owner_user_id: int | None = None,
     ) -> MatchAnalysisFolder:
         folder = MatchAnalysisFolder(
             name=name[:255],
             parent_id=parent_id,
             sort_order=sort_order,
             created_by_admin_id=admin_id,
+            owner_user_id=owner_user_id if owner_user_id is not None else admin_id,
         )
         self._session.add(folder)
         await self._session.flush()

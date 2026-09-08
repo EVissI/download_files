@@ -15,10 +15,12 @@
     <link rel="stylesheet" href="/static/css/cards_cabinet_match_audio.css?t={{ cache_timestamp }}">
     {% endif %}
     <link rel="stylesheet" href="/static/css/web_theme.css?t={{ cache_timestamp }}">
+    <link rel="stylesheet" href="/static/css/web_assign_user_modal.css?t={{ cache_timestamp }}">
     {% if not web_standalone_mode|default(false) %}
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     {% endif %}
     <script src="/static/js/web_theme.js?t={{ cache_timestamp }}" defer></script>
+    <script src="/static/js/web_assign_user_modal.js?t={{ cache_timestamp }}" defer></script>
     <script src="/static/js/cards_cabinet.js?t={{ cache_timestamp }}" defer></script>
     {% if cabinet_kind|default('content_cards') == 'match_analysis' %}
     <script src="/static/js/cards_cabinet_match_audio.js?t={{ cache_timestamp }}" defer></script>
@@ -482,6 +484,7 @@
         </div>
     </div>
     <div id="cabinetToast" class="cabinet-toast" role="status" aria-live="polite"></div>
+    {% include "includes/web_assign_user_modal.html" %}
     {% include "cards_cabinet_assign_modal.html" %}
     {% if cabinet_kind|default('content_cards') == 'match_analysis' %}
     {% include "cards_cabinet_match_audio_modal.html" %}

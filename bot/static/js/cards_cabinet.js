@@ -73,13 +73,19 @@
             var maAudioOnlyStateKey = boot.cabinet_audio_only_key || 'match_analysis_cabinet_audio_only_v1';
             var cabinetConfig = (function () {
                 var folderToken = _urlParams.get('folder_token') || '';
+                var folderIdRaw = _urlParams.get('folder_id') || '';
                 if (folderToken) {
                     return { mode: 'folder', folderToken: folderToken };
+                }
+                var folderId = parseInt(folderIdRaw, 10);
+                if (folderId > 0) {
+                    return { mode: 'folder', folderId: folderId };
                 }
                 return { mode: 'main' };
             })();
             var cabinetFolderId = null;
             var cabinetParentFolderId = null;
+            var cabinetFolderGranted = false;
             var addToFolderBtn = document.getElementById('add-to-folder-btn');
             var manageFoldersBtn = document.getElementById('manage-folders-btn');
             var cabinetHomeBtn = document.getElementById('cabinet-home-btn');
@@ -91,8 +97,14 @@
                     params.set('fab_token', fabToken);
                 }
                 var includeFolder = !opts || opts.includeFolder !== false;
-                if (includeFolder && cabinetConfig.mode === 'folder' && cabinetConfig.folderToken) {
-                    params.set('folder_token', cabinetConfig.folderToken);
+                if (includeFolder) {
+                    if (opts && opts.folderId) {
+                        params.set('folder_id', String(opts.folderId));
+                    } else if (cabinetConfig.mode === 'folder' && cabinetConfig.folderToken) {
+                        params.set('folder_token', cabinetConfig.folderToken);
+                    } else if (cabinetConfig.mode === 'folder' && cabinetConfig.folderId) {
+                        params.set('folder_id', String(cabinetConfig.folderId));
+                    }
                 }
                 var qs = params.toString();
                 return CABINET_BASE_PATH + (qs ? '?' + qs : '');
@@ -3551,6 +3563,15 @@
                     }
                 }
 
+                function applyFolderCabinetUi() {
+                    if (!FEATURES.enable_folders) return;
+                    if (manageFoldersBtn) manageFoldersBtn.classList.add('is-visible');
+                    if (addToFolderBtn) addToFolderBtn.classList.add('is-visible');
+                    if (FEATURES.enable_selection && selectModeBtn) {
+                        selectModeBtn.classList.add('is-visible');
+                    }
+                }
+
                 function hideFolderSubfoldersBar() {
                     if (!folderViewBar) return;
                     folderViewBar.classList.remove('is-visible');
@@ -3578,6 +3599,7 @@
                 }
 
                 function getNewFolderParentId() {
+                    if (cabinetFolderGranted) return null;
                     if (cabinetConfig.mode === 'folder' && cabinetFolderId) {
                         return cabinetFolderId;
                     }
@@ -3607,13 +3629,16 @@
                 function fetchCabinetData(config) {
                     if (IS_MATCH_ANALYSIS) {
                         if (config.mode === 'folder') {
-                            return fetch('/api/match_analysis/folders/link_resolve', {
+                            var maFolderBody = config.folderToken
+                                ? { folder_token: config.folderToken, direct_only: true }
+                                : { folder_id: config.folderId, direct_only: true };
+                            var maFolderUrl = config.folderToken
+                                ? '/api/match_analysis/folders/link_resolve'
+                                : '/api/match_analysis/folders/resolve';
+                            return fetch(maFolderUrl, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(authPayload({
-                                    folder_token: config.folderToken,
-                                    direct_only: true,
-                                })),
+                                body: JSON.stringify(authPayload(maFolderBody)),
                             })
                                 .then(function (r) {
                                     return parseApiJsonResponse(r, 'Ошибка загрузки папки');
@@ -3654,13 +3679,16 @@
                             });
                     }
                     if (config.mode === 'folder') {
-                        return fetch('/api/content_cards/folders/link_resolve', {
+                        var cardsFolderBody = config.folderToken
+                            ? { folder_token: config.folderToken, direct_only: true }
+                            : { folder_id: config.folderId, direct_only: true };
+                        var cardsFolderUrl = config.folderToken
+                            ? '/api/content_cards/folders/link_resolve'
+                            : '/api/content_cards/folders/resolve';
+                        return fetch(cardsFolderUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(authPayload({
-                                folder_token: config.folderToken,
-                                direct_only: true,
-                            })),
+                            body: JSON.stringify(authPayload(cardsFolderBody)),
                         })
                             .then(function (r) {
                                 return parseApiJsonResponse(r, 'Ошибка загрузки папки');
@@ -3718,7 +3746,7 @@
                     cabinetParentFolderId = parentId;
 
                     if (cabinetHomeBtn) {
-                        cabinetHomeBtn.classList.toggle('is-visible', inFolderView && isRootAdminUser);
+                        cabinetHomeBtn.classList.toggle('is-visible', inFolderView);
                     }
                     if (cabinetBackToParentBtn) {
                         cabinetBackToParentBtn.classList.toggle(
@@ -3730,7 +3758,9 @@
 
                 function applyCabinetPayload(payload, config) {
                     isRootAdminUser = !!(payload && payload.is_root_admin);
+                    cabinetFolderGranted = !!(payload && payload.folder && payload.folder.is_granted);
                     applyRootAdminCabinetUi();
+                    applyFolderCabinetUi();
                     setReadyForIssueCount(
                         payload && payload.ready_for_issue_count != null
                             ? payload.ready_for_issue_count
@@ -3743,7 +3773,9 @@
                         cabinetFolderId = payload.folder && payload.folder.id;
                         updateFolderNavButtons(payload, config);
                         if (payload.folder && headerTitle) {
-                            headerTitle.textContent = payload.folder.name;
+                            headerTitle.textContent = payload.folder.is_granted
+                                ? (payload.folder.name + ' · общая')
+                                : payload.folder.name;
                         }
                         renderFolderSubfoldersBar(payload);
                     } else {
@@ -3927,6 +3959,17 @@
                 var folderScheduleLabels = document.getElementById('folderScheduleLabels');
                 var folderScheduleActiveInput = document.getElementById('folderScheduleActiveInput');
                 var folderScheduleModalMsg = document.getElementById('folderScheduleModalMsg');
+                var FOLDER_SHARED_ICON =
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+                    '<circle cx="9" cy="8" r="2.4" stroke="currentColor" stroke-width="1.7"/>' +
+                    '<path d="M4.5 18c.4-2.6 2.4-4 4.5-4s4.1 1.4 4.5 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>' +
+                    '<circle cx="16.2" cy="8.6" r="2" stroke="currentColor" stroke-width="1.7"/>' +
+                    '<path d="M15.2 14.2c1.8.2 3.4 1.4 3.8 3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>' +
+                    '</svg>';
+                var FOLDER_SEND_ICON =
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+                    '<path d="M4 11.5L20 4l-6.8 16-2.4-6.4L4 11.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' +
+                    '</svg>';
                 var folderScheduleDeleteBtn = document.getElementById('folderScheduleDeleteBtn');
                 var folderScheduleCancelBtn = document.getElementById('folderScheduleCancelBtn');
                 var folderScheduleSaveBtn = document.getElementById('folderScheduleSaveBtn');
@@ -4282,13 +4325,7 @@
                         });
                         return;
                     }
-                    folderApiPost('generate_link', { folder_id: folderId }).then(function (data) {
-                        var token = data && data.link_token;
-                        if (!token) throw new Error('Не удалось открыть папку');
-                        goCabinetHref(buildFolderShareUrl(token));
-                    }).catch(function (e) {
-                        showErr(e.message || String(e));
-                    });
+                    goCabinetHref(buildCardsCabinetUrl({ folderId: folderId }));
                 }
 
                 if (cabinetBackToParentBtn) {
@@ -4363,15 +4400,27 @@
                     });
                 }
 
+                function ownFolderNodes(nodes) {
+                    var out = [];
+                    (nodes || []).forEach(function (node) {
+                        if (!node || node.is_granted) return;
+                        out.push(Object.assign({}, node, {
+                            children: ownFolderNodes(node.children || []),
+                        }));
+                    });
+                    return out;
+                }
+
                 function refreshFolderPickList() {
                     if (!folderPickTree) return;
                     folderPickTree.innerHTML = '';
-                    if (!folderTreeData.length) {
+                    var nodes = ownFolderNodes(folderTreeData);
+                    if (!nodes.length) {
                         folderPickTree.innerHTML =
                             '<p style="color:#aaa;font-size:13px;text-align:center;padding:16px 0;">Папок пока нет. Сначала создайте папку.</p>';
                         return;
                     }
-                    folderTreeData.forEach(function (node) {
+                    nodes.forEach(function (node) {
                         folderPickTree.appendChild(buildFolderPickNodeEl(node));
                     });
                 }
@@ -4379,10 +4428,7 @@
                 function refreshFolderCreateParentList() {
                     if (!folderCreateParentTree) return;
                     folderCreateParentTree.innerHTML = '';
-                    if (!folderTreeData.length) {
-                        return;
-                    }
-                    folderTreeData.forEach(function (node) {
+                    ownFolderNodes(folderTreeData).forEach(function (node) {
                         folderCreateParentTree.appendChild(buildFolderCreateParentNodeEl(node));
                     });
                 }
@@ -4463,7 +4509,7 @@
                 }
 
                 function openFolderCreateParentModal() {
-                    if (!isRootAdminUser || !folderCreateParentModal) return;
+                    if (!FEATURES.enable_folders || !folderCreateParentModal) return;
                     if (folderCreateParentMsg) folderCreateParentMsg.textContent = '';
                     folderCreateParentModal.classList.add('is-open');
                     folderCreateParentModal.setAttribute('aria-hidden', 'false');
@@ -4536,6 +4582,64 @@
                     return wrap;
                 }
 
+                function openFolderShareModal(folderId, folderName) {
+                    if (!isRootAdminUser || !window.WebAssignUserModal) return;
+                    window.WebAssignUserModal.open({
+                        title: 'Выбор пользователя',
+                        subtitle: 'Папка «' + folderName + '»',
+                        loadUsers: function () {
+                            return fetch('/api/content_cards/admin_users', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(authPayload()),
+                            }).then(function (r) {
+                                return parseApiJsonResponse(r, 'Не удалось загрузить пользователей');
+                            }).then(function (data) {
+                                return (data && data.users) || [];
+                            });
+                        },
+                        onSubmit: function (userId) {
+                            return folderApiPost('share', {
+                                folder_id: folderId,
+                                target_user_id: userId,
+                            });
+                        },
+                        onSuccess: function (data) {
+                            if (!folderManageMsg) return;
+                            if (data && data.notify_sent) {
+                                folderManageMsg.textContent = data.already_had
+                                    ? 'Доступ уже был. Уведомление отправлено в чат.'
+                                    : 'Доступ отправлен. Пользователь получит сообщение в чат поддержки.';
+                            } else if (data && data.notify_error) {
+                                folderManageMsg.textContent = 'Доступ выдан, но сообщение в чат не отправилось.';
+                            } else {
+                                folderManageMsg.textContent = data && data.already_had
+                                    ? 'У пользователя уже есть доступ к этой папке.'
+                                    : 'Доступ отправлен.';
+                            }
+                        }
+                    });
+                }
+
+                function toggleFolderShared(node) {
+                    var next = !node.is_shared;
+                    folderApiPost('set_shared', {
+                        folder_id: node.id,
+                        is_shared: next,
+                    }).then(function () {
+                        return loadFolderTreeData().then(function () {
+                            refreshFolderManageList();
+                            if (folderManageMsg) {
+                                folderManageMsg.textContent = next
+                                    ? 'Папка сделана общей.'
+                                    : 'Папка больше не общая.';
+                            }
+                        });
+                    }).catch(function (e) {
+                        if (folderManageMsg) folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
+                    });
+                }
+
                 function buildFolderManageNodeEl(node) {
                     var wrap = document.createElement('div');
                     var hasChildren = node.children && node.children.length;
@@ -4557,21 +4661,28 @@
                     name.textContent = node.name;
                     nameWrap.appendChild(name);
 
-                    var renameBtn = document.createElement('button');
-                    renameBtn.type = 'button';
-                    renameBtn.className = 'folder-node__rename';
-                    renameBtn.title = 'Переименовать папку';
-                    renameBtn.setAttribute('aria-label', 'Переименовать папку «' + node.name + '»');
-                    renameBtn.innerHTML =
-                        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-                        '<path d="M4 20h4l10.5-10.5a1.4 1.4 0 0 0 0-2L14.5 3.5a1.4 1.4 0 0 0-2 0L3 13v4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
-                        '<path d="M13.5 5.5l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
-                        '</svg>';
-                    renameBtn.addEventListener('click', function (ev) {
-                        ev.stopPropagation();
-                        openRenameFolderModal(node.id, node.name);
-                    });
-                    nameWrap.appendChild(renameBtn);
+                    if (node.is_granted) {
+                        var badge = document.createElement('span');
+                        badge.className = 'folder-node__badge';
+                        badge.textContent = 'общая';
+                        nameWrap.appendChild(badge);
+                    } else {
+                        var renameBtn = document.createElement('button');
+                        renameBtn.type = 'button';
+                        renameBtn.className = 'folder-node__rename';
+                        renameBtn.title = 'Переименовать папку';
+                        renameBtn.setAttribute('aria-label', 'Переименовать папку «' + node.name + '»');
+                        renameBtn.innerHTML =
+                            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+                            '<path d="M4 20h4l10.5-10.5a1.4 1.4 0 0 0 0-2L14.5 3.5a1.4 1.4 0 0 0-2 0L3 13v4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
+                            '<path d="M13.5 5.5l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+                            '</svg>';
+                        renameBtn.addEventListener('click', function (ev) {
+                            ev.stopPropagation();
+                            openRenameFolderModal(node.id, node.name);
+                        });
+                        nameWrap.appendChild(renameBtn);
+                    }
                     row.appendChild(nameWrap);
 
                     var rightCluster = document.createElement('span');
@@ -4586,39 +4697,69 @@
                     var actions = document.createElement('span');
                     actions.className = 'folder-node__actions';
 
-                    var linkBtn = document.createElement('button');
-                    linkBtn.type = 'button';
-                    linkBtn.className = 'folder-node__action';
-                    linkBtn.innerHTML = '<i class="fa fa-link" aria-hidden="true"></i>';
-                    linkBtn.title = 'Получить ссылку';
-                    linkBtn.setAttribute('aria-label', 'Получить ссылку на папку «' + node.name + '»');
-                    linkBtn.addEventListener('click', function (ev) {
-                        ev.stopPropagation();
-                        openFolderShareLinkModal(node.id);
-                    });
-                    actions.appendChild(linkBtn);
+                    if (!node.is_granted) {
+                        if (isRootAdminUser) {
+                            var sharedBtn = document.createElement('button');
+                            sharedBtn.type = 'button';
+                            sharedBtn.className = 'folder-node__action' +
+                                (node.is_shared ? ' folder-node__action--shared-active' : '');
+                            sharedBtn.innerHTML = FOLDER_SHARED_ICON;
+                            sharedBtn.title = node.is_shared ? 'Папка общая' : 'Сделать папку общей';
+                            sharedBtn.setAttribute('aria-label', sharedBtn.title + ': ' + node.name);
+                            sharedBtn.addEventListener('click', function (ev) {
+                                ev.stopPropagation();
+                                toggleFolderShared(node);
+                            });
+                            actions.appendChild(sharedBtn);
+                            if (node.is_shared) {
+                                var sendBtn = document.createElement('button');
+                                sendBtn.type = 'button';
+                                sendBtn.className = 'folder-node__action';
+                                sendBtn.innerHTML = FOLDER_SEND_ICON;
+                                sendBtn.title = 'Отправить доступ';
+                                sendBtn.setAttribute('aria-label', 'Отправить доступ к папке «' + node.name + '»');
+                                sendBtn.addEventListener('click', function (ev) {
+                                    ev.stopPropagation();
+                                    openFolderShareModal(node.id, node.name);
+                                });
+                                actions.appendChild(sendBtn);
+                            }
 
-                    var scheduleBtn = document.createElement('button');
-                    scheduleBtn.type = 'button';
-                    scheduleBtn.className = 'folder-node__action';
-                    if (node.schedule && node.schedule.is_active) {
-                        scheduleBtn.className += ' folder-node__action--schedule-active';
+                            var linkBtn = document.createElement('button');
+                            linkBtn.type = 'button';
+                            linkBtn.className = 'folder-node__action';
+                            linkBtn.innerHTML = '<i class="fa fa-link" aria-hidden="true"></i>';
+                            linkBtn.title = 'Получить ссылку';
+                            linkBtn.setAttribute('aria-label', 'Получить ссылку на папку «' + node.name + '»');
+                            linkBtn.addEventListener('click', function (ev) {
+                                ev.stopPropagation();
+                                openFolderShareLinkModal(node.id);
+                            });
+                            actions.appendChild(linkBtn);
+
+                            var scheduleBtn = document.createElement('button');
+                            scheduleBtn.type = 'button';
+                            scheduleBtn.className = 'folder-node__action';
+                            if (node.schedule && node.schedule.is_active) {
+                                scheduleBtn.className += ' folder-node__action--schedule-active';
+                            }
+                            scheduleBtn.innerHTML = '<i class="fa fa-calendar" aria-hidden="true"></i>';
+                            scheduleBtn.title = node.schedule && node.schedule.is_active
+                                ? 'Расписание активно'
+                                : 'Настроить расписание';
+                            scheduleBtn.setAttribute(
+                                'aria-label',
+                                (node.schedule && node.schedule.is_active
+                                    ? 'Расписание активно: '
+                                    : 'Настроить расписание: ') + node.name
+                            );
+                            scheduleBtn.addEventListener('click', function (ev) {
+                                ev.stopPropagation();
+                                loadFolderScheduleAndOpen(node.id, node.name, node.schedule || null);
+                            });
+                            actions.appendChild(scheduleBtn);
+                        }
                     }
-                    scheduleBtn.innerHTML = '<i class="fa fa-calendar" aria-hidden="true"></i>';
-                    scheduleBtn.title = node.schedule && node.schedule.is_active
-                        ? 'Расписание активно'
-                        : 'Настроить расписание';
-                    scheduleBtn.setAttribute(
-                        'aria-label',
-                        (node.schedule && node.schedule.is_active
-                            ? 'Расписание активно: '
-                            : 'Настроить расписание: ') + node.name
-                    );
-                    scheduleBtn.addEventListener('click', function (ev) {
-                        ev.stopPropagation();
-                        loadFolderScheduleAndOpen(node.id, node.name, node.schedule || null);
-                    });
-                    actions.appendChild(scheduleBtn);
 
                     var goBtn = document.createElement('button');
                     goBtn.type = 'button';
@@ -4632,33 +4773,35 @@
                     });
                     actions.appendChild(goBtn);
 
-                    var delBtn = document.createElement('button');
-                    delBtn.type = 'button';
-                    delBtn.className = 'folder-node__action folder-node__action--danger';
-                    delBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
-                    delBtn.title = 'Удалить папку';
-                    delBtn.setAttribute('aria-label', 'Удалить папку «' + node.name + '»');
-                    delBtn.addEventListener('click', function (ev) {
-                        ev.stopPropagation();
-                        showCabinetConfirm(
-                            'Удалить «' + node.name + '»?',
-                            'Удаление папки',
-                            { danger: true, confirmLabel: 'Удалить' }
-                        ).then(function (ok) {
-                            if (!ok) return;
-                            var deletedFolderId = node.id;
-                            folderApiPost('delete', { folder_id: deletedFolderId })
-                                .then(function () {
-                                    return afterFolderStructureChanged(deletedFolderId);
-                                })
-                                .catch(function (e) {
-                                    if (folderManageMsg) {
-                                        folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
-                                    }
-                                });
+                    if (!node.is_granted) {
+                        var delBtn = document.createElement('button');
+                        delBtn.type = 'button';
+                        delBtn.className = 'folder-node__action folder-node__action--danger';
+                        delBtn.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
+                        delBtn.title = 'Удалить папку';
+                        delBtn.setAttribute('aria-label', 'Удалить папку «' + node.name + '»');
+                        delBtn.addEventListener('click', function (ev) {
+                            ev.stopPropagation();
+                            showCabinetConfirm(
+                                'Удалить «' + node.name + '»?',
+                                'Удаление папки',
+                                { danger: true, confirmLabel: 'Удалить' }
+                            ).then(function (ok) {
+                                if (!ok) return;
+                                var deletedFolderId = node.id;
+                                folderApiPost('delete', { folder_id: deletedFolderId })
+                                    .then(function () {
+                                        return afterFolderStructureChanged(deletedFolderId);
+                                    })
+                                    .catch(function (e) {
+                                        if (folderManageMsg) {
+                                            folderManageMsg.textContent = 'Ошибка: ' + (e.message || e);
+                                        }
+                                    });
+                            });
                         });
-                    });
-                    actions.appendChild(delBtn);
+                        actions.appendChild(delBtn);
+                    }
 
                     rightCluster.appendChild(actions);
                     row.appendChild(rightCluster);
@@ -4697,7 +4840,7 @@
                 }
 
                 function openFolderManageModal() {
-                    if (!isRootAdminUser || !folderManageModal) return;
+                    if (!FEATURES.enable_folders || !folderManageModal) return;
                     if (folderManageMsg) folderManageMsg.textContent = '';
                     folderManageModal.classList.add('is-open');
                     folderManageModal.setAttribute('aria-hidden', 'false');
@@ -4980,7 +5123,7 @@
                 }
 
                 function openFolderActionModal() {
-                    if (!isRootAdminUser || !folderActionModal) return;
+                    if (!FEATURES.enable_folders || !folderActionModal) return;
                     var cardIds = getSelectedCardIdsForFolderAction();
                     if (!cardIds.length) return;
                     folderActionPendingCardIds = cardIds.slice();
@@ -4995,7 +5138,7 @@
                 }
 
                 function openCreateFolderWithSelectedCardsModal(cardIds) {
-                    if (!isRootAdminUser) return;
+                    if (!FEATURES.enable_folders) return;
                     var ids = cardIds || getSelectedCardIdsForFolderAction();
                     if (!ids.length) return;
                     var parentId = getNewFolderParentId();
@@ -5018,7 +5161,7 @@
                 }
 
                 function openFolderPickModal(cardIds) {
-                    if (!isRootAdminUser || !folderPickModal) return;
+                    if (!FEATURES.enable_folders || !folderPickModal) return;
                     var ids = cardIds || [];
                     if (!ids.length) return;
                     folderPickPendingCardIds = ids.slice();

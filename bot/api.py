@@ -3082,6 +3082,21 @@ class FolderScheduleDeleteBody(FolderBaseBody):
     folder_id: int
 
 
+class FolderSetSharedBody(FolderBaseBody):
+    folder_id: int
+    is_shared: bool
+
+
+class FolderShareBody(FolderBaseBody):
+    folder_id: int
+    target_user_id: int = Field(..., ne=0)
+
+
+class FolderResolveBody(FolderBaseBody):
+    folder_id: int
+    direct_only: bool = True
+
+
 # ============================================================
 #  Helpers
 # ============================================================
@@ -3105,10 +3120,35 @@ def _require_content_card_folder_admin(user_id: int) -> None:
     require_cabinet_admin(user_id)
 
 
-def _serialize_folder(f: ContentCardFolder) -> dict:
+async def _folder_actor(init_data: str | None, fab_token: str | None) -> tuple[int, bool]:
+    from bot.common.service.cabinet_admin import is_cabinet_admin
+
+    user_id = await _resolve_content_cards_user_id(init_data, fab_token)
+    return user_id, is_cabinet_admin(user_id)
+
+
+def _require_mutable_content_folder(dao: ContentCardFolderDAO, folder, user_id: int, is_admin: bool):
+    if folder is None:
+        raise HTTPException(status_code=404, detail="Папка не найдена")
+    if not dao.viewer_owns(folder, user_id, is_admin):
+        raise HTTPException(status_code=403, detail="Нельзя изменять эту папку")
+    return folder
+
+
+def _serialize_folder(
+    f: ContentCardFolder,
+    *,
+    viewer_id: int | None = None,
+    is_admin: bool = False,
+) -> dict:
     pool_val = f.folder_pool
     if hasattr(pool_val, "value"):
         pool_val = pool_val.value
+    is_granted = False
+    if viewer_id is not None:
+        from bot.common.service.cabinet_folder_acl import viewer_owns_folder
+
+        is_granted = not viewer_owns_folder(f, int(viewer_id), is_admin)
     return {
         "id": f.id,
         "name": f.name,
@@ -3116,6 +3156,9 @@ def _serialize_folder(f: ContentCardFolder) -> dict:
         "sort_order": f.sort_order,
         "folder_pool": pool_val,
         "created_by_admin_id": f.created_by_admin_id,
+        "owner_user_id": f.owner_user_id,
+        "is_shared": bool(f.is_shared),
+        "is_granted": is_granted,
         "created_at": f.created_at.isoformat() if f.created_at else None,
     }
 
@@ -3163,12 +3206,15 @@ def _build_folder_tree(
     folders: list[ContentCardFolder],
     direct_counts: dict[int, int],
     schedules_by_folder: dict[int, ContentCardFolderSchedule] | None = None,
+    *,
+    viewer_id: int | None = None,
+    is_admin: bool = False,
 ) -> list[dict]:
     schedules_by_folder = schedules_by_folder or {}
     nodes: dict[int, dict] = {}
     for f in folders:
         nodes[f.id] = {
-            **_serialize_folder(f),
+            **_serialize_folder(f, viewer_id=viewer_id, is_admin=is_admin),
             "children": [],
             "direct_cards_count": direct_counts.get(f.id, 0),
             "schedule": _serialize_folder_schedule(schedules_by_folder.get(f.id)),
@@ -3198,18 +3244,14 @@ def _build_folder_tree(
 
 @app.post("/api/content_cards/folders/tree")
 async def folder_tree(body: FolderBaseBody):
-    """Вернуть дерево папок со счётчиками карточек. Только ROOT_ADMIN."""
-    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
-    _require_content_card_folder_admin(user_id)
+    """Дерево папок: свои, выданные и (для админа) каталог."""
+    user_id, is_admin = await _folder_actor(body.init_data, body.fab_token)
     folder_pool = _parse_content_card_pool(body.pool)
 
     async with async_session_maker() as session:
         dao = ContentCardFolderDAO(session)
-        folders = [
-            f for f in await dao.get_all_folders() if f.folder_pool == folder_pool
-        ]
+        folders = await dao.list_visible_folders(user_id, is_admin, folder_pool)
 
-        # Считаем прямые карточки каждой папки
         counts_res = await session.execute(
             select(ContentCardFolderItem.folder_id, func.count(ContentCardFolderItem.id))
             .group_by(ContentCardFolderItem.folder_id)
@@ -3222,50 +3264,56 @@ async def folder_tree(body: FolderBaseBody):
             for schedule in schedules_res.scalars().all()
         }
 
-        # Строим дерево: словарь id → узел
-        roots = _build_folder_tree(folders, direct_counts, schedules_by_folder)
+        roots = _build_folder_tree(
+            folders,
+            direct_counts,
+            schedules_by_folder,
+            viewer_id=user_id,
+            is_admin=is_admin,
+        )
 
     return {"folders": roots}
 
 
 @app.post("/api/content_cards/folders/create")
 async def folder_create(body: FolderCreateBody):
-    """Создать папку. Только ROOT_ADMIN."""
-    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
-    _require_content_card_folder_admin(user_id)
+    """Создать папку (своя ветка; админ — в общем каталоге)."""
+    user_id, is_admin = await _folder_actor(body.init_data, body.fab_token)
     folder_pool = _parse_content_card_pool(body.pool)
 
     async with async_session_maker() as session:
         async with session.begin():
             dao = ContentCardFolderDAO(session)
             if body.parent_id is not None:
-                parent = await dao.get_folder_by_id(body.parent_id)
-                if not parent:
-                    raise HTTPException(status_code=404, detail="Родительская папка не найдена")
-                if parent.folder_pool != folder_pool:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Родительская папка принадлежит другому пулу",
-                    )
+                parent = await dao.get_accessible_folder(
+                    body.parent_id, user_id, is_admin, folder_pool
+                )
+                _require_mutable_content_folder(dao, parent, user_id, is_admin)
             folder = await dao.create_folder(
                 name=body.name,
                 parent_id=body.parent_id,
                 sort_order=body.sort_order,
-                admin_id=user_id,
+                admin_id=user_id if is_admin else None,
                 folder_pool=folder_pool,
+                owner_user_id=user_id,
             )
-            return {"folder": _serialize_folder(folder)}
+            return {
+                "folder": _serialize_folder(
+                    folder, viewer_id=user_id, is_admin=is_admin
+                )
+            }
 
 
 @app.post("/api/content_cards/folders/update")
 async def folder_update(body: FolderUpdateBody):
-    """Обновить имя/сортировку папки. Только ROOT_ADMIN."""
-    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
-    _require_content_card_folder_admin(user_id)
+    """Обновить имя/сортировку папки."""
+    user_id, is_admin = await _folder_actor(body.init_data, body.fab_token)
 
     async with async_session_maker() as session:
         async with session.begin():
             dao = ContentCardFolderDAO(session)
+            folder = await dao.get_accessible_folder(body.folder_id, user_id, is_admin)
+            _require_mutable_content_folder(dao, folder, user_id, is_admin)
             folder = await dao.update_folder(
                 folder_id=body.folder_id,
                 name=body.name,
@@ -3273,30 +3321,28 @@ async def folder_update(body: FolderUpdateBody):
             )
             if not folder:
                 raise HTTPException(status_code=404, detail="Папка не найдена")
-            return {"folder": _serialize_folder(folder)}
+            return {
+                "folder": _serialize_folder(
+                    folder, viewer_id=user_id, is_admin=is_admin
+                )
+            }
 
 
 @app.post("/api/content_cards/folders/move")
 async def folder_move(body: FolderMoveBody):
-    """Перенести папку (смена parent). Проверяет цикличность. Только ROOT_ADMIN."""
-    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
-    _require_content_card_folder_admin(user_id)
+    """Перенести папку (смена parent)."""
+    user_id, is_admin = await _folder_actor(body.init_data, body.fab_token)
 
     async with async_session_maker() as session:
         async with session.begin():
             dao = ContentCardFolderDAO(session)
-            folder = await dao.get_folder_by_id(body.folder_id)
-            if not folder:
-                raise HTTPException(status_code=404, detail="Папка не найдена")
+            folder = await dao.get_accessible_folder(body.folder_id, user_id, is_admin)
+            _require_mutable_content_folder(dao, folder, user_id, is_admin)
             if body.new_parent_id is not None:
-                new_parent = await dao.get_folder_by_id(body.new_parent_id)
-                if not new_parent:
-                    raise HTTPException(status_code=404, detail="Родительская папка не найдена")
-                if new_parent.folder_pool != folder.folder_pool:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Нельзя переместить папку в другой пул",
-                    )
+                new_parent = await dao.get_accessible_folder(
+                    body.new_parent_id, user_id, is_admin, folder.folder_pool
+                )
+                _require_mutable_content_folder(dao, new_parent, user_id, is_admin)
             try:
                 folder = await dao.move_folder(
                     folder_id=body.folder_id,
@@ -3307,18 +3353,23 @@ async def folder_move(body: FolderMoveBody):
                 raise HTTPException(status_code=400, detail=str(e))
             if not folder:
                 raise HTTPException(status_code=404, detail="Папка не найдена")
-            return {"folder": _serialize_folder(folder)}
+            return {
+                "folder": _serialize_folder(
+                    folder, viewer_id=user_id, is_admin=is_admin
+                )
+            }
 
 
 @app.post("/api/content_cards/folders/delete")
 async def folder_delete(body: FolderDeleteBody):
-    """Удалить папку и все вложенные подпапки. Только ROOT_ADMIN."""
-    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
-    _require_content_card_folder_admin(user_id)
+    """Удалить папку и все вложенные подпапки."""
+    user_id, is_admin = await _folder_actor(body.init_data, body.fab_token)
 
     async with async_session_maker() as session:
         async with session.begin():
             dao = ContentCardFolderDAO(session)
+            folder = await dao.get_accessible_folder(body.folder_id, user_id, is_admin)
+            _require_mutable_content_folder(dao, folder, user_id, is_admin)
             schedule = await session.scalar(
                 select(ContentCardFolderSchedule).where(
                     ContentCardFolderSchedule.folder_id == body.folder_id
@@ -3332,9 +3383,8 @@ async def folder_delete(body: FolderDeleteBody):
 
 @app.post("/api/content_cards/folders/add_items")
 async def folder_add_items(body: FolderAddItemsBody):
-    """Добавить карточки в папку (merge, без дубликатов). Только ROOT_ADMIN."""
-    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
-    _require_content_card_folder_admin(user_id)
+    """Добавить карточки в папку (merge, без дубликатов)."""
+    user_id, is_admin = await _folder_actor(body.init_data, body.fab_token)
 
     card_ids: list[int] = []
     seen: set[int] = set()
@@ -3353,9 +3403,22 @@ async def folder_add_items(body: FolderAddItemsBody):
     async with async_session_maker() as session:
         async with session.begin():
             dao = ContentCardFolderDAO(session)
-            folder = await dao.get_folder_by_id(body.folder_id)
-            if not folder:
-                raise HTTPException(status_code=404, detail="Папка не найдена")
+            folder = await dao.get_accessible_folder(body.folder_id, user_id, is_admin)
+            _require_mutable_content_folder(dao, folder, user_id, is_admin)
+            if not is_admin:
+                owned = await session.execute(
+                    select(UserContentCard.content_card_id).where(
+                        UserContentCard.user_id == user_id,
+                        UserContentCard.content_card_id.in_(card_ids),
+                    )
+                )
+                owned_ids = {int(cid) for cid in owned.scalars().all() if cid is not None}
+                card_ids = [cid for cid in card_ids if cid in owned_ids]
+                if not card_ids:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Можно добавлять только свои карточки",
+                    )
             cards_res = await session.execute(
                 select(ContentCard.id, ContentCard.card_pool).where(
                     ContentCard.id.in_(card_ids)
@@ -3374,9 +3437,8 @@ async def folder_add_items(body: FolderAddItemsBody):
 
 @app.post("/api/content_cards/folders/remove_items")
 async def folder_remove_items(body: FolderRemoveItemsBody):
-    """Убрать карточки из папки (связь folder_items), без удаления из БД. Только ROOT_ADMIN."""
-    user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
-    _require_content_card_folder_admin(user_id)
+    """Убрать карточки из папки (связь folder_items), без удаления из БД."""
+    user_id, is_admin = await _folder_actor(body.init_data, body.fab_token)
 
     card_ids: list[int] = []
     seen: set[int] = set()
@@ -3395,9 +3457,8 @@ async def folder_remove_items(body: FolderRemoveItemsBody):
     async with async_session_maker() as session:
         async with session.begin():
             dao = ContentCardFolderDAO(session)
-            folder = await dao.get_folder_by_id(body.folder_id)
-            if not folder:
-                raise HTTPException(status_code=404, detail="Папка не найдена")
+            folder = await dao.get_accessible_folder(body.folder_id, user_id, is_admin)
+            _require_mutable_content_folder(dao, folder, user_id, is_admin)
             removed = 0
             for cid in card_ids:
                 if await dao.remove_card_from_folder(body.folder_id, cid):
@@ -3528,6 +3589,203 @@ async def folder_schedule_delete(body: FolderScheduleDeleteBody):
         await session.delete(schedule)
         await session.commit()
     return {"ok": True, "deleted": True}
+
+
+@app.post("/api/content_cards/folders/set_shared")
+async def folder_set_shared(body: FolderSetSharedBody):
+    user_id, is_admin = await _folder_actor(body.init_data, body.fab_token)
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="Только для администраторов")
+    folder_pool = _parse_content_card_pool(body.pool)
+    async with async_session_maker() as session:
+        async with session.begin():
+            dao = ContentCardFolderDAO(session)
+            folder = await dao.get_accessible_folder(
+                body.folder_id, user_id, True, folder_pool
+            )
+            _require_mutable_content_folder(dao, folder, user_id, True)
+            folder = await dao.set_folder_shared(body.folder_id, body.is_shared)
+            return {
+                "ok": True,
+                "folder": _serialize_folder(folder, viewer_id=user_id, is_admin=True),
+            }
+
+
+@app.post("/api/content_cards/folders/share")
+async def folder_share(body: FolderShareBody):
+    user_id, is_admin = await _folder_actor(body.init_data, body.fab_token)
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="Только для администраторов")
+    if int(body.target_user_id) == int(user_id):
+        raise HTTPException(status_code=400, detail="Нельзя выдать доступ самому себе")
+
+    folder_pool = _parse_content_card_pool(body.pool)
+    async with async_session_maker() as session:
+        dao = ContentCardFolderDAO(session)
+        folder = await dao.get_accessible_folder(
+            body.folder_id, user_id, True, folder_pool
+        )
+        _require_mutable_content_folder(dao, folder, user_id, True)
+        if not folder.is_shared:
+            raise HTTPException(
+                status_code=400, detail="Сначала сделайте папку общей"
+            )
+        target_exists = await session.scalar(
+            select(User.id).where(User.id == body.target_user_id).limit(1)
+        )
+        if target_exists is None:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+        _grant, created = await dao.grant_folder_access(
+            int(folder.id), int(body.target_user_id), int(user_id)
+        )
+        card_ids = await dao.collect_card_ids_for_folder_tree(
+            int(folder.id), include_children=True
+        )
+        if card_ids:
+            existing = await session.execute(
+                select(UserContentCard.content_card_id).where(
+                    UserContentCard.user_id == body.target_user_id,
+                    UserContentCard.content_card_id.in_(card_ids),
+                )
+            )
+            already = {
+                int(cid) for cid in existing.scalars().all() if cid is not None
+            }
+            for cid in card_ids:
+                if cid in already:
+                    continue
+                session.add(
+                    UserContentCard(
+                        user_id=body.target_user_id,
+                        content_card_id=cid,
+                    )
+                )
+        folder_id = int(folder.id)
+        folder_name = str(folder.name or "")
+        await session.commit()
+
+    from bot.common.service.cabinet_admin import (
+        notify_cabinet_assignment,
+        web_cabinet_source_path_for_pool,
+    )
+
+    source_path = f"{web_cabinet_source_path_for_pool(folder_pool)}/folder/{folder_id}"
+    notify_sent, notify_error = await notify_cabinet_assignment(
+        body.target_user_id,
+        text=f"Вам открыт доступ к папке «{folder_name}».",
+        source_path=source_path,
+        author_user_id=user_id,
+        telegram_markup=_folder_cabinet_webapp_markup(folder_pool, folder_id),
+    )
+    return {
+        "ok": True,
+        "created": created,
+        "already_had": not created,
+        "notify_sent": notify_sent,
+        "notify_error": notify_error,
+    }
+
+
+def _folder_cabinet_webapp_markup(pool: ContentCardPool, folder_id: int):
+    base = settings.MINI_APP_URL.rstrip("/")
+    if pool == ContentCardPool.PIP_COUNT:
+        path = "/pip-count-cabinet"
+        button_text = "Открыть папку пипсов"
+    else:
+        path = "/cards-cabinet"
+        button_text = "Открыть папку"
+    kb = InlineKeyboardBuilder()
+    kb.button(
+        text=button_text,
+        web_app=WebAppInfo(url=f"{base}{path}?folder_id={int(folder_id)}"),
+    )
+    kb.adjust(1)
+    return kb.as_markup()
+
+
+@app.post("/api/content_cards/folders/resolve")
+async def folder_resolve(body: FolderResolveBody):
+    """Папка и карточки по folder_id, если есть доступ (своя / выданная / админ)."""
+    user_id, is_admin = await _folder_actor(body.init_data, body.fab_token)
+    folder_pool = _parse_content_card_pool(body.pool)
+    async with async_session_maker() as session:
+        folder_dao = ContentCardFolderDAO(session)
+        folder = await folder_dao.get_accessible_folder(
+            body.folder_id, user_id, is_admin, folder_pool
+        )
+        if not folder:
+            raise HTTPException(status_code=404, detail="Папка не найдена")
+        if body.direct_only:
+            card_ids = await folder_dao.get_folder_card_ids(folder.id)
+        else:
+            card_ids = await folder_dao.collect_card_ids_for_folder_tree(
+                root_folder_id=folder.id, include_children=True
+            )
+        visible = await folder_dao.list_visible_folders(user_id, is_admin, folder_pool)
+        visible_ids = {int(f.id) for f in visible}
+        counts_res = await session.execute(
+            select(ContentCardFolderItem.folder_id, func.count(ContentCardFolderItem.id))
+            .group_by(ContentCardFolderItem.folder_id)
+        )
+        direct_counts: dict[int, int] = {row[0]: row[1] for row in counts_res.all()}
+        child_folders = []
+        for f in visible:
+            if f.parent_id == folder.id:
+                child_folders.append({
+                    "id": f.id,
+                    "name": f.name,
+                    "parent_id": f.parent_id,
+                    "direct_cards_count": direct_counts.get(f.id, 0),
+                    "is_granted": int(f.id) in visible_ids
+                    and not folder_dao.viewer_owns(f, user_id, is_admin),
+                })
+        cards_data: list[dict] = []
+        if card_ids:
+            cards_res = await session.execute(
+                select(ContentCard).where(
+                    ContentCard.id.in_(card_ids),
+                    ContentCard.card_pool == folder.folder_pool,
+                )
+            )
+            cards_by_id = {c.id: c for c in cards_res.scalars().all()}
+            card_ids = [cid for cid in card_ids if cid in cards_by_id]
+            for cid in card_ids:
+                c = cards_by_id.get(cid)
+                if c:
+                    cards_data.append({
+                        "id": c.id,
+                        "file_name": c.file_name,
+                        "notes": c.notes,
+                        "labels": c.labels or [],
+                        "board_xgid": c.board_xgid,
+                        "is_ready": bool(getattr(c, "is_ready", False)),
+                    })
+        parent_id = folder.parent_id
+        if parent_id and parent_id not in visible_ids:
+            parent_id = None
+        folder_payload = _serialize_folder(
+            folder, viewer_id=user_id, is_admin=is_admin
+        )
+        folder_payload["parent_id"] = parent_id
+        ready_for_issue_count = 0
+        if is_admin:
+            ready_for_issue_count = int(
+                await session.scalar(
+                    select(func.count(ContentCard.id)).where(
+                        ContentCard.card_pool == folder.folder_pool,
+                        ContentCard.is_ready.is_(True),
+                    )
+                )
+                or 0
+            )
+        return {
+            "folder": folder_payload,
+            "card_ids": card_ids,
+            "cards": cards_data,
+            "child_folders": child_folders,
+            "is_root_admin": is_admin,
+            "ready_for_issue_count": ready_for_issue_count,
+        }
 
 
 # ============================================================
