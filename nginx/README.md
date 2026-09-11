@@ -12,8 +12,13 @@
 | `reload-loop.sh` | раз в 6 ч делает `nginx -s reload`, чтобы подхватить продлённый сертификат |
 | `init-letsencrypt.sh` | первичный выпуск сертификата (один раз на сервер) |
 
-Сертификаты и webroot живут в docker-томах `certbot_conf` / `certbot_www`.
-Продлением занимается контейнер `certbot` (проверка каждые 12 ч).
+Сертификаты лежат в хостовой папке `/etc/letsencrypt` (смонтирована в оба контейнера),
+webroot для ACME — в docker-томе `certbot_www`. Продлением занимается контейнер `certbot`
+(проверка каждые 12 ч).
+
+Хостовая папка выбрана вместо docker-тома, чтобы уже выпущенные сертификаты подхватывались
+без копирования, а хостовый certbot (если он ещё жив) видел те же файлы. На чистом сервере
+Docker создаст папку сам, а заполнит её `init-letsencrypt.sh`.
 
 ## Переезд на новый сервер
 
@@ -54,18 +59,15 @@ sh nginx/init-letsencrypt.sh
 
 ## Перенос существующих сертификатов (чтобы не выпускать заново)
 
-Если на старом сервере уже есть `/etc/letsencrypt`, его можно перенести в том:
-
 ```bash
-tar czf le.tar.gz -C /etc letsencrypt          # на старом сервере
-# скопировать le.tar.gz на новый, затем:
-docker volume create download_files_certbot_conf
-docker run --rm -v download_files_certbot_conf:/etc/letsencrypt -v "$PWD":/backup alpine \
-  sh -c "tar xzf /backup/le.tar.gz -C /tmp && cp -a /tmp/letsencrypt/. /etc/letsencrypt/"
+sudo tar czf le.tar.gz -C /etc letsencrypt     # на старом сервере
+# скопировать le.tar.gz на новый, затем там же:
+sudo tar xzf le.tar.gz -C /etc
 docker compose up -d
 ```
 
-Имя тома — `<имя_проекта>_certbot_conf`; имя проекта по умолчанию равно имени папки.
+`init-letsencrypt.sh` в этом случае не нужен — контейнер `certbot` подхватит
+существующие `renewal/*.conf` и продолжит продлевать.
 
 ## Отключение старого nginx
 
