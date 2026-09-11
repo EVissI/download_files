@@ -53,9 +53,9 @@
       - NGINX_ENVSUBST_FILTER=^APP_
     volumes:
       - ./nginx/templates:/etc/nginx/templates:ro
-      # Сертификаты — хостовая папка: подхватываются уже выпущенные,
-      # и на новом сервере Docker создаст её сам (заполнит init-letsencrypt.sh).
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Сертификаты в docker-томе, а не в /etc/letsencrypt хоста: docker здесь
+      # rootless, и root контейнера не прочитал бы live/archive с правами 0700.
+      - certbot_conf:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
     depends_on:
       - fastapi
@@ -65,7 +65,7 @@
     image: certbot/certbot
     container_name: certbot
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt
+      - certbot_conf:/etc/letsencrypt
       - certbot_www:/var/www/certbot
     # Первичный выпуск — nginx/init-letsencrypt.sh. Здесь только автопродление.
     entrypoint: ["/bin/sh", "-c", "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $$!; done"]
@@ -150,7 +150,9 @@ volumes:
     driver: local
   redisdata:
     driver: local
-  # Webroot для ACME-проверки. Сами сертификаты — в /etc/letsencrypt на хосте.
+  # Сертификаты Let's Encrypt и webroot для ACME-проверки.
+  certbot_conf:
+    driver: local
   certbot_www:
     driver: local
 
