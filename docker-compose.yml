@@ -37,6 +37,14 @@
     depends_on:
       - db
       - redis
+    # Порт принимает соединения → nginx можно пускать трафик.
+    # Без этого при пересборке появляется окно 502 (connection refused).
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8000), timeout=3).close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     restart: unless-stopped
 
   nginx:
@@ -58,7 +66,8 @@
       - certbot_conf:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
     depends_on:
-      - fastapi
+      fastapi:
+        condition: service_healthy
     restart: unless-stopped
 
   certbot:

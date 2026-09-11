@@ -93,7 +93,13 @@ systemctl disable --now nginx
 docker compose exec nginx nginx -t          # проверить конфиг
 docker compose exec nginx nginx -s reload   # перечитать после правки шаблона
 docker compose logs -f nginx certbot
-docker compose run --rm certbot certificates   # срок действия сертификатов
+# Срок действия сертификатов. --entrypoint обязателен: у сервиса certbot
+# entrypoint переопределён на цикл автопродления, и без этого аргументы
+# уйдут в тот скрипт, а контейнер молча зависнет.
+docker compose run --rm --entrypoint certbot certbot certificates
+
+# Проверка автопродления: ходит на тестовый сервер LE, лимиты не тратит.
+docker compose run --rm --entrypoint certbot certbot renew --webroot -w /var/www/certbot --dry-run
 ```
 
 После правки `templates/app.conf.template` нужен `--force-recreate` контейнера

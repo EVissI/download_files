@@ -77,8 +77,10 @@ server {
         root /var/www/certbot;
     }
 
+    # Именно /web/hints: маршрута ровно /web в приложении нет,
+    # старый конфиг редиректил на 404.
     location = / {
-        return 301 /web;
+        return 301 /web/hints;
     }
 
     location /static/ {

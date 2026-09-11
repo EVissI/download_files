@@ -25,31 +25,33 @@ LIVE="/etc/letsencrypt/live/$DOMAIN"
 
 echo "==> Домен: $DOMAIN, контакт: $EMAIL"
 
+# Во всех вызовах обязателен --entrypoint: у сервиса certbot entrypoint
+# переопределён на цикл автопродления, и аргументы ушли бы в тот скрипт.
+
 echo "==> Временный самоподписанный сертификат (иначе nginx не стартует)"
-$COMPOSE run --rm --entrypoint "\
-  sh -c 'mkdir -p $LIVE && \
-  openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
-    -keyout $LIVE/privkey.pem -out $LIVE/fullchain.pem -subj \"/CN=$DOMAIN\"'" certbot
+$COMPOSE run --rm --entrypoint sh certbot -c \
+  "mkdir -p $LIVE && openssl req -x509 -nodes -newkey rsa:2048 -days 1 -keyout $LIVE/privkey.pem -out $LIVE/fullchain.pem -subj /CN=$DOMAIN"
 
 echo "==> Поднимаем nginx"
 $COMPOSE up -d nginx
 sleep 3
 
 echo "==> Убираем временный сертификат"
-$COMPOSE run --rm --entrypoint "rm -rf /etc/letsencrypt/live/$DOMAIN /etc/letsencrypt/archive/$DOMAIN /etc/letsencrypt/renewal/$DOMAIN.conf" certbot
+$COMPOSE run --rm --entrypoint sh certbot -c \
+  "rm -rf /etc/letsencrypt/live/$DOMAIN /etc/letsencrypt/archive/$DOMAIN /etc/letsencrypt/renewal/$DOMAIN.conf"
 
 echo "==> Запрашиваем настоящий сертификат"
 STAGING_ARG=""
 [ "${STAGING:-0}" = "1" ] && STAGING_ARG="--staging"
 
-$COMPOSE run --rm --entrypoint "\
-  certbot certonly --webroot -w /var/www/certbot \
+$COMPOSE run --rm --entrypoint certbot certbot \
+  certonly --webroot -w /var/www/certbot \
     $STAGING_ARG \
-    -d $DOMAIN \
-    --email $EMAIL \
+    -d "$DOMAIN" \
+    --email "$EMAIL" \
     --agree-tos --no-eff-email \
     --rsa-key-size 4096 \
-    --non-interactive" certbot
+    --non-interactive
 
 echo "==> Перечитываем конфиг nginx"
 $COMPOSE exec nginx nginx -s reload
