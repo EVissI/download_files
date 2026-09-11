@@ -46,7 +46,7 @@ MAX_UPLOAD_BYTES = 30 * 1024 * 1024
 
 
 def _login_redirect() -> RedirectResponse:
-    return RedirectResponse(url="/web/hints/login?next=/web/board", status_code=303)
+    return RedirectResponse(url="/login?next=/web/board", status_code=303)
 
 
 async def _require_session(request: Request) -> tuple[str, dict[str, Any]]:

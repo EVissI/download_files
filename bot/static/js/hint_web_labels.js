@@ -3,7 +3,7 @@
     if (!historyApi || !historyApi.enableUserLabels) return;
 
     var apiBase = historyApi.apiBase || '/web/hints';
-    var loginUrl = historyApi.loginUrl || '/web/hints/login';
+    var loginUrl = historyApi.loginUrl || '/login';
     var labelDraft = [];
     var labelEditUploadIds = [];
     var presets = [];

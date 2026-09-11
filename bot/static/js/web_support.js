@@ -1,7 +1,7 @@
 (function () {
     if (window.__webSupportBooted) return;
     window.__webSupportBooted = true;
-    var loginUrl = '/web/hints/login';
+    var loginUrl = '/login';
 
     function $(sel, root) {
         return (root || document).querySelector(sel);

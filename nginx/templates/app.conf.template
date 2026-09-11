@@ -77,10 +77,9 @@ server {
         root /var/www/certbot;
     }
 
-    # Именно /web/hints: маршрута ровно /web в приложении нет,
-    # старый конфиг редиректил на 404.
+    # /web — публичный лендинг (bot/routers/web_landing_router.py).
     location = / {
-        return 301 /web/hints;
+        return 301 /web;
     }
 
     location /static/ {

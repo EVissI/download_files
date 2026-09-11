@@ -258,7 +258,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
                 "Один файл сразу откроется в плеере, несколько попадут в историю."
             ),
             "upload_ok_message": "Матчи загружены в историю.",
-            "login_url": "/web/hints/login?next=/web/board",
+            "login_url": "/login?next=/web/board",
             "card_title": "Новый матч",
             "upload_btn_label": "Загрузить",
             "show_current_jobs": False,
@@ -281,7 +281,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
                 "можно раскрыть таблицу анализа."
             ),
             "upload_ok_message": "Файл(ы) приняты, анализ запущен.",
-            "login_url": "/web/hints/login?next=/web/analyze",
+            "login_url": "/login?next=/web/analyze",
             "card_title": "Новый анализ",
             "upload_btn_label": "Отправить на анализ",
             "show_current_jobs": True,
@@ -307,7 +307,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
             "Когда анализ будет готов, появится уведомление."
         ),
         "upload_ok_message": "Файл(ы) приняты, анализ в очереди.",
-        "login_url": "/web/hints/login",
+        "login_url": "/login",
         "card_title": "Новый анализ",
         "upload_btn_label": "Отправить на анализ",
         "show_current_jobs": True,

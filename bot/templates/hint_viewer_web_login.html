@@ -60,6 +60,26 @@
             border-radius: 8px;
             margin-bottom: 16px;
         }
+        .access {
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid var(--web-border);
+            font-size: 0.9rem;
+            color: var(--web-text-soft);
+        }
+        .access__title { margin: 0 0 6px; font-weight: 600; color: var(--web-text); }
+        .access__text { margin: 0 0 12px; color: var(--web-text-muted); line-height: 1.45; }
+        .access__links { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0; }
+        .access a { color: var(--web-link); text-decoration: none; }
+        .access a:hover { text-decoration: underline; }
+        .back {
+            display: inline-block;
+            margin-top: 14px;
+            font-size: 0.85rem;
+            color: var(--web-text-muted);
+            text-decoration: none;
+        }
+        .back:hover { color: var(--web-text); }
     </style>
 </head>
 <body>
@@ -68,7 +88,7 @@
         {% if error %}
         <div class="error">{{ error }}</div>
         {% endif %}
-        <form method="post" action="/web/hints/login">
+        <form method="post" action="/login">
             <input type="hidden" name="next" value="{{ next_path or '/web/hints' }}">
             <label for="login">Логин</label>
             <input id="login" name="login" type="text" autocomplete="username" value="{{ login_value or '' }}" required>
@@ -76,6 +96,16 @@
             <input id="password" name="password" type="password" autocomplete="current-password" required>
             <button type="submit">Войти</button>
         </form>
+
+        <div class="access">
+            <p class="access__title">Нет доступа к сервисам?</p>
+            <p class="access__text">Аккаунты выдаём вручную. Напишите нам — расскажем про сервисы и откроем доступ.</p>
+            <p class="access__links">
+                <a href="https://t.me/Learn_bg" target="_blank" rel="noopener">Telegram @Learn_bg</a>
+                <a href="mailto:learnbg24@gmail.com">learnbg24@gmail.com</a>
+            </p>
+            <a class="back" href="/web">← О сервисах</a>
+        </div>
     </div>
 </body>
 </html>

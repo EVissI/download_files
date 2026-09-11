@@ -742,7 +742,7 @@
     <div class="toast" id="toast"></div>
     <script>
         const apiBase = {{ api_base|default('/web/hints')|tojson }};
-        const loginUrl = {{ login_url|default('/web/hints/login')|tojson }};
+        const loginUrl = {{ login_url|default('/login')|tojson }};
         const uploadOkMessage = {{ upload_ok_message|default('Файл(ы) приняты, анализ в очереди.')|tojson }};
         const allowMultiple = {{ allow_multiple|default(true)|tojson }};
         const openOnUpload = {{ open_on_upload|default(false)|tojson }};

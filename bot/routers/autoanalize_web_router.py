@@ -92,7 +92,7 @@ _worker_task: asyncio.Task | None = None
 
 
 def _login_redirect() -> RedirectResponse:
-    return RedirectResponse(url="/web/hints/login?next=/web/analyze", status_code=303)
+    return RedirectResponse(url="/login?next=/web/analyze", status_code=303)
 
 
 async def _require_session(request: Request) -> tuple[str, dict[str, Any]]:

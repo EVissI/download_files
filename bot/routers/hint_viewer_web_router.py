@@ -109,7 +109,7 @@ WEB_JOB_TTL = 86400
 
 
 def _login_redirect() -> RedirectResponse:
-    return RedirectResponse(url="/web/hints/login", status_code=303)
+    return RedirectResponse(url="/login", status_code=303)
 
 
 async def _require_session(request: Request) -> tuple[str, dict[str, Any]]:
@@ -616,7 +616,12 @@ def _enrich_batch_job(stored: dict[str, Any]) -> dict[str, Any]:
     return item
 
 
-@hint_viewer_web_api_router.get("/web/hints/login", response_class=HTMLResponse)
+# Канонический путь входа — /login. Старый /web/hints/login оставлен рабочим:
+# на него ведут закладки и ссылки в письмах.
+@hint_viewer_web_api_router.get("/login", response_class=HTMLResponse)
+@hint_viewer_web_api_router.get(
+    "/web/hints/login", response_class=HTMLResponse, include_in_schema=False
+)
 async def web_hints_login_page(request: Request, next: str = "/web/hints"):
     next_path = safe_web_next(next)
     if await resolve_web_session(request):
@@ -635,7 +640,8 @@ async def web_hints_login_page(request: Request, next: str = "/web/hints"):
     return response
 
 
-@hint_viewer_web_api_router.post("/web/hints/login")
+@hint_viewer_web_api_router.post("/login")
+@hint_viewer_web_api_router.post("/web/hints/login", include_in_schema=False)
 async def web_hints_login(
     request: Request,
     login: str = Form(""),

@@ -3,7 +3,7 @@
     if (!historyApi || !historyApi.enableUserFolders) return;
 
     var apiBase = historyApi.apiBase || '/web/hints';
-    var loginUrl = historyApi.loginUrl || '/web/hints/login';
+    var loginUrl = historyApi.loginUrl || '/login';
 
     var folderTreeData = [];
     var expandedManageIds = {};

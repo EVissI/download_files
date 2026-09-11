@@ -17,7 +17,7 @@ content_cards_web_api_router = APIRouter()
 
 def _login_redirect(next_path: str) -> RedirectResponse:
     return RedirectResponse(
-        url=f"/web/hints/login?next={next_path}",
+        url=f"/login?next={next_path}",
         status_code=303,
     )
 

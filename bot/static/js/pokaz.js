@@ -3346,7 +3346,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (!response.ok) {
                         const i18n = window.POKAZ_I18N || {};
                         if (response.status === 401) {
-                            window.location.href = '/web/hints/login?next=/web/pokaz';
+                            window.location.href = '/login?next=/web/pokaz';
                             throw new Error('Нужна авторизация');
                         }
                         if (response.status === 402) {

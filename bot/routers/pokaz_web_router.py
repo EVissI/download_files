@@ -26,7 +26,7 @@ templates.env.globals["cache_timestamp"] = get_static_asset_version()
 
 
 def _login_redirect() -> RedirectResponse:
-    return RedirectResponse(url="/web/hints/login?next=/web/pokaz", status_code=303)
+    return RedirectResponse(url="/login?next=/web/pokaz", status_code=303)
 
 
 async def _require_session(request: Request) -> tuple[str, dict[str, Any]]:
