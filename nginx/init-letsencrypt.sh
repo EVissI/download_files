@@ -1,0 +1,57 @@
+#!/bin/sh
+# Первичный выпуск сертификата Let's Encrypt. Запускать ОДИН раз на новом сервере
+# из корня проекта:  sh nginx/init-letsencrypt.sh
+# Для проверки без расхода лимитов LE:  STAGING=1 sh nginx/init-letsencrypt.sh
+#
+# Дальше продление полностью автоматическое: контейнер certbot проверяет
+# сертификат каждые 12 ч, nginx перечитывает конфиг каждые 6 ч.
+set -eu
+
+cd "$(dirname "$0")/.."
+
+[ -f .env ] || { echo "Нет .env в корне проекта"; exit 1; }
+# shellcheck disable=SC1091
+. ./.env
+
+DOMAIN="${APP_DOMAIN:-}"
+EMAIL="${CERTBOT_EMAIL:-}"
+[ -n "$DOMAIN" ] || { echo "В .env не задан APP_DOMAIN"; exit 1; }
+[ -n "$EMAIL" ]  || { echo "В .env не задан CERTBOT_EMAIL"; exit 1; }
+
+COMPOSE="docker compose"
+$COMPOSE version >/dev/null 2>&1 || COMPOSE="docker-compose"
+
+LIVE="/etc/letsencrypt/live/$DOMAIN"
+
+echo "==> Домен: $DOMAIN, контакт: $EMAIL"
+
+echo "==> Временный самоподписанный сертификат (иначе nginx не стартует)"
+$COMPOSE run --rm --entrypoint "\
+  sh -c 'mkdir -p $LIVE && \
+  openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+    -keyout $LIVE/privkey.pem -out $LIVE/fullchain.pem -subj \"/CN=$DOMAIN\"'" certbot
+
+echo "==> Поднимаем nginx"
+$COMPOSE up -d nginx
+sleep 3
+
+echo "==> Убираем временный сертификат"
+$COMPOSE run --rm --entrypoint "rm -rf /etc/letsencrypt/live/$DOMAIN /etc/letsencrypt/archive/$DOMAIN /etc/letsencrypt/renewal/$DOMAIN.conf" certbot
+
+echo "==> Запрашиваем настоящий сертификат"
+STAGING_ARG=""
+[ "${STAGING:-0}" = "1" ] && STAGING_ARG="--staging"
+
+$COMPOSE run --rm --entrypoint "\
+  certbot certonly --webroot -w /var/www/certbot \
+    $STAGING_ARG \
+    -d $DOMAIN \
+    --email $EMAIL \
+    --agree-tos --no-eff-email \
+    --rsa-key-size 4096 \
+    --non-interactive" certbot
+
+echo "==> Перечитываем конфиг nginx"
+$COMPOSE exec nginx nginx -s reload
+
+echo "==> Готово. Проверь: https://$DOMAIN"

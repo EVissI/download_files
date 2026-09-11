@@ -19,3 +19,7 @@ __pycache__/
 **/.idea/
 
 redisdata/
+
+# База знаний для Claude Code (локальная, не для репозитория)
+CLAUDE.md
+.claude/
