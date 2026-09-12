@@ -779,3 +779,37 @@
         return byKind(kind);
     };
 })();
+
+
+/* Бургер шапки кабинета: на узких экранах навигация и кнопки живут
+   в выпадающей панели. */
+(function () {
+    var burger = document.getElementById('web-burger');
+    var menu = document.getElementById('web-header-menu');
+    if (!burger || !menu) return;
+
+    function setOpen(open) {
+        menu.classList.toggle('is-open', open);
+        burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    burger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        setOpen(!menu.classList.contains('is-open'));
+    });
+    // переход по ссылке или нажатие кнопки закрывают панель
+    menu.addEventListener('click', function (e) {
+        if (e.target.closest('a, button')) setOpen(false);
+    });
+    document.addEventListener('click', function (e) {
+        if (!menu.contains(e.target) && !burger.contains(e.target)) setOpen(false);
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') setOpen(false);
+    });
+    // на широком экране панель не нужна: иначе после поворота телефона
+    // она осталась бы висеть поверх обычной шапки
+    window.addEventListener('resize', function () {
+        if (window.innerWidth > 760) setOpen(false);
+    });
+})();

@@ -280,6 +280,12 @@
         toggle.classList.toggle('is-on', on);
         toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
 
+        imageSlots.forEach(function (el) {
+            el.classList.toggle('is-lp-img', on);
+            if (on) el.addEventListener('click', onImageClick);
+            else el.removeEventListener('click', onImageClick);
+        });
+
         nodes.forEach(function (el) {
             if (on) {
                 el.setAttribute('contenteditable', 'plaintext-only');
@@ -305,6 +311,65 @@
             panel.classList.remove('is-open');
             select(null);
         }
+    }
+
+    // --- картинки ----------------------------------------------------------
+
+    // Картинки меняются сразу по выбору файла, а не по кнопке «Сохранить»:
+    // это отдельная операция с загрузкой на сервер, копить её незачем.
+    var imageSlots = [].slice.call(document.querySelectorAll('[data-lp-img]'));
+    var filePicker = null;
+    var pendingSlot = null;
+
+    function onImageClick(e) {
+        if (!editing) return;
+        e.preventDefault();
+        e.stopPropagation();
+        pendingSlot = this;
+        if (!filePicker) {
+            filePicker = document.createElement('input');
+            filePicker.type = 'file';
+            filePicker.accept = 'image/png,image/jpeg,image/webp,image/gif';
+            filePicker.style.display = 'none';
+            filePicker.addEventListener('change', onFilePicked);
+            document.body.appendChild(filePicker);
+        }
+        filePicker.value = '';
+        filePicker.click();
+    }
+
+    function onFilePicked() {
+        var file = filePicker.files && filePicker.files[0];
+        var slot = pendingSlot;
+        if (!file || !slot) return;
+
+        var data = new FormData();
+        data.append('key', slot.getAttribute('data-lp-img'));
+        data.append('file', file);
+        slot.classList.add('is-lp-uploading');
+
+        fetch('/web/landing/api/upload-image', {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: data
+        }).then(function (r) {
+            return r.json().then(function (data) {
+                if (!r.ok) throw new Error(data.detail || ('HTTP ' + r.status));
+                return data;
+            });
+        }).then(function (data) {
+            slot.classList.remove('is-lp-uploading');
+            if (slot.tagName === 'IMG') {
+                slot.src = data.url;
+            } else {
+                // заглушка без картинки — показываем загруженную и перезагружаем,
+                // чтобы разметка стала обычным боксом со скриншотом
+                location.reload();
+            }
+        }).catch(function (err) {
+            slot.classList.remove('is-lp-uploading');
+            alert('Не удалось загрузить картинку: ' + err.message);
+        });
     }
 
     // --- сохранение --------------------------------------------------------

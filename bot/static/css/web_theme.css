@@ -87,6 +87,43 @@ html[data-theme="light"] {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color: var(--web-text);
 }
+/* Бургер шапки: на десктопе его нет, обёртка меню растворяется (display:contents),
+   поэтому навигация и кнопки остаются прямыми детьми грида. */
+.web-header-menu {
+    display: contents;
+}
+.web-burger,
+.web-header-title {
+    display: none;
+}
+.web-burger {
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border: 1px solid var(--web-border);
+    border-radius: 8px;
+    background: var(--web-ghost-bg);
+    color: var(--web-ghost-fg);
+    cursor: pointer;
+}
+.web-burger:hover {
+    background: var(--web-ghost-hover);
+}
+.web-burger svg {
+    width: 20px;
+    height: 20px;
+}
+.web-burger__close {
+    display: none;
+}
+.web-burger[aria-expanded="true"] .web-burger__open {
+    display: none;
+}
+.web-burger[aria-expanded="true"] .web-burger__close {
+    display: block;
+}
 .web-header-bar {
     display: grid;
     grid-template-columns: minmax(0, 60fr) minmax(0, 40fr);
@@ -506,6 +543,73 @@ html[data-theme="light"] .player-position-toggle {
     .web-header-bar {
         column-gap: 6px;
     }
+
+    /* Телефон: в полосе остаются только бургер и название раздела,
+       навигация и кнопки уезжают в выпадающую панель. */
+    .web-cabinet-header .web-header-bar {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .web-burger {
+        display: inline-flex;
+        order: -1;
+    }
+    .web-header-title {
+        display: block;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--web-text);
+    }
+    .web-header-menu {
+        display: none;
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+        z-index: 40;
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+        border-radius: 12px;
+        background: var(--web-bg-header);
+        border: 1px solid var(--web-border);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, .28);
+    }
+    .web-header-menu.is-open {
+        display: flex;
+    }
+    /* на невысоких экранах список сервисов не помещается целиком */
+    .web-header-menu {
+        max-height: calc(100vh - 72px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+    /* внутри панели навигация идёт столбиком, без горизонтальной прокрутки */
+    .web-cabinet-header .service-nav {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        overflow: visible;
+        background: transparent;
+        padding: 0;
+        gap: 2px;
+    }
+    .web-cabinet-header .service-nav a {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .header-actions {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        padding-top: 8px;
+        border-top: 1px solid var(--web-border-subtle);
+    }
+
     .web-cabinet-header .service-nav {
         scrollbar-width: none;
         padding: 3px;

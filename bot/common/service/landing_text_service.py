@@ -24,9 +24,13 @@ PAGE = "landing"
 CACHE_KEY = "landing:texts:v1"
 CACHE_TTL_SEC = 3600
 
+KEY_MAX_LEN = 80  # ширина landing_texts.key
 KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_.-]{0,79}$")
 MAX_TEXT_LEN = 2000
 MAX_KEYS_PER_SAVE = 200
+# Картинки лежат в тех же строках, что и тексты, но под своим префиксом —
+# чтобы не путались с ключами текстовых узлов.
+IMAGE_KEY_PREFIX = "img-"
 
 # Границы стилей. Намеренно узкие: размер — множитель к тому, что задано в CSS,
 # поэтому адаптивные clamp() продолжают работать и вёрстка не разъезжается.
@@ -259,3 +263,30 @@ async def reset_all() -> int:
         await session.commit()
     await invalidate_cache()
     return result.rowcount or 0
+
+
+def valid_image_key(key: Any) -> bool:
+    """Ключ картинки хранится с префиксом, поэтому запас под него нужен сразу."""
+    return valid_key(key) and len(key) + len(IMAGE_KEY_PREFIX) <= KEY_MAX_LEN
+
+
+async def save_image(key: str, url: str, user_id: int | None) -> None:
+    """Запоминает адрес картинки, загруженной админом вместо штатной."""
+    if not valid_image_key(key) or not url:
+        return
+    async with async_session_maker() as session:
+        stmt = insert(LandingText).values(
+            page=PAGE,
+            key=f"{IMAGE_KEY_PREFIX}{key}",
+            text=url,
+            style_json=None,
+            updated_by=user_id,
+        )
+        await session.execute(
+            stmt.on_conflict_do_update(
+                index_elements=[LandingText.page, LandingText.key],
+                set_={"text": stmt.excluded.text, "updated_by": stmt.excluded.updated_by},
+            )
+        )
+        await session.commit()
+    await invalidate_cache()

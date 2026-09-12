@@ -157,3 +157,19 @@
         flex: 1;
     }
 }
+
+/* Заменяемые картинки: в режиме правки подсвечиваются и кликаются. */
+.lp-editing [data-lp-img] {
+    outline: 1px dashed var(--lbg-accent-2);
+    outline-offset: 3px;
+    cursor: pointer;
+}
+
+.lp-editing [data-lp-img]:hover {
+    outline-style: solid;
+}
+
+.lp-editing [data-lp-img].is-lp-uploading {
+    opacity: .5;
+    pointer-events: none;
+}

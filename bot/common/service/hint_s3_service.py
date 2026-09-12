@@ -66,6 +66,29 @@ class HintS3Storage:
     def game_json_key(game_id: str, game_num: str) -> str:
         return f"{HintS3Storage.PREFIX}/{game_id}_games/game_{game_num}.json"
 
+    LANDING_MEDIA_PREFIX = "landing/media"
+
+    @staticmethod
+    def landing_media_key(filename: str) -> str:
+        """Картинки лендинга, загруженные админом: ``landing/media/{filename}``."""
+        fn = filename.replace("\\", "/").split("/")[-1].strip()
+        if not fn or ".." in fn or "/" in fn:
+            fn = "image.bin"
+        return f"{HintS3Storage.LANDING_MEDIA_PREFIX}/{fn}"
+
+    @classmethod
+    def is_landing_media_key(cls, key: str) -> bool:
+        """Ключ картинки лендинга — только свой префикс и без переходов вверх."""
+        raw = (key or "").strip()
+        if not raw or ".." in raw:
+            return False
+        parts = raw.split("/")
+        return (
+            len(parts) == 3
+            and f"{parts[0]}/{parts[1]}" == cls.LANDING_MEDIA_PREFIX
+            and bool(parts[2])
+        )
+
     @staticmethod
     def cabinet_gallery_media_key(filename: str) -> str:
         """Общая галерея кабинета карточек: ``content_cards/media/cabinet_gallery/{filename}``."""

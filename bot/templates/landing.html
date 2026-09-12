@@ -124,12 +124,19 @@
       <a class="lbg-card__link" href="/web/pip-count" {{ lp_attr('services-a-30') }}>{{ lp_text('services-a-30', 'Открыть «Подсчёт пипсов»') }}</a>
     </article>
 
+      <article class="lbg-card">
+        <p class="lbg-card__num" {{ lp_attr('services-p-31') }}>{{ lp_text('services-p-31', '08') }}</p>
+        <h3 {{ lp_attr('services-h3-32') }}>{{ lp_text('services-h3-32', 'Всё о матче') }}</h3>
+        <p {{ lp_attr('services-p-33') }}>{{ lp_text('services-p-33', 'Загрузили матч один раз — получили сразу всё: таблицу статистики с выгрузкой в PDF, разбор ошибок по каждому игроку и просмотр партии в плеере. Не нужно отправлять файл из сервиса в сервис и ждать дважды.') }}</p>
+        <a class="lbg-card__link" href="/web/match" {{ lp_attr('services-a-34') }}>{{ lp_text('services-a-34', 'Открыть «Всё о матче»') }}</a>
+      </article>
+
   </div>
 </section>
 
 <section class="lbg-section" id="steps">
   <h2 {{ lp_attr('steps-h2-1') }}>{{ lp_text('steps-h2-1', 'По шагам') }}</h2>
-  <p class="lbg-section__lead" {{ lp_attr('steps-p-2') }}>{{ lp_text('steps-p-2', 'Один сценарий, который проходят все три основных сервиса — от сыгранного матча до проработанной позиции.') }}</p>
+  <p class="lbg-section__lead" {{ lp_attr('steps-p-2') }}>{{ lp_text('steps-p-2', 'Один сценарий — от сыгранного матча до проработанной позиции. Сначала по шагам, сервис за сервисом, а в конце то же самое одной загрузкой.') }}</p>
   <div class="lbg-steps">
 
     <div class="lbg-step">
@@ -139,8 +146,8 @@
         <p {{ lp_attr('steps-p-5') }}>{{ lp_text('steps-p-5', 'Сыграли матч или серию манигеймов, загрузили протокол в «Анализ». Определили уровень соперника. Нашли партии, результат которых не устраивает, и передали их в «Ошибки».') }}</p>
       </div>
       <button type="button" class="lbg-shotbox" data-lbg-shot="analyze" title="Подробный просмотр на весь экран">
-        <img class="lbg-shot lbg-shot--dark" src="/static/screens/analyze-dark.png?t={{ cache_timestamp }}" alt="Сводная статистика матча в сервисе «Анализ»">
-        <img class="lbg-shot lbg-shot--light" src="/static/screens/analyze-light.png?t={{ cache_timestamp }}" alt="Сводная статистика матча в сервисе «Анализ»">
+        <img class="lbg-shot lbg-shot--dark" data-lp-img="steps-analyze-dark" src="{{ lp_img('steps-analyze-dark', '/static/screens/analyze-dark.png?t=' ~ cache_timestamp) }}" alt="Сводная статистика матча в сервисе «Анализ»">
+        <img class="lbg-shot lbg-shot--light" data-lp-img="steps-analyze-light" src="{{ lp_img('steps-analyze-light', '/static/screens/analyze-light.png?t=' ~ cache_timestamp) }}" alt="Сводная статистика матча в сервисе «Анализ»">
       </button>
     </div>
 
@@ -151,8 +158,8 @@
         <p {{ lp_attr('steps-p-8') }}>{{ lp_text('steps-p-8', 'Выбрали, чьи ошибки смотреть, и прошли их по очереди: почему правильный ход правильный и почему сыграли иначе. Непонятное отправили эксперту кнопкой «Комментарий», важное сохранили скриншотом.') }}</p>
       </div>
       <button type="button" class="lbg-shotbox" data-lbg-shot="hints" title="Подробный просмотр на весь экран">
-        <img class="lbg-shot lbg-shot--dark" src="/static/screens/hints-dark.png?t={{ cache_timestamp }}" alt="Позиция и таблица лучших ходов в сервисе «Ошибки»">
-        <img class="lbg-shot lbg-shot--light" src="/static/screens/hints-light.png?t={{ cache_timestamp }}" alt="Позиция и таблица лучших ходов в сервисе «Ошибки»">
+        <img class="lbg-shot lbg-shot--dark" data-lp-img="steps-hints-dark" src="{{ lp_img('steps-hints-dark', '/static/screens/hints-dark.png?t=' ~ cache_timestamp) }}" alt="Позиция и таблица лучших ходов в сервисе «Ошибки»">
+        <img class="lbg-shot lbg-shot--light" data-lp-img="steps-hints-light" src="{{ lp_img('steps-hints-light', '/static/screens/hints-light.png?t=' ~ cache_timestamp) }}" alt="Позиция и таблица лучших ходов в сервисе «Ошибки»">
       </button>
     </div>
 
@@ -163,9 +170,25 @@
         <p {{ lp_attr('steps-p-11') }}>{{ lp_text('steps-p-11', 'Перенесли позицию из «Ошибок» одной кнопкой. Поменяли положение шашек, счёт, куб и посмотрели, как меняется оценка. Особенно полезно на выбросе, при битве праймов и когда шашка на баре.') }}</p>
       </div>
       <button type="button" class="lbg-shotbox" data-lbg-shot="pokaz" title="Подробный просмотр на весь экран">
-        <img class="lbg-shot lbg-shot--dark" src="/static/screens/pokaz-dark.png?t={{ cache_timestamp }}" alt="Редактор позиции в сервисе «Позиция»">
-        <img class="lbg-shot lbg-shot--light" src="/static/screens/pokaz-light.png?t={{ cache_timestamp }}" alt="Редактор позиции в сервисе «Позиция»">
+        <img class="lbg-shot lbg-shot--dark" data-lp-img="steps-pokaz-dark" src="{{ lp_img('steps-pokaz-dark', '/static/screens/pokaz-dark.png?t=' ~ cache_timestamp) }}" alt="Редактор позиции в сервисе «Позиция»">
+        <img class="lbg-shot lbg-shot--light" data-lp-img="steps-pokaz-light" src="{{ lp_img('steps-pokaz-light', '/static/screens/pokaz-light.png?t=' ~ cache_timestamp) }}" alt="Редактор позиции в сервисе «Позиция»">
       </button>
+    </div>
+
+    <div class="lbg-step">
+      <div>
+        <p class="lbg-step__label" {{ lp_attr('steps-p-12') }}>{{ lp_text('steps-p-12', 'ШАГ 4 · ВСЁ О МАТЧЕ') }}</p>
+        <h3 {{ lp_attr('steps-h3-13') }}>{{ lp_text('steps-h3-13', 'Сделали всё за один заход') }}</h3>
+        <p {{ lp_attr('steps-p-14') }}>{{ lp_text('steps-p-14', 'Когда нужен сразу весь разбор, загрузите матч в «Всё о матче» — файл сам пройдёт анализ и разбор ошибок. В истории окажется готовая карточка матча: таблица с PDF, четыре режима просмотра ошибок и кнопка в плеер. Первые три шага складываются в один.') }}</p>
+      </div>
+      {% set match_shot = lp_img('steps-match', '') %}
+      {% if match_shot %}
+      <button type="button" class="lbg-shotbox" data-lbg-shot="match" title="Подробный просмотр на весь экран">
+        <img class="lbg-shot" data-lp-img="steps-match" src="{{ match_shot }}" alt="Сервис «Всё о матче»">
+      </button>
+      {% else %}
+      <div class="lbg-step__media" data-lp-img="steps-match">Скриншот появится позже</div>
+      {% endif %}
     </div>
 
   </div>

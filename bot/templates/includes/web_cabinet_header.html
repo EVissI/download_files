@@ -1,7 +1,18 @@
+{# На узких экранах навигация и кнопки прячутся под бургер. Обёртка
+   .web-header-menu на десктопе имеет display:contents — то есть исчезает из
+   разметки, и nav с кнопками остаются прямыми детьми грида, как раньше. #}
 <header class="web-cabinet-header">
     <div class="web-header-bar">
-        {% include "includes/web_service_nav.html" %}
-        {% include "includes/web_header_actions.html" %}
+        <button type="button" class="web-burger" id="web-burger"
+                aria-label="Меню" aria-expanded="false" aria-controls="web-header-menu">
+            <svg class="web-burger__open" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+            <svg class="web-burger__close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        </button>
+        <span class="web-header-title">{{ page_title|default('') }}</span>
+        <div class="web-header-menu" id="web-header-menu">
+            {% include "includes/web_service_nav.html" %}
+            {% include "includes/web_header_actions.html" %}
+        </div>
     </div>
 </header>
 {% include "includes/web_support_widget.html" %}
