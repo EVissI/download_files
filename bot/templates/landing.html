@@ -21,6 +21,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/static/css/web_landing.css?t={{ cache_timestamp }}">
+{% if lp_color_css %}<style id="lp-colors">{{ lp_color_css }}</style>{% endif %}
 {% if can_edit %}
 <link rel="stylesheet" href="/static/css/web_landing_edit.css?t={{ cache_timestamp }}">
 {% endif %}

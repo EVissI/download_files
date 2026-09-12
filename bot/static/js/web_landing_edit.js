@@ -59,10 +59,33 @@
         }
     }
 
+    // Цвет зависит от темы, поэтому задаётся правилами, а не инлайном.
+    // Свой блок идёт после серверного, поэтому перебивает его при равной
+    // специфичности — так превью совпадает с тем, что будет после сохранения.
+    function renderColors() {
+        var el = document.getElementById('lp-colors-live');
+        if (!el) {
+            el = document.createElement('style');
+            el.id = 'lp-colors-live';
+            document.head.appendChild(el);
+        }
+        var css = '';
+        Object.keys(state).forEach(function (key) {
+            var color = state[key].style.color;
+            if (!color) return;
+            if (color.dark) css += '.lbg [data-lp="' + key + '"]{color:' + color.dark + '}';
+            if (color.light) {
+                css += 'html[data-theme="light"] .lbg [data-lp="' + key + '"]{color:'
+                    + color.light + '}';
+            }
+        });
+        el.textContent = css;
+    }
+
     function applyStyle(el, st) {
         el.style.fontSize = st.size ? st.size.toFixed(2) + 'em' : '';
         el.style.fontWeight = st.bold ? '700' : '';
-        el.style.color = st.color || '';
+        el.style.color = '';
         if (st.stroke) {
             el.style.webkitTextStroke = st.stroke.width + 'px ' + st.stroke.color;
             el.style.paintOrder = 'stroke fill';
@@ -93,8 +116,11 @@
             '  <span class="lbg-ed__size" id="lbg-ed-size">100%</span>',
             '  <button type="button" data-act="bigger" title="Крупнее">A+</button>',
             '  <button type="button" data-act="bold" title="Жирный"><b>Ж</b></button>',
-            '  <label class="lbg-ed__color" title="Цвет текста">',
-            '    <span>Цвет</span><input type="color" data-act="color" value="#ffffff">',
+            '  <label class="lbg-ed__color" title="Цвет текста в тёмной теме">',
+            '    <span>Цвет тёмн.</span><input type="color" data-act="color-dark" value="#eeeeee">',
+            '  </label>',
+            '  <label class="lbg-ed__color" title="Цвет текста в светлой теме">',
+            '    <span>светл.</span><input type="color" data-act="color-light" value="#1c1d21">',
             '  </label>',
             '  <button type="button" data-act="stroke" title="Обводка">Обводка</button>',
             '  <label class="lbg-ed__color" title="Цвет обводки">',
@@ -139,8 +165,10 @@
         var stroke = tools.querySelector('[data-act="stroke"]');
         if (stroke) stroke.classList.toggle('is-on', !!st.stroke);
 
-        var color = tools.querySelector('[data-act="color"]');
-        if (color && st.color) color.value = st.color;
+        var dark = tools.querySelector('[data-act="color-dark"]');
+        if (dark && st.color && st.color.dark) dark.value = st.color.dark;
+        var light = tools.querySelector('[data-act="color-light"]');
+        if (light && st.color && st.color.light) light.value = st.color.light;
 
         var sColor = tools.querySelector('[data-act="stroke-color"]');
         if (sColor && st.stroke) sColor.value = st.stroke.color;
@@ -178,6 +206,7 @@
             state[k].text = defaultText(k);
             state[k].style = {};
             st = state[k].style;
+            renderColors();
         }
 
         applyStyle(active, st);
@@ -191,8 +220,10 @@
         var act = input.getAttribute('data-act');
         var st = state[keyOf(active)].style;
 
-        if (act === 'color') {
-            st.color = input.value;
+        if (act === 'color-dark' || act === 'color-light') {
+            st.color = st.color || {};
+            st.color[act === 'color-dark' ? 'dark' : 'light'] = input.value;
+            renderColors();
         } else if (act === 'stroke-color') {
             st.stroke = { width: (st.stroke && st.stroke.width) || 1, color: input.value };
         } else {

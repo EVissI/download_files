@@ -2298,7 +2298,7 @@ class LandingText(Base):
     style_json — ограниченный набор, чтобы правки не ломали вёрстку:
       {"size": 1.15,            # множитель к базовому размеру (em), 0.8…1.4
        "bold": true,
-       "color": "#eeeeee",
+       "color": {"dark": "#eeeeee", "light": "#1c1d21"},
        "stroke": {"width": 1, "color": "#000000"}}
     """
 

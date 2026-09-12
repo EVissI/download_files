@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from bot.common.service.hint_viewer_web_service import resolve_web_session
 from bot.common.service.landing_text_service import (
+    colors_css,
     get_overrides,
     reset_all,
     save_items,
@@ -105,6 +106,11 @@ async def web_landing(request: Request):
 
     overrides = await get_overrides()
     lp_attr, lp_text, lp_defaults = _build_helpers(overrides)
+    # Цвета зависят от темы, поэтому идут правилами в <style>, а не инлайном.
+    # Markup обязателен: внутри <style> HTML-сущности не декодируются, и
+    # экранированные кавычки сломали бы селекторы. Содержимое безопасно —
+    # ключи и цвета проходят валидацию в colors_css.
+    color_css = Markup(colors_css(overrides))
 
     return templates.TemplateResponse(
         "landing.html",
@@ -117,6 +123,7 @@ async def web_landing(request: Request):
             "lp_attr": lp_attr,
             "lp_text": lp_text,
             "lp_defaults": lp_defaults,
+            "lp_color_css": color_css,
         },
     )
 

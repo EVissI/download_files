@@ -57,6 +57,25 @@ def clean_text(raw: Any) -> str:
     return text.strip()[:MAX_TEXT_LEN]
 
 
+def _clean_color_map(raw: Any) -> dict[str, str] | None:
+    """
+    Приводит цвет к виду {"dark": "#…", "light": "#…"}.
+    Голая строка — формат прежних записей; применяем её к обеим темам, чтобы
+    внешний вид уже сохранённых правок не изменился.
+    """
+    if isinstance(raw, str) and _COLOR_RE.match(raw.strip()):
+        value = raw.strip().lower()
+        return {"dark": value, "light": value}
+    if isinstance(raw, dict):
+        out: dict[str, str] = {}
+        for theme in ("dark", "light"):
+            value = raw.get(theme)
+            if isinstance(value, str) and _COLOR_RE.match(value.strip()):
+                out[theme] = value.strip().lower()
+        return out or None
+    return None
+
+
 def clean_style(raw: Any) -> dict[str, Any] | None:
     """Пропускаем только разрешённые поля в разрешённых границах."""
     if not isinstance(raw, dict):
@@ -72,9 +91,9 @@ def clean_style(raw: Any) -> dict[str, Any] | None:
     if raw.get("bold") is True:
         out["bold"] = True
 
-    color = raw.get("color")
-    if isinstance(color, str) and _COLOR_RE.match(color.strip()):
-        out["color"] = color.strip().lower()
+    color = _clean_color_map(raw.get("color"))
+    if color:
+        out["color"] = color
 
     stroke = raw.get("stroke")
     if isinstance(stroke, dict):
@@ -95,7 +114,11 @@ def clean_style(raw: Any) -> dict[str, Any] | None:
 
 
 def style_to_css(style: dict[str, Any] | None) -> str:
-    """Собирает инлайновый style. Размер в em — относительно значения из CSS."""
+    """
+    Инлайновый style: размер (в em — относительно значения из CSS), жирность
+    и обводка. Цвета здесь намеренно нет: он зависит от темы и живёт в
+    отдельных правилах, см. colors_css.
+    """
     if not style:
         return ""
     parts: list[str] = []
@@ -104,9 +127,6 @@ def style_to_css(style: dict[str, Any] | None) -> str:
         parts.append(f"font-size:{float(size):.2f}em")
     if style.get("bold"):
         parts.append("font-weight:700")
-    color = style.get("color")
-    if isinstance(color, str):
-        parts.append(f"color:{color}")
     stroke = style.get("stroke")
     if isinstance(stroke, dict):
         parts.append(
@@ -114,6 +134,32 @@ def style_to_css(style: dict[str, Any] | None) -> str:
             f"paint-order:stroke fill"
         )
     return ";".join(parts)
+
+
+def colors_css(overrides: dict[str, dict[str, Any]] | None) -> str:
+    """
+    Правила цвета для всех переопределённых ключей.
+
+    Специфичность `.lbg [data-lp="…"]` (два класса) намеренно выше базовых
+    `.lbg a` и `.lbg .lbg-btn--primary`, иначе цвет ссылок и кнопок не
+    применился бы. Светлая тема — отдельным, более точным селектором.
+    """
+    rules: list[str] = []
+    for key, entry in (overrides or {}).items():
+        if not valid_key(key):
+            continue
+        color = ((entry or {}).get("style") or {}).get("color")
+        if not isinstance(color, dict):
+            continue
+        dark = color.get("dark")
+        light = color.get("light")
+        if dark:
+            rules.append('.lbg [data-lp="%s"]{color:%s}' % (key, dark))
+        if light:
+            rules.append(
+                'html[data-theme="light"] .lbg [data-lp="%s"]{color:%s}' % (key, light)
+            )
+    return "".join(rules)
 
 
 async def _load_from_db() -> dict[str, dict[str, Any]]:
