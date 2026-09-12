@@ -59,10 +59,6 @@ body.lbg{
 .lbg-hero h1{margin-top:20px;font-size:clamp(2.1rem,5.2vw,3.6rem);line-height:1.08;letter-spacing:-.025em;font-weight:700;max-width:20ch;text-wrap:pretty}
 .lbg-hero__lead{margin-top:24px;font-size:clamp(1rem,1.6vw,1.2rem);line-height:1.6;color:var(--lbg-soft);max-width:62ch;text-wrap:pretty}
 .lbg-hero .lbg-btns{margin-top:36px}
-.lbg-facts{margin-top:56px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px;max-width:860px}
-.lbg-fact{border-top:1px solid var(--lbg-border);padding-top:14px}
-.lbg-fact b{display:block;font-size:1.5rem;font-weight:700;letter-spacing:-.02em}
-.lbg-fact span{display:block;margin-top:4px;font-size:.9rem;color:var(--lbg-muted)}
 
 /* sections */
 .lbg-section{max-width:1160px;margin:0 auto;padding:88px 20px 24px}
