@@ -37,8 +37,20 @@ fi
 STAGING_ARG=""
 [ "${STAGING:-0}" = "1" ] && STAGING_ARG="--staging"
 
+# ensure-cert.sh кладёт временный самоподписанный прямо в live/<домен>, но без
+# archive/ и renewal/. Для certbot это "битая" линия: он откажется писать поверх
+# ("live directory exists"). Настоящую линию (с renewal/<домен>.conf) не трогаем —
+# её certbot обновит сам.
+if $COMPOSE run --rm --entrypoint sh certbot \
+     -c "[ -f /etc/letsencrypt/renewal/$DOMAIN.conf ]" >/dev/null 2>&1; then
+    echo "==> Линия сертификата уже заведена, обновляю её"
+else
+    echo "==> Убираю временный самоподписанный сертификат"
+    $COMPOSE run --rm --entrypoint sh certbot \
+      -c "rm -rf /etc/letsencrypt/live/$DOMAIN /etc/letsencrypt/archive/$DOMAIN"
+fi
+
 echo "==> Выпускаю сертификат для $DOMAIN"
-# --force-renewal: перезатирает временный самоподписанный, созданный ensure-cert.sh
 $COMPOSE run --rm --entrypoint certbot certbot \
   certonly --webroot -w /var/www/certbot \
     $STAGING_ARG \
@@ -47,7 +59,6 @@ $COMPOSE run --rm --entrypoint certbot certbot \
     --email "$EMAIL" \
     --agree-tos --no-eff-email \
     --rsa-key-size 4096 \
-    --force-renewal \
     --non-interactive
 
 echo "==> Перечитываю конфиг nginx"
