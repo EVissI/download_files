@@ -7,10 +7,14 @@
 
 | Файл | Назначение |
 |---|---|
-| `templates/app.conf.template` | конфиг сайта; `${APP_DOMAIN}` подставляется при старте контейнера |
+| `templates/app.conf.template` | server-блоки доменов; `${APP_DOMAIN}` и `${APP_DOMAIN_OLD}` подставляются при старте |
+| `snippets/app.conf` | проксирование и locations — общее для всех доменов |
+| `snippets/ssl.conf` | параметры TLS |
 | `Dockerfile` | `nginx:1.27-alpine` + скрипт перечитывания конфига |
 | `reload-loop.sh` | раз в 6 ч делает `nginx -s reload`, чтобы подхватить продлённый сертификат |
-| `init-letsencrypt.sh` | первичный выпуск сертификата (один раз на сервер) |
+| `init-letsencrypt.sh` | первичный выпуск сертификата на новом сервере |
+| `ensure-cert.sh` | временный самоподписанный сертификат, чтобы nginx стартовал до переезда DNS |
+| `issue-cert.sh` | выпуск настоящего сертификата для домена (и `www`, если резолвится) |
 
 Сертификаты и webroot для ACME живут в docker-томах `certbot_conf` / `certbot_www`.
 Продлением занимается контейнер `certbot` (проверка каждые 12 ч).
@@ -47,13 +51,65 @@ docker compose run --rm --entrypoint "rm -rf /etc/letsencrypt/live /etc/letsencr
 sh nginx/init-letsencrypt.sh
 ```
 
-## Смена домена
+## Переезд на другой домен (learnbg.ru)
 
-Поменять `APP_DOMAIN` в `.env`, там же `MINI_APP_URL`, затем:
+Порядок важен: Let's Encrypt не выпустит сертификат, пока домен не резолвится
+на этот сервер, а nginx не стартует с доменом, у которого сертификата ещё нет.
+Поэтому сначала ставим временный самоподписанный.
+
+**1. Понизить TTL** у A-записи домена до 300 секунд — за сутки до переезда.
+
+**2. Прописать домены в `.env`:**
+
+```
+APP_DOMAIN=learnbg.ru
+APP_DOMAIN_OLD=nards.mini.app.gnubg.ru
+```
+
+**3. Временный сертификат и запуск nginx** (DNS ещё на старом хостинге):
+
+```bash
+sh nginx/ensure-cert.sh learnbg.ru
+docker compose up -d --force-recreate nginx
+```
+
+**4. Открепить домен на старом хостинге** (в Тильде: Настройки сайта → Домен → открепить).
+
+**5. Сменить A-запись** `learnbg.ru` на IP этого сервера. `CNAME www → learnbg.ru`
+менять не нужно, он поедет следом. MX и TXT не трогать.
+
+**6. Дождаться DNS и проверить:**
+
+```bash
+dig +short learnbg.ru && curl -sI http://learnbg.ru/.well-known/acme-challenge/test
+```
+
+Должен вернуться IP сервера и ответ 404 от nginx (не от старого хостинга).
+
+**7. Выпустить настоящий сертификат:**
+
+```bash
+sh nginx/issue-cert.sh learnbg.ru
+```
+
+Скрипт сам определит, резолвится ли `www`, и включит его в сертификат.
+Репетиция без расхода лимитов — `STAGING=1 sh nginx/issue-cert.sh learnbg.ru`.
+
+**8. Переключить приложение на новый домен:** в `.env` поменять `MINI_APP_URL`
+на `https://learnbg.ru`, затем
+
+```bash
+docker compose up -d --force-recreate fastapi backgammon-bot
+```
+
+Кнопки Mini App инлайновые, домен в BotFather не привязан — там ничего менять не нужно.
+
+**9. Включить редирект со старого домена** (только после проверки шага 8):
+в `templates/app.conf.template`, в последнем server-блоке закомментировать
+`include /etc/nginx/snippets/app.conf;` и раскомментировать `return 301`.
 
 ```bash
 docker compose up -d --force-recreate nginx
-sh nginx/init-letsencrypt.sh
 ```
 
 ## Перенос существующих сертификатов (чтобы не выпускать заново)

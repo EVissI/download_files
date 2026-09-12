@@ -58,9 +58,11 @@
       # Фильтр ограничивает envsubst переменными APP_*, чтобы не затронуть
       # переменные самого nginx ($host, $scheme и т.п.).
       - APP_DOMAIN=${APP_DOMAIN}
+      - APP_DOMAIN_OLD=${APP_DOMAIN_OLD}
       - NGINX_ENVSUBST_FILTER=^APP_
     volumes:
       - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/snippets:/etc/nginx/snippets:ro
       # Сертификаты в docker-томе, а не в /etc/letsencrypt хоста: docker здесь
       # rootless, и root контейнера не прочитал бы live/archive с правами 0700.
       - certbot_conf:/etc/letsencrypt:ro

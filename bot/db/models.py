@@ -2285,3 +2285,33 @@ class WebSupportAttachment(Base):
     s3_key: Mapped[str] = mapped_column(String(255), nullable=False)
     content_type: Mapped[str] = mapped_column(String(120), nullable=False)
     size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class LandingText(Base):
+    """
+    Переопределения текстов и их стилей на публичном лендинге (/web).
+
+    Ключ соответствует атрибуту data-lp в bot/templates/landing.html; значения
+    по умолчанию лежат в самом шаблоне, в БД попадает только то, что админ
+    поменял в режиме редактирования. Отсутствие строки = текст из шаблона.
+
+    style_json — ограниченный набор, чтобы правки не ломали вёрстку:
+      {"size": 1.15,            # множитель к базовому размеру (em), 0.8…1.4
+       "bold": true,
+       "color": "#eeeeee",
+       "stroke": {"width": 1, "color": "#000000"}}
+    """
+
+    __tablename__ = "landing_texts"
+    __table_args__ = (
+        UniqueConstraint("page", "key", name="uq_landing_texts_page_key"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    page: Mapped[str] = mapped_column(
+        String(40), nullable=False, default="landing", server_default="landing"
+    )
+    key: Mapped[str] = mapped_column(String(80), nullable=False)
+    text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    style_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    updated_by: Mapped[int | None] = mapped_column(Integer, nullable=True)

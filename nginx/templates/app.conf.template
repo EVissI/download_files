@@ -1,6 +1,8 @@
-# Конфиг сайта. Домен подставляется из APP_DOMAIN при старте контейнера
+# Домены подставляются из APP_DOMAIN / APP_DOMAIN_OLD при старте контейнера
 # (официальный entrypoint nginx + NGINX_ENVSUBST_FILTER=^APP_, поэтому
 # переменные самого nginx вида $host / $scheme не трогаются).
+#
+# Общие настройки проксирования — в snippets/app.conf, TLS — в snippets/ssl.conf.
 
 upstream app {
     server fastapi:8000;
@@ -12,7 +14,6 @@ map $http_upgrade $connection_upgrade {
 }
 
 # Запрос с чужим Host (сканеры по IP) — рвём соединение.
-# Раньше на его месте отдавался /var/www/html.
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
@@ -24,7 +25,7 @@ server {
 server {
     listen 80;
     listen [::]:80;
-    server_name ${APP_DOMAIN};
+    server_name ${APP_DOMAIN} www.${APP_DOMAIN} ${APP_DOMAIN_OLD};
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
@@ -35,6 +36,21 @@ server {
     }
 }
 
+# www → на основной домен без www.
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name www.${APP_DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${APP_DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${APP_DOMAIN}/privkey.pem;
+    include /etc/nginx/snippets/ssl.conf;
+
+    return 301 https://${APP_DOMAIN}$request_uri;
+}
+
+# Основной домен.
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
@@ -43,81 +59,26 @@ server {
 
     ssl_certificate     /etc/letsencrypt/live/${APP_DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${APP_DOMAIN}/privkey.pem;
+    include /etc/nginx/snippets/ssl.conf;
 
-    # Аналог options-ssl-nginx.conf от certbot, но без зависимости от его файлов:
-    # nginx должен стартовать, даже если certbot ещё ничего не положил рядом.
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 1d;
-    ssl_session_tickets off;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers off;
+    include /etc/nginx/snippets/app.conf;
+}
 
-    server_tokens off;
+# Прежний домен. Сейчас отдаёт то же самое, чтобы старые ссылки и кнопки
+# в Telegram продолжали работать во время переезда.
+#
+# ФАЗА 2 (когда learnbg.ru проверен и MINI_APP_URL уже на него):
+#   закомментировать include ниже и раскомментировать return 301.
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${APP_DOMAIN_OLD};
 
-    # Лимиты приложения: карточки и веб-загрузки — 30 МБ (запас на multipart).
-    # Исключение — импорт архива аудио, см. отдельный location ниже.
-    client_max_body_size 40m;
+    ssl_certificate     /etc/letsencrypt/live/${APP_DOMAIN_OLD}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${APP_DOMAIN_OLD}/privkey.pem;
+    include /etc/nginx/snippets/ssl.conf;
 
-    # Анализ .mat и выгрузки бывают долгими.
-    proxy_read_timeout 300s;
-    proxy_send_timeout 300s;
-
-    # Общие заголовки прокси. ВАЖНО: если в location появится свой
-    # proxy_set_header, эти перестанут наследоваться — их надо продублировать
-    # (так сделано в /admin).
-    proxy_http_version 1.1;
-    proxy_set_header Host              $host;
-    proxy_set_header X-Real-IP         $remote_addr;
-    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header Upgrade           $http_upgrade;
-    proxy_set_header Connection        $connection_upgrade;
-
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-
-    # /web — публичный лендинг (bot/routers/web_landing_router.py).
-    location = / {
-        return 301 /web;
-    }
-
-    location /static/ {
-        proxy_pass http://app;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    location /admin/static/ {
-        proxy_pass http://app;
-        expires 7d;
-        add_header Cache-Control "public";
-    }
-
-    # Flask-AppBuilder смонтирован на /admin и ждёт X-Script-Name.
-    location /admin {
-        proxy_pass http://app;
-        proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Script-Name     /admin;
-    }
-
-    # Импорт mp3-архива в «Анализ матча»: приложение принимает до 200 МБ.
-    location = /api/match_analysis/audio/import_mp3_zip {
-        proxy_pass http://app;
-        client_max_body_size 220m;
-        proxy_request_buffering off;
-    }
-
-    # Всё остальное отдаёт FastAPI: /web, /hint-viewer, /pokaz, /cards-cabinet,
-    # /pip-count-cabinet, /content-card-view, /board-viewer,
-    # /match-analysis-cabinet, /match-analysis-view, /api/...
-    # Перечислять их поштучно не нужно — приложение само отвечает 404/444
-    # на мусорные пути (SecurityHeadersMiddleware).
-    location / {
-        proxy_pass http://app;
-    }
+    include /etc/nginx/snippets/app.conf;
+    # return 301 https://${APP_DOMAIN}$request_uri;
 }

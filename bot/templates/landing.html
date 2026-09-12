@@ -1,3 +1,10 @@
+{# Тексты страницы редактируются админом прямо на сайте (режим редактирования).
+   lp_attr(key)  — вешает data-lp и инлайновый стиль из БД;
+   lp_text(key, default) — подставляет текст: в шаблоне лежит значение по
+   умолчанию, в БД хранятся только правки.
+   Ключи позиционные (секция-тег-номер): при перестановке блоков правки съедут,
+   после таких изменений их надо сбросить через POST /web/landing/api/reset.
+   Шапка намеренно без data-lp — она не редактируется. #}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -14,6 +21,9 @@
   })();
 </script>
 <link rel="stylesheet" href="/static/css/web_landing.css?t={{ cache_timestamp }}">
+{% if can_edit %}
+<link rel="stylesheet" href="/static/css/web_landing_edit.css?t={{ cache_timestamp }}">
+{% endif %}
 </head>
 <body class="lbg">
 
@@ -28,6 +38,12 @@
       <a class="lbg-nav__cta" href="{{ login_url }}">{{ login_label }}</a>
     </nav>
     <div class="lbg-header__actions">
+      {% if can_edit %}
+      <button type="button" class="lbg-theme lbg-edit-toggle" id="lbg-edit-toggle"
+              title="Режим редактирования" aria-label="Режим редактирования" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Zm10-13 3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+      {% endif %}
       <button type="button" class="lbg-theme" id="lbg-theme-toggle" title="Сменить тему" aria-label="Сменить тему">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.2 3.5A8.5 8.5 0 1 0 20.5 14 7 7 0 0 1 15.2 3.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
       </button>
@@ -42,83 +58,83 @@
 
 <section class="lbg-hero" id="top">
   <div class="lbg-hero__inner">
-    <p class="lbg-eyebrow">Платформа сервисов для коротких нард</p>
-    <h1>Веб-сервисы для коротких нард</h1>
-    <p class="lbg-hero__lead">Анализ игр, разбор ошибок, работа с позицией и счёт пипсов — в браузере, со смартфона или планшета, без установки программ на компьютер.</p>
+    <p class="lbg-eyebrow" {{ lp_attr('top-p-1') }}>{{ lp_text('top-p-1', 'Платформа сервисов для коротких нард') }}</p>
+    <h1 {{ lp_attr('top-h1-2') }}>{{ lp_text('top-h1-2', 'Веб-сервисы для коротких нард') }}</h1>
+    <p class="lbg-hero__lead" {{ lp_attr('top-p-3') }}>{{ lp_text('top-p-3', 'Анализ игр, разбор ошибок, работа с позицией и счёт пипсов — в браузере, со смартфона или планшета, без установки программ на компьютер.') }}</p>
     <div class="lbg-btns">
       <a class="lbg-btn lbg-btn--primary" href="{{ login_url }}">{{ login_label }}</a>
-      <a class="lbg-btn lbg-btn--ghost" href="https://t.me/Learn_bg" target="_blank" rel="noopener">Написать</a>
+      <a class="lbg-btn lbg-btn--ghost" href="https://t.me/Learn_bg" target="_blank" rel="noopener" {{ lp_attr('top-a-4') }}>{{ lp_text('top-a-4', 'Написать') }}</a>
     </div>
   </div>
 </section>
 
 <section class="lbg-section" id="services">
-  <h2>Сервисы</h2>
-  <p class="lbg-section__lead">Загружаете протокол игры — получаете разбор. Каждый сервис работает отдельно, но данные передаются между ними одной кнопкой.</p>
+  <h2 {{ lp_attr('services-h2-1') }}>{{ lp_text('services-h2-1', 'Сервисы') }}</h2>
+  <p class="lbg-section__lead" {{ lp_attr('services-p-2') }}>{{ lp_text('services-p-2', 'Загружаете протокол игры — получаете разбор. Каждый сервис работает отдельно, но данные передаются между ними одной кнопкой.') }}</p>
   <div class="lbg-grid">
 
     <article class="lbg-card">
-      <p class="lbg-card__num">01</p>
-      <h3>Анализ</h3>
-      <p>Загрузите протокол матча или манигейма и получите уровень игры — свой и соперника — по шкале, сопоставимой с pr в Extreme Gammon. Пакетный анализ, статистика, автоматическое сохранение результата в PDF.</p>
-      <a class="lbg-card__link" href="/web/analyze">Открыть «Анализ»</a>
+      <p class="lbg-card__num" {{ lp_attr('services-p-3') }}>{{ lp_text('services-p-3', '01') }}</p>
+      <h3 {{ lp_attr('services-h3-4') }}>{{ lp_text('services-h3-4', 'Анализ') }}</h3>
+      <p {{ lp_attr('services-p-5') }}>{{ lp_text('services-p-5', 'Загрузите протокол матча или манигейма и получите уровень игры — свой и соперника — по шкале, сопоставимой с pr в Extreme Gammon. Пакетный анализ, статистика, автоматическое сохранение результата в PDF.') }}</p>
+      <a class="lbg-card__link" href="/web/analyze" {{ lp_attr('services-a-6') }}>{{ lp_text('services-a-6', 'Открыть «Анализ»') }}</a>
     </article>
 
     <article class="lbg-card">
-      <p class="lbg-card__num">02</p>
-      <h3>Плеер</h3>
-      <p>Просмотр сыгранной партии ход за ходом. Скриншот любого момента, чтобы переслать друзьям. Поддерживается просмотр коротких нард с 16 шашками.</p>
-      <a class="lbg-card__link" href="/web/board">Открыть «Плеер»</a>
+      <p class="lbg-card__num" {{ lp_attr('services-p-7') }}>{{ lp_text('services-p-7', '02') }}</p>
+      <h3 {{ lp_attr('services-h3-8') }}>{{ lp_text('services-h3-8', 'Плеер') }}</h3>
+      <p {{ lp_attr('services-p-9') }}>{{ lp_text('services-p-9', 'Просмотр сыгранной партии ход за ходом. Скриншот любого момента, чтобы переслать друзьям. Поддерживается просмотр коротких нард с 16 шашками.') }}</p>
+      <a class="lbg-card__link" href="/web/board" {{ lp_attr('services-a-10') }}>{{ lp_text('services-a-10', 'Открыть «Плеер»') }}</a>
     </article>
 
     <article class="lbg-card">
-      <p class="lbg-card__num">03</p>
-      <h3>Ошибки</h3>
-      <p>Через 3–4 минуты после загрузки протокола — список ошибок, ваших и соперника. Можно смотреть одну сторону или все ходы, отправить непонятную позицию эксперту, перенести её в «Позицию» одной кнопкой.</p>
-      <a class="lbg-card__link" href="/web/hints">Открыть «Ошибки»</a>
+      <p class="lbg-card__num" {{ lp_attr('services-p-11') }}>{{ lp_text('services-p-11', '03') }}</p>
+      <h3 {{ lp_attr('services-h3-12') }}>{{ lp_text('services-h3-12', 'Ошибки') }}</h3>
+      <p {{ lp_attr('services-p-13') }}>{{ lp_text('services-p-13', 'Через 3–4 минуты после загрузки протокола — список ошибок, ваших и соперника. Можно смотреть одну сторону или все ходы, отправить непонятную позицию эксперту, перенести её в «Позицию» одной кнопкой.') }}</p>
+      <a class="lbg-card__link" href="/web/hints" {{ lp_attr('services-a-14') }}>{{ lp_text('services-a-14', 'Открыть «Ошибки»') }}</a>
     </article>
 
     <article class="lbg-card">
-      <p class="lbg-card__num">04</p>
-      <h3>Позиция</h3>
-      <p>Расставьте любую позицию и получите анализ. Таблица лучших ходов не закрывает доску; переход по любому ходу, случайный бросок кубиков, режим «Эталон» с угадыванием лучшего хода.</p>
-      <a class="lbg-card__link" href="/web/pokaz">Открыть «Позицию»</a>
+      <p class="lbg-card__num" {{ lp_attr('services-p-15') }}>{{ lp_text('services-p-15', '04') }}</p>
+      <h3 {{ lp_attr('services-h3-16') }}>{{ lp_text('services-h3-16', 'Позиция') }}</h3>
+      <p {{ lp_attr('services-p-17') }}>{{ lp_text('services-p-17', 'Расставьте любую позицию и получите анализ. Таблица лучших ходов не закрывает доску; переход по любому ходу, случайный бросок кубиков, режим «Эталон» с угадыванием лучшего хода.') }}</p>
+      <a class="lbg-card__link" href="/web/pokaz" {{ lp_attr('services-a-18') }}>{{ lp_text('services-a-18', 'Открыть «Позицию»') }}</a>
     </article>
 
     <article class="lbg-card">
-      <p class="lbg-card__num">05</p>
-      <h3>Карточки</h3>
-      <p>120 прокомментированных задач в месяц. Сортировка на решённые, сложные и избранные; случайная выборка для самопроверки; аудио-разбор; назначение карточек по темам — гонка, прайминг, холдинг, атака, обратная игра, выброс.</p>
-      <a class="lbg-card__link" href="/web/cards">Открыть «Карточки»</a>
+      <p class="lbg-card__num" {{ lp_attr('services-p-19') }}>{{ lp_text('services-p-19', '05') }}</p>
+      <h3 {{ lp_attr('services-h3-20') }}>{{ lp_text('services-h3-20', 'Карточки') }}</h3>
+      <p {{ lp_attr('services-p-21') }}>{{ lp_text('services-p-21', '120 прокомментированных задач в месяц. Сортировка на решённые, сложные и избранные; случайная выборка для самопроверки; аудио-разбор; назначение карточек по темам — гонка, прайминг, холдинг, атака, обратная игра, выброс.') }}</p>
+      <a class="lbg-card__link" href="/web/cards" {{ lp_attr('services-a-22') }}>{{ lp_text('services-a-22', 'Открыть «Карточки»') }}</a>
     </article>
 
     <article class="lbg-card">
-      <p class="lbg-card__num">06</p>
-      <h3>Анализ матча</h3>
-      <p>Разбор матча целиком: партии собраны в папки, помечены метками, к разобранным позициям можно приложить аудио-комментарий.</p>
-      <a class="lbg-card__link" href="/web/match-analysis">Открыть «Анализ матча»</a>
+      <p class="lbg-card__num" {{ lp_attr('services-p-23') }}>{{ lp_text('services-p-23', '06') }}</p>
+      <h3 {{ lp_attr('services-h3-24') }}>{{ lp_text('services-h3-24', 'Анализ матча') }}</h3>
+      <p {{ lp_attr('services-p-25') }}>{{ lp_text('services-p-25', 'Разбор матча целиком: партии собраны в папки, помечены метками, к разобранным позициям можно приложить аудио-комментарий.') }}</p>
+      <a class="lbg-card__link" href="/web/match-analysis" {{ lp_attr('services-a-26') }}>{{ lp_text('services-a-26', 'Открыть «Анализ матча»') }}</a>
     </article>
 
     <article class="lbg-card">
-      <p class="lbg-card__num">07</p>
-      <h3>Подсчёт пипсов</h3>
-      <p>Тренировка быстрого счёта пипсов и разницы пипсов в любой позиции — и решения по ходу и кубу на её основе.</p>
-      <a class="lbg-card__link" href="/web/pip-count">Открыть «Подсчёт пипсов»</a>
+      <p class="lbg-card__num" {{ lp_attr('services-p-27') }}>{{ lp_text('services-p-27', '07') }}</p>
+      <h3 {{ lp_attr('services-h3-28') }}>{{ lp_text('services-h3-28', 'Подсчёт пипсов') }}</h3>
+      <p {{ lp_attr('services-p-29') }}>{{ lp_text('services-p-29', 'Тренировка быстрого счёта пипсов и разницы пипсов в любой позиции — и решения по ходу и кубу на её основе.') }}</p>
+      <a class="lbg-card__link" href="/web/pip-count" {{ lp_attr('services-a-30') }}>{{ lp_text('services-a-30', 'Открыть «Подсчёт пипсов»') }}</a>
     </article>
 
   </div>
 </section>
 
 <section class="lbg-section" id="steps">
-  <h2>По шагам</h2>
-  <p class="lbg-section__lead">Один сценарий, который проходят все три основных сервиса — от сыгранного матча до проработанной позиции.</p>
+  <h2 {{ lp_attr('steps-h2-1') }}>{{ lp_text('steps-h2-1', 'По шагам') }}</h2>
+  <p class="lbg-section__lead" {{ lp_attr('steps-p-2') }}>{{ lp_text('steps-p-2', 'Один сценарий, который проходят все три основных сервиса — от сыгранного матча до проработанной позиции.') }}</p>
   <div class="lbg-steps">
 
     <div class="lbg-step">
       <div>
-        <p class="lbg-step__label">ШАГ 1 · АНАЛИЗ</p>
-        <h3>Узнали уровень игры</h3>
-        <p>Сыграли матч или серию манигеймов, загрузили протокол в «Анализ». Определили уровень соперника. Нашли партии, результат которых не устраивает, и передали их в «Ошибки».</p>
+        <p class="lbg-step__label" {{ lp_attr('steps-p-3') }}>{{ lp_text('steps-p-3', 'ШАГ 1 · АНАЛИЗ') }}</p>
+        <h3 {{ lp_attr('steps-h3-4') }}>{{ lp_text('steps-h3-4', 'Узнали уровень игры') }}</h3>
+        <p {{ lp_attr('steps-p-5') }}>{{ lp_text('steps-p-5', 'Сыграли матч или серию манигеймов, загрузили протокол в «Анализ». Определили уровень соперника. Нашли партии, результат которых не устраивает, и передали их в «Ошибки».') }}</p>
       </div>
       <button type="button" class="lbg-shotbox" data-lbg-shot="analyze" title="Подробный просмотр на весь экран">
         <img class="lbg-shot lbg-shot--dark" src="/static/screens/analyze-dark.png?t={{ cache_timestamp }}" alt="Сводная статистика матча в сервисе «Анализ»">
@@ -128,9 +144,9 @@
 
     <div class="lbg-step">
       <div>
-        <p class="lbg-step__label">ШАГ 2 · ОШИБКИ</p>
-        <h3>Разобрали ошибки</h3>
-        <p>Выбрали, чьи ошибки смотреть, и прошли их по очереди: почему правильный ход правильный и почему сыграли иначе. Непонятное отправили эксперту кнопкой «Комментарий», важное сохранили скриншотом.</p>
+        <p class="lbg-step__label" {{ lp_attr('steps-p-6') }}>{{ lp_text('steps-p-6', 'ШАГ 2 · ОШИБКИ') }}</p>
+        <h3 {{ lp_attr('steps-h3-7') }}>{{ lp_text('steps-h3-7', 'Разобрали ошибки') }}</h3>
+        <p {{ lp_attr('steps-p-8') }}>{{ lp_text('steps-p-8', 'Выбрали, чьи ошибки смотреть, и прошли их по очереди: почему правильный ход правильный и почему сыграли иначе. Непонятное отправили эксперту кнопкой «Комментарий», важное сохранили скриншотом.') }}</p>
       </div>
       <button type="button" class="lbg-shotbox" data-lbg-shot="hints" title="Подробный просмотр на весь экран">
         <img class="lbg-shot lbg-shot--dark" src="/static/screens/hints-dark.png?t={{ cache_timestamp }}" alt="Позиция и таблица лучших ходов в сервисе «Ошибки»">
@@ -140,9 +156,9 @@
 
     <div class="lbg-step">
       <div>
-        <p class="lbg-step__label">ШАГ 3 · ПОЗИЦИЯ</p>
-        <h3>Проработали позицию</h3>
-        <p>Перенесли позицию из «Ошибок» одной кнопкой. Поменяли положение шашек, счёт, куб и посмотрели, как меняется оценка. Особенно полезно на выбросе, при битве праймов и когда шашка на баре.</p>
+        <p class="lbg-step__label" {{ lp_attr('steps-p-9') }}>{{ lp_text('steps-p-9', 'ШАГ 3 · ПОЗИЦИЯ') }}</p>
+        <h3 {{ lp_attr('steps-h3-10') }}>{{ lp_text('steps-h3-10', 'Проработали позицию') }}</h3>
+        <p {{ lp_attr('steps-p-11') }}>{{ lp_text('steps-p-11', 'Перенесли позицию из «Ошибок» одной кнопкой. Поменяли положение шашек, счёт, куб и посмотрели, как меняется оценка. Особенно полезно на выбросе, при битве праймов и когда шашка на баре.') }}</p>
       </div>
       <button type="button" class="lbg-shotbox" data-lbg-shot="pokaz" title="Подробный просмотр на весь экран">
         <img class="lbg-shot lbg-shot--dark" src="/static/screens/pokaz-dark.png?t={{ cache_timestamp }}" alt="Редактор позиции в сервисе «Позиция»">
@@ -156,39 +172,39 @@
 <section class="lbg-section" id="guides">
   <div class="lbg-panel">
     <div>
-      <h2>Руководства пользователя</h2>
-      <p>К каждому сервису есть подробное руководство: что он умеет, как загрузить протокол и как читать результат анализа. Рекомендую прочитать перед первым запуском.</p>
+      <h2 {{ lp_attr('guides-h2-1') }}>{{ lp_text('guides-h2-1', 'Руководства пользователя') }}</h2>
+      <p {{ lp_attr('guides-p-2') }}>{{ lp_text('guides-p-2', 'К каждому сервису есть подробное руководство: что он умеет, как загрузить протокол и как читать результат анализа. Рекомендую прочитать перед первым запуском.') }}</p>
     </div>
     <div class="lbg-btns">
-      <a class="lbg-btn lbg-btn--primary" href="https://drive.google.com/drive/folders/1Y34SjIabpKGSD7nygeRd8mnYNcyHCWsY?usp=drive_link" target="_blank" rel="noopener">Открыть руководства</a>
-      <a class="lbg-btn lbg-btn--ghost" href="https://drive.google.com/drive/folders/121L8wP5ytrAahWErPEOuh0SxjH4gAKpB" target="_blank" rel="noopener">GNU и Extreme Gammon: сравнение</a>
+      <a class="lbg-btn lbg-btn--primary" href="https://drive.google.com/drive/folders/1Y34SjIabpKGSD7nygeRd8mnYNcyHCWsY?usp=drive_link" target="_blank" rel="noopener" {{ lp_attr('guides-a-3') }}>{{ lp_text('guides-a-3', 'Открыть руководства') }}</a>
+      <a class="lbg-btn lbg-btn--ghost" href="https://drive.google.com/drive/folders/121L8wP5ytrAahWErPEOuh0SxjH4gAKpB" target="_blank" rel="noopener" {{ lp_attr('guides-a-4') }}>{{ lp_text('guides-a-4', 'GNU и Extreme Gammon: сравнение') }}</a>
     </div>
   </div>
 </section>
 
 <section class="lbg-section" id="play">
-  <h2>Где играть</h2>
-  <p class="lbg-section__lead">Протоколы для сервисов берутся с площадок, где вы играете.</p>
+  <h2 {{ lp_attr('play-h2-1') }}>{{ lp_text('play-h2-1', 'Где играть') }}</h2>
+  <p class="lbg-section__lead" {{ lp_attr('play-p-2') }}>{{ lp_text('play-p-2', 'Протоколы для сервисов берутся с площадок, где вы играете.') }}</p>
   <div class="lbg-grid">
     <article class="lbg-card">
-      <h3>PPNards</h3>
-      <p>Игровая площадка для коротких нард. Протокол сыгранного матча скачивается сразу после игры.</p>
-      <a class="lbg-card__link" href="https://app.ppn-app.ru/share/v2/club?t=1722613517&amp;mkid=79585ae6-4c7c-4a04-8cb6-5d176db3f41e&amp;l=ru" target="_blank" rel="noopener">Начать играть на PPNards →</a>
+      <h3 {{ lp_attr('play-h3-3') }}>{{ lp_text('play-h3-3', 'PPNards') }}</h3>
+      <p {{ lp_attr('play-p-4') }}>{{ lp_text('play-p-4', 'Игровая площадка для коротких нард. Протокол сыгранного матча скачивается сразу после игры.') }}</p>
+      <a class="lbg-card__link" href="https://app.ppn-app.ru/share/v2/club?t=1722613517&amp;mkid=79585ae6-4c7c-4a04-8cb6-5d176db3f41e&amp;l=ru" target="_blank" rel="noopener" {{ lp_attr('play-a-5') }}>{{ lp_text('play-a-5', 'Начать играть на PPNards →') }}</a>
     </article>
     <article class="lbg-card">
-      <h3>Приложение ФНР</h3>
-      <p>Турниры Федерации нардов России. Приложение доступно в RuStore.</p>
-      <a class="lbg-card__link" href="https://www.rustore.ru/catalog/app/com.khrustalnydom.fnr" target="_blank" rel="noopener">Установить из RuStore →</a>
+      <h3 {{ lp_attr('play-h3-6') }}>{{ lp_text('play-h3-6', 'Приложение ФНР') }}</h3>
+      <p {{ lp_attr('play-p-7') }}>{{ lp_text('play-p-7', 'Турниры Федерации нардов России. Приложение доступно в RuStore.') }}</p>
+      <a class="lbg-card__link" href="https://www.rustore.ru/catalog/app/com.khrustalnydom.fnr" target="_blank" rel="noopener" {{ lp_attr('play-a-8') }}>{{ lp_text('play-a-8', 'Установить из RuStore →') }}</a>
     </article>
   </div>
 </section>
 
 <section class="lbg-section lbg-section--last">
   <div class="lbg-cta">
-    <h2>Остались вопросы?</h2>
-    <p>Напишите мне о сервисах, подписке, вариантах оплаты или индивидуальном обучении — отвечу и помогу начать.</p>
+    <h2 {{ lp_attr('play-h2-9') }}>{{ lp_text('play-h2-9', 'Остались вопросы?') }}</h2>
+    <p {{ lp_attr('play-p-10') }}>{{ lp_text('play-p-10', 'Напишите мне о сервисах, подписке, вариантах оплаты или индивидуальном обучении — отвечу и помогу начать.') }}</p>
     <div class="lbg-btns">
-      <a class="lbg-btn lbg-btn--primary" href="https://t.me/Learn_bg" target="_blank" rel="noopener">Написать</a>
+      <a class="lbg-btn lbg-btn--primary" href="https://t.me/Learn_bg" target="_blank" rel="noopener" {{ lp_attr('play-a-11') }}>{{ lp_text('play-a-11', 'Написать') }}</a>
       <a class="lbg-btn lbg-btn--ghost" href="{{ login_url }}">{{ login_label }}</a>
     </div>
   </div>
@@ -197,12 +213,12 @@
 <footer class="lbg-footer">
   <div class="lbg-footer__inner">
     <div>
-      <b>LearnBG</b>
-      <p class="lbg-footer__note">Сервисы, помогающие учиться играть в короткие нарды</p>
+      <b {{ lp_attr('play-b-12') }}>{{ lp_text('play-b-12', 'LearnBG') }}</b>
+      <p class="lbg-footer__note" {{ lp_attr('play-p-13') }}>{{ lp_text('play-p-13', 'Сервисы, помогающие учиться играть в короткие нарды') }}</p>
     </div>
     <div class="lbg-footer__links">
-      <a href="mailto:learnbg24@gmail.com">learnbg24@gmail.com</a>
-      <a href="https://t.me/Learn_bg" target="_blank" rel="noopener">Telegram</a>
+      <a href="mailto:learnbg24@gmail.com" {{ lp_attr('play-a-14') }}>{{ lp_text('play-a-14', 'learnbg24@gmail.com') }}</a>
+      <a href="https://t.me/Learn_bg" target="_blank" rel="noopener" {{ lp_attr('play-a-15') }}>{{ lp_text('play-a-15', 'Telegram') }}</a>
       <a href="{{ login_url }}">{{ login_label }}</a>
     </div>
   </div>
@@ -275,5 +291,8 @@
   })();
 </script>
 
+{% if can_edit %}
+<script src="/static/js/web_landing_edit.js?t={{ cache_timestamp }}"></script>
+{% endif %}
 </body>
 </html>
