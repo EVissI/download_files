@@ -3258,6 +3258,7 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         folder_id: int | None = None,
         label: str | None = None,
         skip_owner_filter: bool = False,
+        statuses: tuple[str, ...] | None = None,
     ) -> list[HintViewerWebUpload]:
         owner_filter = (
             []
@@ -3276,6 +3277,9 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
                 *service_filter,
                 *self._folder_membership_filter(folder_id),
                 *self._label_membership_filter(user_id, label),
+                *(
+                    [HintViewerWebUpload.status.in_(statuses)] if statuses else []
+                ),
             )
             .order_by(HintViewerWebUpload.id.desc())
             .limit(limit)
@@ -3290,6 +3294,7 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         folder_id: int | None = None,
         label: str | None = None,
         skip_owner_filter: bool = False,
+        statuses: tuple[str, ...] | None = None,
     ) -> int:
         owner_filter = (
             []
@@ -3309,6 +3314,9 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
                 *service_filter,
                 *self._folder_membership_filter(folder_id),
                 *self._label_membership_filter(user_id, label),
+                *(
+                    [HintViewerWebUpload.status.in_(statuses)] if statuses else []
+                ),
             )
         )
         return int(result.scalar_one() or 0)

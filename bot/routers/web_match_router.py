@@ -385,6 +385,12 @@ async def web_match_history(
         service=WEB_SERVICE_MATCH,
         folder_id=scoped_folder_id,
         label=label,
+        # Пока матч считается, он виден в текущих задачах. В историю попадает
+        # готовым целиком — с таблицей, PDF и кнопками разбора.
+        statuses=(
+            HintViewerWebUploadStatus.DONE.value,
+            HintViewerWebUploadStatus.ERROR.value,
+        ),
     )
     return {"ok": True, "folder_id": scoped_folder_id, **payload}
 

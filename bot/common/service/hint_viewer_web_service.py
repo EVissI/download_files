@@ -912,7 +912,13 @@ async def list_history_for_user(
     service: str = WEB_SERVICE_HINTS,
     folder_id: int | None = None,
     label: str | None = None,
+    statuses: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
+    """
+    statuses — оставить в выдаче только записи с этими статусами. Нужен
+    «Всё о матче»: пока матч не готов целиком, он живёт в текущих задачах
+    и в историю не попадает.
+    """
     empty = {
         "items": [],
         "page": 1,
@@ -949,6 +955,7 @@ async def list_history_for_user(
                 folder_id=scoped_folder_id,
                 label=scoped_label,
                 skip_owner_filter=skip_owner_filter,
+                statuses=statuses,
             )
         pages = max(1, (total + size - 1) // size) if total else 1
         current = max(1, int(page or 1))
@@ -974,6 +981,7 @@ async def list_history_for_user(
                 folder_id=scoped_folder_id,
                 label=scoped_label,
                 skip_owner_filter=skip_owner_filter,
+                statuses=statuses,
             )
             items = [_history_item(row) for row in rows]
         upload_ids: list[int] = []

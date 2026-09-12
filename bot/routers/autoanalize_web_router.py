@@ -1080,20 +1080,27 @@ async def _load_analyze_for_user(user_id: int, game_id: str):
     gid = (game_id or "").strip()
     if not gid:
         raise HTTPException(status_code=400, detail="Нужен game_id")
-    from sqlalchemy import select
+    from sqlalchemy import and_, or_, select
 
     from bot.db.database import async_session_maker
     from bot.db.models import HintViewerWebUpload
 
     async with async_session_maker() as db:
-        # «Всё о матче» хранит стадию анализа в своей записи (service="match"),
-        # поэтому таблица и PDF должны принимать оба сервиса.
+        # В «Анализе» id стадии лежит в game_id, а у «Всё о матче» там стадия
+        # ошибок, и анализ хранится отдельно — в analyze_game_id. Ищем по обоим,
+        # иначе таблица, PDF и отправка в плеер отвечают «Анализ не найден».
         result = await db.execute(
             select(HintViewerWebUpload).where(
                 HintViewerWebUpload.user_id == int(user_id),
-                HintViewerWebUpload.game_id == gid,
-                HintViewerWebUpload.service.in_(
-                    (WEB_SERVICE_ANALYZE, WEB_SERVICE_MATCH)
+                or_(
+                    and_(
+                        HintViewerWebUpload.service == WEB_SERVICE_ANALYZE,
+                        HintViewerWebUpload.game_id == gid,
+                    ),
+                    and_(
+                        HintViewerWebUpload.service == WEB_SERVICE_MATCH,
+                        HintViewerWebUpload.analyze_game_id == gid,
+                    ),
                 ),
             )
         )
