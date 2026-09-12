@@ -128,6 +128,15 @@ html[data-theme="light"] .hw-hint__arrow {
     flex: 1;
     min-width: 0;
 }
+/* Игроки папки — отдельной строкой под навигацией и подпапками. */
+.folder-view-bar__players {
+    flex: 0 0 100%;
+    min-width: 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--web-text-soft);
+    overflow-wrap: anywhere;
+}
 .folder-view-bar__chip,
 .folder-view-bar__nav {
     border: 1px solid var(--web-border);

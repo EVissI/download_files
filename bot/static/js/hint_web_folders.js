@@ -22,6 +22,7 @@
     var titleEl = document.getElementById('historyCardTitle');
     var folderViewBar = document.getElementById('folderViewBar');
     var folderViewSubfolders = document.getElementById('folderViewSubfolders');
+    var folderViewPlayers = document.getElementById('folderViewPlayers');
     var folderViewBackBtn = document.getElementById('folderViewBackBtn');
     var folderViewHomeBtn = document.getElementById('folderViewHomeBtn');
     var folderViewUpBtn = document.getElementById('folderViewUpBtn');
@@ -278,11 +279,29 @@
         navigateToFolder(prev, false, true);
     }
 
+    // «Иванов Иван (5.2), Петров Пётр (12.8)» — средний PR по матчам папки.
+    // Ключ players приходит только от «Анализа», у остальных сервисов строки нет.
+    function renderFolderPlayers(players) {
+        if (!folderViewPlayers) return;
+        var list = Array.isArray(players) ? players : [];
+        if (!list.length) {
+            folderViewPlayers.textContent = '';
+            folderViewPlayers.hidden = true;
+            return;
+        }
+        folderViewPlayers.textContent = list.map(function (row) {
+            var name = String(row.name || row.name_norm || '').trim() || '—';
+            return name + ' (' + Number(row.avg_pr || 0).toFixed(1) + ')';
+        }).join(', ');
+        folderViewPlayers.hidden = false;
+    }
+
     function renderFolderBar(meta) {
         if (!folderViewBar || !folderViewSubfolders) return;
         folderViewBar.classList.add('is-visible');
         folderViewBar.setAttribute('aria-hidden', 'false');
         folderViewSubfolders.innerHTML = '';
+        renderFolderPlayers(meta && meta.players);
         if (!meta || !meta.folder) {
             if (titleEl) titleEl.textContent = 'История загрузок';
             updateNavButtons();
@@ -1048,7 +1067,11 @@
             closeInsertConfirm();
             historyApi.clearSelection();
             updateSelectionUi();
-            if (historyApi.getFolderId() === pending.folderId) historyApi.pollHistory();
+            if (historyApi.getFolderId() === pending.folderId) {
+                historyApi.pollHistory();
+                // состав папки изменился — пересобираем строку с игроками
+                loadCurrentFolderView();
+            }
             window.alert('В папку «' + pending.folderName + '» добавлено файлов: ' + added + '.');
         }).catch(function (e) {
             if (insertMsg) insertMsg.textContent = e.message || String(e);

@@ -3096,6 +3096,48 @@ class WebAnalyzePlayerStatDAO(BaseDAO[WebAnalyzePlayerStat]):
         result = await self._session.execute(query)
         return list(result.scalars().all())
 
+    async def list_players_for_uploads(self, folder_id: int) -> list[dict]:
+        """
+        Игроки и их средний PR по матчам, лежащим в папке.
+
+        Считаем по game_id самих загрузок, а не по владельцу статистики:
+        общая папка видна и тому, кто её не загружал.
+        """
+        games = (
+            select(HintViewerWebUpload.game_id)
+            .join(
+                HintWebFolderItem,
+                HintWebFolderItem.upload_id == HintViewerWebUpload.id,
+            )
+            .where(
+                HintWebFolderItem.folder_id == int(folder_id),
+                HintViewerWebUpload.game_id.is_not(None),
+            )
+        )
+        result = await self._session.execute(
+            select(
+                self.model.player_name_norm,
+                func.max(self.model.player_name).label("player_name"),
+                func.avg(self.model.snowie_error_rate).label("avg_pr"),
+                func.count(self.model.id).label("games"),
+            )
+            .where(self.model.game_id.in_(games))
+            .group_by(self.model.player_name_norm)
+            .order_by(
+                func.count(self.model.id).desc(),
+                func.max(self.model.player_name).asc(),
+            )
+        )
+        return [
+            {
+                "name": str(player_name or ""),
+                "name_norm": str(name_norm or ""),
+                "avg_pr": float(avg_pr or 0),
+                "games": int(games_count or 0),
+            }
+            for name_norm, player_name, avg_pr, games_count in result.all()
+        ]
+
     async def delete_player_rows(
         self,
         player_name_norm: str,
