@@ -47,10 +47,16 @@ class LandingSaveBody(BaseModel):
 
 def _build_helpers(overrides: dict[str, dict[str, Any]]):
     """
-    Две функции для шаблона:
-      lp_attr('hero.title') → data-lp="hero.title" style="…"
+    Три функции для шаблона:
+      lp_attr('hero.title')  → data-lp="hero.title" style="…"
       lp_text('hero.title', 'Текст по умолчанию') → актуальный текст
+      lp_defaults()          → JSON с исходниками подменённых ключей
+
+    Исходники нужны кнопке «Сброс» в редакторе: страница уже отдана с
+    подменённым текстом, и вернуть шаблонный вариант браузеру больше неоткуда.
+    Собираются по ходу рендера, поэтому lp_defaults() вызывается в конце body.
     """
+    defaults: dict[str, str] = {}
 
     def lp_attr(key: str) -> Markup:
         entry = overrides.get(key) or {}
@@ -66,9 +72,17 @@ def _build_helpers(overrides: dict[str, dict[str, Any]]):
 
     def lp_text(key: str, default: str = "") -> str:
         text = (overrides.get(key) or {}).get("text")
-        return text if text else default
+        if not text:
+            return default
+        defaults[key] = default
+        return text
 
-    return lp_attr, lp_text
+    def lp_defaults() -> Markup:
+        # "</" экранируем, иначе текст с тегом закроет <script> раньше времени
+        raw = json.dumps(defaults, ensure_ascii=False).replace("</", "<\\/")
+        return Markup(raw)
+
+    return lp_attr, lp_text, lp_defaults
 
 
 async def _is_landing_admin(request: Request) -> bool:
@@ -90,7 +104,7 @@ async def web_landing(request: Request):
     is_admin = bool((session or {}).get("is_admin"))
 
     overrides = await get_overrides()
-    lp_attr, lp_text = _build_helpers(overrides)
+    lp_attr, lp_text, lp_defaults = _build_helpers(overrides)
 
     return templates.TemplateResponse(
         "landing.html",
@@ -102,6 +116,7 @@ async def web_landing(request: Request):
             "can_edit": is_admin,
             "lp_attr": lp_attr,
             "lp_text": lp_text,
+            "lp_defaults": lp_defaults,
         },
     )
 

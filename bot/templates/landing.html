@@ -292,6 +292,7 @@
 </script>
 
 {% if can_edit %}
+<script id="lp-defaults" type="application/json">{{ lp_defaults() }}</script>
 <script src="/static/js/web_landing_edit.js?t={{ cache_timestamp }}"></script>
 {% endif %}
 </body>

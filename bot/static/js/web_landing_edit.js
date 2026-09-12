@@ -23,13 +23,31 @@
     var state = {};          // key -> {text, style}
     var panel = null;
 
+    // Исходники из шаблона для ключей, которые уже переопределены в БД.
+    // Для остальных исходник — то, что пришло в разметке.
+    var defaults = {};
+    try {
+        var raw = document.getElementById('lp-defaults');
+        if (raw) defaults = JSON.parse(raw.textContent) || {};
+    } catch (e) {
+        defaults = {};
+    }
+
     nodes.forEach(function (el) {
         var key = el.getAttribute('data-lp');
-        state[key] = {
-            text: el.textContent.trim(),
-            style: parseStyle(el)
-        };
+        var text = el.textContent.trim();
+        state[key] = { text: text, style: parseStyle(el) };
+        if (!(key in defaults)) defaults[key] = text;
     });
+
+    function defaultText(key) {
+        return defaults[key] != null ? defaults[key] : '';
+    }
+
+    function isPristine(key) {
+        var st = state[key];
+        return st.text === defaultText(key) && !Object.keys(st.style).length;
+    }
 
     function parseStyle(el) {
         var raw = el.getAttribute('data-lp-style');
@@ -82,7 +100,7 @@
             '  <label class="lbg-ed__color" title="Цвет обводки">',
             '    <input type="color" data-act="stroke-color" value="#000000">',
             '  </label>',
-            '  <button type="button" data-act="clear" title="Сбросить оформление">Сброс</button>',
+            '  <button type="button" data-act="clear" title="Вернуть исходный текст и оформление">Сброс</button>',
             '</div>',
             '<div class="lbg-ed__actions">',
             '  <span class="lbg-ed__counter" id="lbg-ed-counter"></span>',
@@ -155,8 +173,11 @@
                 st.stroke = { width: 1, color: (sc && sc.value) || '#000000' };
             }
         } else if (act === 'clear') {
-            state[keyOf(active)].style = {};
-            st = state[keyOf(active)].style;
+            var k = keyOf(active);
+            active.textContent = defaultText(k);
+            state[k].text = defaultText(k);
+            state[k].style = {};
+            st = state[k].style;
         }
 
         applyStyle(active, st);
@@ -263,6 +284,9 @@
 
         var items = keys.map(function (key) {
             var st = state[key].style;
+            // пустой текст без стилей сервер понимает как «вернуть шаблонный»
+            // и удаляет строку — именно это нужно после «Сброса»
+            if (isPristine(key)) return { key: key, text: '', style: null };
             return {
                 key: key,
                 text: state[key].text,
