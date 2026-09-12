@@ -145,3 +145,51 @@ html[data-theme="light"] .lbg-shotbox .lbg-shot--light{display:block}
   }
   .lbg .lbg-nav__cta:hover{background:var(--lbg-accent-2);color:#fff}
 }
+
+/* Десктоп: базовые размеры макета на широких экранах читаются мелко —
+   поднимаем типографику и воздух примерно на 15%. Ниже 1024px всё как было. */
+@media (min-width:1024px){
+  .lbg .lbg-logo{font-size:1.25rem}
+  .lbg-nav a{font-size:.95rem;padding:9px 13px}
+  .lbg-theme{width:46px;height:46px}
+  .lbg-theme svg{width:20px;height:20px}
+  .lbg-btn{height:54px;padding:0 30px;font-size:1.08rem}
+  .lbg-btn--sm{height:46px;padding:0 20px;font-size:.95rem}
+
+  .lbg-hero__inner{padding:120px 20px 108px}
+  .lbg-eyebrow{font-size:.92rem}
+  .lbg-hero h1{font-size:clamp(3.6rem,4.4vw,4.6rem)}
+  .lbg-hero__lead{font-size:clamp(1.2rem,1.4vw,1.45rem);max-width:60ch}
+
+  .lbg-section{padding:108px 20px 24px}
+  .lbg-section--last{padding-bottom:116px}
+  .lbg-section h2{font-size:clamp(2.3rem,2.7vw,3rem)}
+  .lbg-section__lead{font-size:clamp(1.1rem,1.2vw,1.25rem);max-width:62ch}
+
+  .lbg-grid{margin-top:48px;gap:20px}
+  .lbg-card{padding:30px}
+  .lbg-card__num{font-size:.85rem}
+  .lbg-card h3{margin-top:14px;font-size:1.4rem}
+  .lbg-card p{margin-top:12px;font-size:1.08rem}
+  .lbg-card__link{padding-top:24px;font-size:1.02rem}
+
+  .lbg-steps{margin-top:48px;gap:28px}
+  .lbg-step{padding:40px;gap:36px}
+  .lbg-step__label{font-size:.85rem}
+  .lbg-step h3{font-size:1.6rem}
+  .lbg-step p{font-size:1.12rem}
+
+  .lbg-panel{padding:48px;gap:40px}
+  .lbg-panel h2{font-size:clamp(2rem,2.4vw,2.5rem)}
+  .lbg-panel p{font-size:1.12rem}
+  .lbg-panel .lbg-btn{font-size:1.02rem}
+
+  .lbg-cta{padding:64px 48px}
+  .lbg-cta h2{font-size:clamp(2.2rem,2.6vw,2.8rem)}
+  .lbg-cta p{font-size:1.15rem}
+
+  .lbg-footer__inner{padding:48px 20px}
+  .lbg-footer b{font-size:1.15rem}
+  .lbg-footer__note{font-size:1rem}
+  .lbg-footer__links{font-size:1rem;gap:24px}
+}
