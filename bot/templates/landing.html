@@ -20,17 +20,22 @@
 <header class="lbg-header">
   <div class="lbg-header__inner">
     <a class="lbg-logo" href="#top">LearnBG</a>
-    <nav class="lbg-nav" aria-label="Разделы">
+    <nav class="lbg-nav" id="lbg-menu" aria-label="Разделы">
       <a href="#services">Сервисы</a>
       <a href="#steps">По шагам</a>
       <a href="#guides">Руководства</a>
       <a href="#play">Где играть</a>
+      <a class="lbg-nav__cta" href="{{ login_url }}">{{ login_label }}</a>
     </nav>
     <div class="lbg-header__actions">
       <button type="button" class="lbg-theme" id="lbg-theme-toggle" title="Сменить тему" aria-label="Сменить тему">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.2 3.5A8.5 8.5 0 1 0 20.5 14 7 7 0 0 1 15.2 3.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
       </button>
-      <a class="lbg-btn lbg-btn--sm lbg-btn--primary" href="{{ login_url }}">{{ login_label }}</a>
+      <a class="lbg-btn lbg-btn--sm lbg-btn--primary lbg-header__login" href="{{ login_url }}">{{ login_label }}</a>
+      <button type="button" class="lbg-burger" id="lbg-burger" aria-label="Меню" aria-expanded="false" aria-controls="lbg-menu">
+        <svg class="lbg-burger__open" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        <svg class="lbg-burger__close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      </button>
     </div>
   </div>
 </header>
@@ -209,6 +214,34 @@
 </div>
 
 <script>
+  (function () {
+    var burger = document.getElementById('lbg-burger');
+    var menu = document.getElementById('lbg-menu');
+    if (!burger || !menu) return;
+
+    function setOpen(open) {
+      menu.classList.toggle('is-open', open);
+      burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    burger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      setOpen(!menu.classList.contains('is-open'));
+    });
+    menu.addEventListener('click', function (e) {
+      if (e.target.closest('a')) setOpen(false);
+    });
+    document.addEventListener('click', function (e) {
+      if (!menu.contains(e.target) && !burger.contains(e.target)) setOpen(false);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') setOpen(false);
+    });
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > 820) setOpen(false);
+    });
+  })();
+
   document.getElementById('lbg-theme-toggle').addEventListener('click', function () {
     var root = document.documentElement;
     var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
