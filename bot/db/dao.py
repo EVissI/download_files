@@ -3219,9 +3219,17 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         await self._session.flush()
         return row
 
-    def _user_service_filter(self, user_id: int, service: str | None):
+    def _user_service_filter(
+        self, user_id: int, service: str | tuple[str, ...] | None
+    ):
+        """service может быть кортежем: одни и те же действия применимы
+        и к записям «Ошибок», и к записям «Всё о матче»."""
         conditions = [HintViewerWebUpload.user_id == user_id]
-        if service:
+        if isinstance(service, (tuple, list, set)):
+            values = tuple(service)
+            if values:
+                conditions.append(HintViewerWebUpload.service.in_(values))
+        elif service:
             conditions.append(HintViewerWebUpload.service == service)
         return conditions
 
@@ -3538,7 +3546,7 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         self,
         user_id: int,
         game_id: str,
-        service: str | None = None,
+        service: str | tuple[str, ...] | None = None,
     ) -> HintViewerWebUpload | None:
         gid = (game_id or "").strip()
         if not gid:
@@ -3557,13 +3565,17 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
     async def find_by_game(
         self,
         game_id: str,
-        service: str | None = None,
+        service: str | tuple[str, ...] | None = None,
     ) -> HintViewerWebUpload | None:
         gid = (game_id or "").strip()
         if not gid:
             return None
         conditions = [HintViewerWebUpload.game_id == gid]
-        if service:
+        if isinstance(service, (tuple, list, set)):
+            values = tuple(service)
+            if values:
+                conditions.append(HintViewerWebUpload.service.in_(values))
+        elif service:
             conditions.append(HintViewerWebUpload.service == service)
         result = await self._session.execute(
             select(HintViewerWebUpload)

@@ -44,6 +44,7 @@ from bot.common.service.hint_viewer_web_service import (
     SESSION_TTL_SEC,
     WEB_SERVICE_ANALYZE,
     WEB_SERVICE_HINTS,
+    WEB_SERVICE_MATCH,
     append_session_job,
     attach_device_cookie,
     authenticate_web_user,
@@ -158,6 +159,11 @@ def _read_players(path: str) -> tuple[str, str]:
         return extract_player_names(content)
     except Exception:
         return "Red", "Black"
+
+
+# Эти действия одинаково применимы к разобранному матчу независимо от того,
+# пришёл он из «Ошибок» или из «Всё о матче» — там та же стадия разбора.
+HINT_ACTION_SERVICES = (WEB_SERVICE_HINTS, WEB_SERVICE_MATCH)
 
 
 async def _collect_mat_files(
@@ -1142,7 +1148,7 @@ async def web_hints_send_to_analyze(request: Request, game_id: str = ""):
 
     async with async_session_maker() as db:
         dao = HintViewerWebUploadDAO(db)
-        row = await dao.find_for_user_game(int(user_id), gid, "hints")
+        row = await dao.find_for_user_game(int(user_id), gid, HINT_ACTION_SERVICES)
     if not row:
         raise HTTPException(status_code=404, detail="Анализ не найден")
 
@@ -1223,9 +1229,10 @@ async def web_hints_send_to_user(request: Request, body: SendHintToUserBody):
 
     async with async_session_maker() as db:
         dao = HintViewerWebUploadDAO(db)
-        source = await dao.find_for_user_game(user_id, gid, WEB_SERVICE_HINTS)
+        # исходник может быть как из «Ошибок», так и из «Всё о матче»
+        source = await dao.find_for_user_game(user_id, gid, HINT_ACTION_SERVICES)
         if source is None:
-            source = await dao.find_by_game(gid, WEB_SERVICE_HINTS)
+            source = await dao.find_by_game(gid, HINT_ACTION_SERVICES)
         if source is None or source.status != HintViewerWebUploadStatus.DONE.value:
             raise HTTPException(status_code=404, detail="Анализ не найден")
         filename = source.original_filename or f"{gid}.mat"
@@ -1236,6 +1243,7 @@ async def web_hints_send_to_user(request: Request, body: SendHintToUserBody):
         if not target or target.is_expired():
             raise HTTPException(status_code=404, detail="Пользователь не найден")
 
+        # получателю запись всегда кладётся в «Ошибки», поэтому проверяем там же
         existing = await dao.find_for_user_game(
             target_user_id, gid, WEB_SERVICE_HINTS
         )
@@ -1305,7 +1313,7 @@ async def web_hints_save_match_analysis(request: Request, game_id: str = ""):
 
     async with async_session_maker() as db:
         dao = HintViewerWebUploadDAO(db)
-        row = await dao.find_for_user_game(int(user_id), gid, WEB_SERVICE_HINTS)
+        row = await dao.find_for_user_game(int(user_id), gid, HINT_ACTION_SERVICES)
     if not row:
         raise HTTPException(status_code=404, detail="Анализ не найден")
     if row.status != HintViewerWebUploadStatus.DONE.value:
@@ -1360,7 +1368,7 @@ async def web_hints_order_analysis(request: Request, game_id: str = ""):
 
     async with async_session_maker() as db:
         dao = HintViewerWebUploadDAO(db)
-        row = await dao.find_for_user_game(user_id, gid, "hints")
+        row = await dao.find_for_user_game(user_id, gid, HINT_ACTION_SERVICES)
         if not row:
             raise HTTPException(status_code=404, detail="Анализ не найден")
         filename = row.original_filename or f"{gid}.mat"
