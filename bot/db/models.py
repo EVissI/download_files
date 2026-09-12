@@ -1785,6 +1785,10 @@ class HintViewerWebUploadStatus(str, enum.Enum):
 class WebUploadService(str, enum.Enum):
     HINTS = "hints"
     BOARD = "board"
+    # «Всё о матче»: одна запись на матч, внутри неё последовательно проходят
+    # анализ и разбор ошибок. В историю «Анализа» и «Ошибок» такие записи
+    # не попадают — они отфильтрованы по service.
+    MATCH = "match"
 
 
 class HintViewerWebUpload(Base):
@@ -1805,6 +1809,11 @@ class HintViewerWebUpload(Base):
     )
     session_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     game_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    # Только для service="match": game_id второй стадии (разбор ошибок).
+    # В game_id при этом лежит идентификатор стадии анализа.
+    hints_game_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, index=True
+    )
     job_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
     batch_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)

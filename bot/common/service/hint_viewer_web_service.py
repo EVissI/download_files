@@ -34,6 +34,7 @@ _DEVICE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 WEB_SERVICE_HINTS = "hints"
 WEB_SERVICE_BOARD = "board"
 WEB_SERVICE_ANALYZE = "analyze"
+WEB_SERVICE_MATCH = "match"
 WEB_ALLOWED_NEXT = (
     "/web/hints",
     "/web/board",
@@ -42,6 +43,7 @@ WEB_ALLOWED_NEXT = (
     "/web/pip-count",
     "/web/match-analysis",
     "/web/analyze",
+    "/web/match",
     "/web/support",
 )
 
@@ -111,6 +113,15 @@ def web_hint_open_links(
         {"label": f"Ошибки {red}", "url": f"{base}&error=2"},
         {"label": f"Ошибки {black}", "url": f"{base}&error=3"},
     ]
+
+
+def web_match_open_links(
+    hints_game_id: str | None,
+    red_player: str | None = None,
+    black_player: str | None = None,
+) -> list[dict[str, str]]:
+    """Кнопки просмотра ошибок для матча — те же режимы, что в «Ошибках»."""
+    return web_hint_open_links(hints_game_id, red_player, black_player)
 
 
 def web_board_open_links(game_id: str | None) -> list[dict[str, str]]:
@@ -264,6 +275,36 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
             "show_current_jobs": False,
             "allow_multiple": True,
             "open_on_upload": True,
+            "dropzone_hint": ".mat или .zip",
+            "accept": ".mat,.zip,application/zip",
+            "dropzone_title": "Нажмите или перетащите файлы сюда",
+            "enable_user_folders": True,
+            "enable_user_labels": True,
+        }
+    if service == WEB_SERVICE_MATCH:
+        return {
+            "web_service": WEB_SERVICE_MATCH,
+            "api_base": "/web/match",
+            "page_title": "Всё о матче",
+            "intro_text": (
+                "Загрузите матч или пачку — файл пройдёт сначала анализ, "
+                "затем разбор ошибок. В истории соберётся всё сразу: таблица, "
+                "PDF, просмотр ошибок и отправка в плеер."
+            ),
+            "upload_ok_message": "Файл(ы) приняты, полный разбор запущен.",
+            "login_url": "/login?next=/web/match",
+            "card_title": "Новый матч",
+            "upload_btn_label": "Разобрать полностью",
+            "show_current_jobs": True,
+            "allow_multiple": True,
+            "open_on_upload": False,
+            "history_expandable": True,
+            "pdf_download": True,
+            "send_to_board": True,
+            "send_to_user": True,
+            "match_view_links": True,
+            "order_analysis": True,
+            "save_match_analysis": True,
             "dropzone_hint": ".mat или .zip",
             "accept": ".mat,.zip,application/zip",
             "dropzone_title": "Нажмите или перетащите файлы сюда",
@@ -440,6 +481,7 @@ async def destroy_session(token: str | None, *, user_id: int | None = None) -> N
     await redis_client.delete(_jobs_key(token, WEB_SERVICE_HINTS))
     await redis_client.delete(_jobs_key(token, WEB_SERVICE_BOARD))
     await redis_client.delete(_jobs_key(token, WEB_SERVICE_ANALYZE))
+    await redis_client.delete(_jobs_key(token, WEB_SERVICE_MATCH))
     if uid:
         await _unregister_session_index(int(uid), token, device_id)
 
@@ -610,6 +652,35 @@ async def record_history(**kwargs: Any) -> None:
         logger.exception("hint viewer web history write failed: {}", e)
 
 
+async def mark_match_hints_started(job_id: str | None, hints_game_id: str | None) -> None:
+    """
+    Сервис «Всё о матче»: анализ закончен, поставлена вторая стадия.
+    Пишем её game_id и возвращаем записи статус «в работе» — иначе матч
+    выглядел бы готовым, пока ошибки ещё считаются.
+    """
+    if not job_id or not hints_game_id:
+        return
+    try:
+        from sqlalchemy import select, update
+
+        from bot.db.database import async_session_maker
+        from bot.db.models import HintViewerWebUpload
+
+        async with async_session_maker() as session:
+            await session.execute(
+                update(HintViewerWebUpload)
+                .where(HintViewerWebUpload.job_id == job_id)
+                .values(
+                    hints_game_id=str(hints_game_id),
+                    status="processing",
+                    finished_at=None,
+                )
+            )
+            await session.commit()
+    except Exception:
+        logger.exception("match: не удалось отметить стадию ошибок job_id=%s", job_id)
+
+
 async def update_history_status(
     job_id: str | None,
     status: str,
@@ -719,16 +790,35 @@ def _history_item(row) -> dict[str, Any]:
     game_id = row.game_id
     service = getattr(row, "service", None) or WEB_SERVICE_HINTS
     is_analyze = service == WEB_SERVICE_ANALYZE
-    links = (
-        []
-        if is_analyze
-        else (
+    is_match = service == WEB_SERVICE_MATCH
+    hints_game_id = getattr(row, "hints_game_id", None)
+
+    # У матча game_id — это стадия анализа, а ссылки на ошибки строятся по
+    # hints_game_id. Таблица доступна раньше кнопок: как только анализ готов
+    # (признак — появился hints_game_id), хотя ошибки ещё считаются.
+    analyze_ready = bool(game_id) and (row.status == "done" or bool(hints_game_id))
+    if is_match:
+        links = (
+            web_hint_open_links(hints_game_id, row.red_player, row.black_player)
+            if row.status == "done" and hints_game_id
+            else []
+        )
+    elif is_analyze:
+        links = []
+    else:
+        links = (
             web_open_links_for_service(service, game_id, row.red_player, row.black_player)
             if row.status == "done" and game_id
             else []
         )
-    )
     return {
+        "hints_game_id": hints_game_id,
+        "analyze_ready": analyze_ready if is_match else None,
+        "stage": (
+            ("hints" if hints_game_id and row.status != "done" else
+             "done" if row.status == "done" else "analyze")
+            if is_match else None
+        ),
         "id": row.id,
         "kind": "single",
         "batch_id": row.batch_id,
@@ -740,7 +830,10 @@ def _history_item(row) -> dict[str, Any]:
         "game_id": game_id,
         "view_url": links[0]["url"] if links else None,
         "open_links": links,
-        "expandable": bool(is_analyze and row.status == "done" and game_id),
+        "expandable": bool(
+            (is_analyze and row.status == "done" and game_id)
+            or (is_match and analyze_ready)
+        ),
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "finished_at": row.finished_at.isoformat() if row.finished_at else None,
         "saved_to_match_analysis": False,

@@ -752,7 +752,12 @@
         const sendToBoardEnabled = {{ send_to_board|default(false)|tojson }};
         const sendToAnalyzeEnabled = {{ send_to_analyze|default(false)|tojson }};
         const sendToUserEnabled = {{ (is_admin|default(false) and send_to_user|default(false))|tojson }};
-        const saveMatchAnalysisEnabled = {{ (is_admin|default(false) and (web_service|default('') == 'hints'))|tojson }};
+        const saveMatchAnalysisEnabled = {{ (is_admin|default(false) and (web_service|default('') in ['hints', 'match']))|tojson }};
+        // «Всё о матче»: в одной строке живут обе стадии, поэтому у кнопок
+        // разные идентификаторы — таблица и плеер по game_id стадии анализа,
+        // просмотр ошибок и заказ по hints_game_id.
+        const matchMode = {{ (web_service|default('') == 'match')|tojson }};
+        const orderAnalysisEnabled = {{ order_analysis|default(false)|tojson }};
         const enableUserFolders = {{ enable_user_folders|default(false)|tojson }};
         const enableUserLabels = {{ enable_user_labels|default(false)|tojson }};
         const enablePlayerStats = {{ enable_player_stats|default(false)|tojson }};
@@ -931,7 +936,7 @@
 
         function orderAnalysisButton(gameId) {
             if (!gameId) return '';
-            if (!sendToAnalyzeEnabled && !sendToHintsEnabled) return '';
+            if (!sendToAnalyzeEnabled && !sendToHintsEnabled && !orderAnalysisEnabled) return '';
             return `<button type="button" class="btn ghost history-pdf-btn" data-order-analysis="${escapeHtml(gameId)}">Заказать анализ</button>`;
         }
 
@@ -1243,13 +1248,28 @@
         function renderHistoryFile(item, nested) {
             const players = [item.red_player, item.black_player].filter(Boolean).join(' vs ');
             const gameId = item.game_id ? String(item.game_id) : '';
-            const open = historyExpandable
-                ? ''
-                : openMatchButtons(
+            const hintsId = item.hints_game_id ? String(item.hints_game_id) : '';
+            let open;
+            if (matchMode) {
+                // кнопки разбора ошибок появляются, когда готова вторая стадия
+                const matchExtra = (item.status === 'done' && hintsId)
+                    ? orderAnalysisButton(hintsId)
+                        + matchAnalysisButton(hintsId, item.saved_to_match_analysis)
+                        + sendToUserButton(hintsId, item.original_filename)
+                    : '';
+                open = openMatchButtons(item.open_links, matchExtra);
+            } else if (historyExpandable) {
+                open = '';
+            } else {
+                open = openMatchButtons(
                     item.open_links,
                     item.status === 'done' ? statsButton(gameId) + orderAnalysisButton(gameId) + matchAnalysisButton(gameId, item.saved_to_match_analysis) + sendToUserButton(gameId, item.original_filename) : ''
                 );
-            const err = item.error_message ? `<div class="muted">${escapeHtml(item.error_message)}</div>` : '';
+            }
+            let err = item.error_message ? `<div class="muted">${escapeHtml(item.error_message)}</div>` : '';
+            if (!err && matchMode && item.stage === 'hints') {
+                err = '<div class="muted">Анализ готов, считаются ошибки…</div>';
+            }
             const expandable = !nested && !!(historyExpandable && item.expandable && gameId);
             const isOpen = expandable && openGameIds.has(gameId);
             const extraClass = [
@@ -1261,7 +1281,9 @@
             const titleHtml = expandable
                 ? `<div class="history-item-title-row"><strong>${escapeHtml(item.original_filename || 'Матч')}</strong>${toggle}</div>`
                 : `<strong>${escapeHtml(item.original_filename || 'Матч')}</strong>`;
-            const pdf = (item.status === 'done' && gameId) ? analyzeFileActions(gameId) : '';
+            const pdf = matchMode
+                ? ((item.analyze_ready && gameId) ? pdfLink(gameId) + boardButton(gameId) : '')
+                : ((item.status === 'done' && gameId) ? analyzeFileActions(gameId) : '');
             const cachedTable = gameId && loadedTables[gameId]
                 ? loadedTables[gameId]
                 : (item.table_html || '');

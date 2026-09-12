@@ -271,7 +271,13 @@ async def _enqueue_single(
     web_uid: int,
     session_token: str,
     user_id: int | None,
+    history_service: str | None = WEB_SERVICE_HINTS,
 ) -> dict[str, Any]:
+    """
+    history_service=None — не создавать запись истории. Так ставит задачу
+    сервис «Всё о матче»: у него уже есть своя запись, к которой вторая
+    стадия просто дописывает hints_game_id.
+    """
     game_id = random_filename(ext="")
     job_id = f"web_hint_{abs(web_uid)}_{uuid.uuid4().hex[:8]}"
     red_player, black_player = _read_players(local_mat)
@@ -291,17 +297,19 @@ async def _enqueue_single(
         "estimated_time": estimated_time,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    await record_history(
-        session_id=session_token,
-        user_id=user_id,
-        original_filename=filename,
-        game_id=game_id,
-        job_id=job_id,
-        red_player=red_player,
-        black_player=black_player,
-        status=HintViewerWebUploadStatus.QUEUED.value,
-    )
-    await append_session_job(session_token, job_payload)
+    if history_service:
+        await record_history(
+            session_id=session_token,
+            user_id=user_id,
+            original_filename=filename,
+            game_id=game_id,
+            job_id=job_id,
+            red_player=red_player,
+            black_player=black_player,
+            status=HintViewerWebUploadStatus.QUEUED.value,
+            service=history_service,
+        )
+        await append_session_job(session_token, job_payload)
     task_queue.enqueue(
         "bot.workers.hint_worker.analyze_backgammon_job",
         game_id,

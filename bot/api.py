@@ -29,6 +29,7 @@ from bot.routers.match_analysis_router import match_analysis_api_router
 from bot.routers.content_cards_web_router import content_cards_web_api_router
 from bot.routers.short_board import short_board_api_router
 from bot.routers.web_landing_router import web_landing_api_router
+from bot.routers.web_match_router import web_match_api_router
 from bot.routers.web_support_router import web_support_api_router
 from bot.flask_admin.appbuilder_main import create_app
 from bot.common.utils.tg_auth import verify_telegram_webapp_data
@@ -350,6 +351,7 @@ app.include_router(hint_viewer_web_api_router, prefix="")
 app.include_router(board_viewer_web_api_router, prefix="")
 app.include_router(pokaz_web_api_router, prefix="")
 app.include_router(autoanalize_web_api_router, prefix="")
+app.include_router(web_match_api_router, prefix="")
 app.include_router(match_analysis_api_router, prefix="")
 app.include_router(content_cards_web_api_router, prefix="")
 app.include_router(web_support_api_router, prefix="")

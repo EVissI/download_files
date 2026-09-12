@@ -38,6 +38,7 @@ from bot.common.service.hint_viewer_web_service import (
     COOKIE_NAME,
     HISTORY_PAGE_SIZE,
     WEB_SERVICE_ANALYZE,
+    WEB_SERVICE_MATCH,
     append_session_job,
     list_history_for_user,
     list_session_jobs,
@@ -159,8 +160,10 @@ async def _run_gnubg_exclusive(path: str, file_type: str) -> tuple[Any, str]:
             await redis_client.delete(ANALYZE_GNU_LOCK_KEY)
 
 
-async def _patch_job(token: str, job_id: str, mutator) -> dict[str, Any] | None:
-    return await patch_session_job(token, job_id, mutator, WEB_SERVICE_ANALYZE)
+async def _patch_job(
+    token: str, job_id: str, mutator, service: str = WEB_SERVICE_ANALYZE
+) -> dict[str, Any] | None:
+    return await patch_session_job(token, job_id, mutator, service)
 
 
 async def _worker_loop() -> None:
@@ -190,12 +193,15 @@ async def _process_file_item(item: dict[str, Any]) -> None:
     game_id = item["game_id"]
     kind = item.get("kind") or "single"
     user_id = item.get("user_id")
+    service = item.get("service") or WEB_SERVICE_ANALYZE
+    chain_hints = bool(item.get("chain_hints"))
     await redis_client.set(
         ANALYZE_ACTIVE_KEY.format(game_id=game_id), "1", expire=ANALYZE_GNU_LOCK_TTL
     )
     try:
         await _process_file_item_inner(
-            token, job_id, filename, src_path, file_type, game_id, kind, user_id
+            token, job_id, filename, src_path, file_type, game_id, kind, user_id,
+            service=service, chain_hints=chain_hints,
         )
     finally:
         await redis_client.delete(ANALYZE_ACTIVE_KEY.format(game_id=game_id))
@@ -210,6 +216,9 @@ async def _process_file_item_inner(
     game_id: str,
     kind: str,
     user_id: int | None = None,
+    *,
+    service: str = WEB_SERVICE_ANALYZE,
+    chain_hints: bool = False,
 ) -> None:
     async def mark_processing() -> None:
         await update_history_status(
@@ -229,7 +238,7 @@ async def _process_file_item_inner(
             else:
                 job["status"] = HintViewerWebUploadStatus.PROCESSING.value
 
-        updated = await _patch_job(token, job_id, mutator)
+        updated = await _patch_job(token, job_id, mutator, service)
         if updated:
             await sync_history_from_job(updated)
 
@@ -270,7 +279,7 @@ async def _process_file_item_inner(
                 job["error"] = message
                 job["finished_at"] = now
 
-        updated = await _patch_job(token, job_id, mutator)
+        updated = await _patch_job(token, job_id, mutator, service)
         if updated:
             await sync_history_from_job(updated)
 
@@ -340,12 +349,72 @@ async def _process_file_item_inner(
                 job["expandable"] = True
                 job["finished_at"] = now
 
-        updated = await _patch_job(token, job_id, mutator)
+        updated = await _patch_job(token, job_id, mutator, service)
         if updated:
             await sync_history_from_job(updated)
+        if chain_hints:
+            await _chain_to_hints(
+                token=token,
+                job_id=job_id,
+                filename=filename,
+                src_path=src_path,
+                user_id=user_id,
+            )
     except Exception as exc:
         logger.exception("web autoanalyze failed for {}: {}", filename, exc)
         await fail(str(exc)[:400] or "Не удалось проанализировать файл")
+
+
+async def _chain_to_hints(
+    *,
+    token: str,
+    job_id: str,
+    filename: str,
+    src_path: str,
+    user_id: int | None,
+) -> None:
+    """
+    Вторая стадия сервиса «Всё о матче»: тот же исходник уходит в очередь
+    разбора ошибок. Отдельную запись истории не заводим — дописываем
+    hints_game_id в запись матча и возвращаем ей статус «в работе».
+    """
+    from bot.common.service.hint_viewer_web_service import (
+        mark_match_hints_started,
+    )
+    from bot.routers.hint_viewer_web_router import _enqueue_single
+
+    try:
+        source = Path(src_path)
+        if not source.is_file():
+            raise FileNotFoundError(src_path)
+        mat_name = filename
+        if not str(mat_name).lower().endswith(".mat"):
+            mat_name = f"{Path(mat_name).stem}.mat"
+        web_uid = -int(user_id) if user_id else 0
+        job = await _enqueue_single(
+            local_mat=str(source),
+            filename=mat_name,
+            web_uid=web_uid,
+            session_token=token,
+            user_id=user_id,
+            history_service=None,
+        )
+        await mark_match_hints_started(job_id, job.get("game_id"))
+        logger.info(
+            "match: стадия ошибок запущена job_id={} hints_game_id={}",
+            job_id,
+            job.get("game_id"),
+        )
+    except Exception as exc:
+        logger.exception("match: не удалось запустить стадию ошибок: {}", exc)
+        from bot.common.service.hint_viewer_web_service import update_history_status
+
+        await update_history_status(
+            job_id,
+            HintViewerWebUploadStatus.ERROR.value,
+            error_message="Анализ готов, но разбор ошибок не запустился",
+            finished=True,
+        )
 
 
 async def _collect_files(uploads: list[UploadFile], workdir: str) -> list[tuple[str, str]]:
@@ -955,14 +1024,18 @@ async def _load_analyze_for_user(user_id: int, game_id: str):
     from bot.db.models import HintViewerWebUpload
 
     async with async_session_maker() as db:
+        # «Всё о матче» хранит стадию анализа в своей записи (service="match"),
+        # поэтому таблица и PDF должны принимать оба сервиса.
         result = await db.execute(
             select(HintViewerWebUpload).where(
                 HintViewerWebUpload.user_id == int(user_id),
                 HintViewerWebUpload.game_id == gid,
-                HintViewerWebUpload.service == WEB_SERVICE_ANALYZE,
+                HintViewerWebUpload.service.in_(
+                    (WEB_SERVICE_ANALYZE, WEB_SERVICE_MATCH)
+                ),
             )
         )
-        row = result.scalar_one_or_none()
+        row = result.scalars().first()
         if row is None:
             raise HTTPException(status_code=404, detail="Анализ не найден")
         original_filename = row.original_filename
