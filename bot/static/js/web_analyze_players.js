@@ -13,6 +13,13 @@
     var excelBtn = document.getElementById('playerStatsExcelBtn');
     var excelAllBtn = document.getElementById('playerStatsExcelAllBtn');
     var resultEl = document.getElementById('playerStatsResult');
+    var resetBtn = document.getElementById('playerStatsResetBtn');
+    var resetModal = document.getElementById('playerStatsResetModal');
+    var resetOverlay = document.getElementById('playerStatsResetOverlay');
+    var resetSubtitle = document.getElementById('playerStatsResetSubtitle');
+    var resetMsg = document.getElementById('playerStatsResetMsg');
+    var resetCancelBtn = document.getElementById('playerStatsResetCancelBtn');
+    var resetConfirmBtn = document.getElementById('playerStatsResetConfirmBtn');
     var tabs = document.querySelectorAll('[data-analyze-tab]');
     var players = [];
     var currentTab = 'uploads';
@@ -61,7 +68,7 @@
 
     function fillPlayers(list) {
         players = Array.isArray(list) ? list : [];
-        if (!playerSelect) return;
+        if (!playerSelect) return Promise.resolve();
         var prev = selectedPlayerName();
         playerSelect.innerHTML = '';
         if (!players.length) {
@@ -70,7 +77,7 @@
             empty.textContent = 'Нет игроков';
             playerSelect.appendChild(empty);
             setMsg('Пока нет игроков. Загрузите матч на анализ.', true);
-            return;
+            return Promise.resolve();
         }
         players.forEach(function (row) {
             var opt = document.createElement('option');
@@ -84,7 +91,7 @@
             return (row.name_norm || row.name) === prev;
         });
         playerSelect.value = found ? prev : (players[0].name_norm || players[0].name || '');
-        loadDetail();
+        return loadDetail();
     }
 
     function loadUsers() {
@@ -113,7 +120,7 @@
         return fetch(withOwner(apiBase + '/api/players'), { credentials: 'same-origin' })
             .then(function (r) { return r.json(); })
             .then(function (data) {
-                fillPlayers((data && data.players) || []);
+                return fillPlayers((data && data.players) || []);
             })
             .catch(function () {
                 fillPlayers([]);
@@ -172,6 +179,92 @@
         window.location.assign(url);
     }
 
+    // --- обнуление статистики игрока ----------------------------------------
+
+    function selectedPlayerLabel() {
+        var value = selectedPlayerName();
+        var found = null;
+        players.forEach(function (row) {
+            if ((row.name_norm || row.name) === value) found = row;
+        });
+        return (found && (found.name || found.name_norm)) || value;
+    }
+
+    // Чистим ровно то, что сейчас показано: свои матчи, матчи выбранного
+    // пользователя либо всех сразу — область берётся из того же селекта.
+    function resetScopeText() {
+        if (!isAdmin || !ownerSelect) return 'по вашим матчам';
+        if (!String(ownerSelect.value || '').trim()) return 'по всем пользователям';
+        var opt = ownerSelect.options[ownerSelect.selectedIndex];
+        return 'по пользователю ' + ((opt && opt.textContent) || '');
+    }
+
+    function setResetMsg(text) {
+        if (!resetMsg) return;
+        resetMsg.textContent = text || '';
+        resetMsg.hidden = !text;
+    }
+
+    function closeResetModal() {
+        if (!resetModal) return;
+        resetModal.classList.remove('is-open');
+        resetModal.setAttribute('aria-hidden', 'true');
+        if (resetConfirmBtn) resetConfirmBtn.disabled = false;
+        setResetMsg('');
+    }
+
+    function openResetModal() {
+        if (!resetModal) return;
+        var name = selectedPlayerName();
+        if (!name) {
+            setMsg('Выберите игрока.', true);
+            return;
+        }
+        if (resetSubtitle) {
+            resetSubtitle.textContent = 'Все матчи игрока «' + selectedPlayerLabel() +
+                '» ' + resetScopeText() + ' будут удалены из статистики. ' +
+                'Отменить это нельзя.';
+        }
+        setResetMsg('');
+        if (resetConfirmBtn) resetConfirmBtn.disabled = false;
+        resetModal.classList.add('is-open');
+        resetModal.setAttribute('aria-hidden', 'false');
+        if (resetCancelBtn) resetCancelBtn.focus();
+    }
+
+    function confirmReset() {
+        var name = selectedPlayerName();
+        if (!name) {
+            closeResetModal();
+            return;
+        }
+        if (resetConfirmBtn) resetConfirmBtn.disabled = true;
+        setResetMsg('Удаляем…');
+        var url = withOwner(apiBase + '/api/players/reset?name=' + encodeURIComponent(name));
+        fetch(url, { method: 'POST', credentials: 'same-origin' })
+            .then(function (r) {
+                return r.json().then(function (data) {
+                    if (!r.ok || !data || !data.ok) {
+                        throw new Error((data && data.detail) || ('HTTP ' + r.status));
+                    }
+                    return data;
+                });
+            })
+            .then(function (data) {
+                closeResetModal();
+                return loadPlayers().then(function () {
+                    setMsg(
+                        'Статистика обнулена, удалено записей: ' + Number(data.removed || 0),
+                        true
+                    );
+                });
+            })
+            .catch(function (err) {
+                if (resetConfirmBtn) resetConfirmBtn.disabled = false;
+                setResetMsg('Не удалось обнулить: ' + err.message);
+            });
+    }
+
     function downloadExcelAll() {
         if (!players.length) {
             setMsg('Пока нет игроков для выгрузки.', true);
@@ -214,6 +307,23 @@
     if (excelAllBtn) {
         excelAllBtn.addEventListener('click', downloadExcelAll);
     }
+    if (resetBtn) {
+        resetBtn.addEventListener('click', openResetModal);
+    }
+    if (resetCancelBtn) {
+        resetCancelBtn.addEventListener('click', closeResetModal);
+    }
+    if (resetOverlay) {
+        resetOverlay.addEventListener('click', closeResetModal);
+    }
+    if (resetConfirmBtn) {
+        resetConfirmBtn.addEventListener('click', confirmReset);
+    }
+    document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape' && resetModal && resetModal.classList.contains('is-open')) {
+            closeResetModal();
+        }
+    });
 
     loadUsers();
     if (location.hash === '#stats' || location.hash === '#players') {

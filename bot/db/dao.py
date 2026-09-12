@@ -3096,6 +3096,19 @@ class WebAnalyzePlayerStatDAO(BaseDAO[WebAnalyzePlayerStat]):
         result = await self._session.execute(query)
         return list(result.scalars().all())
 
+    async def delete_player_rows(
+        self,
+        player_name_norm: str,
+        web_user_id: int | None,
+    ) -> int:
+        """Удаляет статистику игрока. web_user_id=None — по всем владельцам."""
+        if not player_name_norm:
+            return 0
+        filters = self._owner_filter(web_user_id)
+        filters.append(self.model.player_name_norm == player_name_norm)
+        result = await self._session.execute(delete(self.model).where(*filters))
+        return int(result.rowcount or 0)
+
     async def add_if_missing(self, **values) -> WebAnalyzePlayerStat | None:
         from sqlalchemy.dialects.postgresql import insert as pg_insert
 

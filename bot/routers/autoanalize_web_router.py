@@ -1451,6 +1451,39 @@ async def web_analyze_player_detail(
     return {"ok": True, "owner_user_id": scope_id, **payload}
 
 
+@autoanalize_web_api_router.post("/web/analyze/api/players/reset")
+async def web_analyze_player_reset(
+    request: Request,
+    name: str = "",
+    owner_user_id: int | None = None,
+):
+    """
+    Обнуляет статистику одного игрока. Область та же, что и у просмотра:
+    обычный пользователь чистит только свои матчи, админ — выбранного
+    пользователя, а если в списке «Все пользователи», то у всех сразу.
+    """
+    _token, session = await _require_session(request)
+    from bot.db.dao import WebAnalyzePlayerStatDAO
+    from bot.db.database import async_session_maker
+
+    name_norm = normalize_player_name(name)
+    if not name_norm:
+        raise HTTPException(status_code=400, detail="Укажите игрока")
+    scope_id = _stats_scope_user_id(session, owner_user_id)
+    async with async_session_maker() as db:
+        removed = await WebAnalyzePlayerStatDAO(db).delete_player_rows(
+            name_norm, scope_id
+        )
+        await db.commit()
+    logger.info(
+        "web analyze player stats reset: игрок={} строк={} область={}",
+        name_norm,
+        removed,
+        scope_id if scope_id is not None else "все",
+    )
+    return JSONResponse({"ok": True, "removed": removed})
+
+
 @autoanalize_web_api_router.get("/web/analyze/api/players/excel")
 async def web_analyze_player_excel(
     request: Request,

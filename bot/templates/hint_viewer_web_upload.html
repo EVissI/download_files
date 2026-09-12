@@ -173,6 +173,16 @@
             padding: 8px 10px;
             font: inherit;
         }
+        /* Обнуление — действие необратимое, поэтому отделено цветом от Excel. */
+        .player-stats-reset {
+            margin-left: auto;
+            border: 1px solid var(--web-danger-border);
+            color: var(--web-error-fg);
+        }
+        .player-stats-reset:hover {
+            background: var(--web-error-bg);
+            color: var(--web-error-fg);
+        }
         .player-stats-result {
             margin: 8px 0 0;
             padding: 12px 14px;
@@ -569,8 +579,22 @@
                     <button type="button" class="primary" id="playerStatsShowBtn">Показать</button>
                     <button type="button" class="ghost" id="playerStatsExcelBtn">Excel</button>
                     <button type="button" class="ghost" id="playerStatsExcelAllBtn">Excel всех</button>
+                    <button type="button" class="ghost player-stats-reset" id="playerStatsResetBtn">Обнулить</button>
                 </div>
                 <div id="playerStatsResult" class="player-stats-result muted">Выберите игрока.</div>
+            </div>
+        </div>
+        <div id="playerStatsResetModal" class="hw-link-modal" aria-hidden="true">
+            <div id="playerStatsResetOverlay" class="hw-link-modal__overlay"></div>
+            <div class="hw-link-modal__box" role="dialog" aria-modal="true"
+                 aria-labelledby="playerStatsResetTitle">
+                <h3 id="playerStatsResetTitle" class="hw-link-modal__title">Обнулить статистику</h3>
+                <p id="playerStatsResetSubtitle" class="hw-link-modal__subtitle"></p>
+                <div id="playerStatsResetMsg" class="hw-link-modal__msg" hidden></div>
+                <div class="hw-link-modal__actions">
+                    <button id="playerStatsResetCancelBtn" type="button" class="hw-link-modal__btn">Отмена</button>
+                    <button id="playerStatsResetConfirmBtn" type="button" class="hw-link-modal__btn hw-link-modal__btn--danger">Обнулить</button>
+                </div>
             </div>
         </div>
         {% endif %}
