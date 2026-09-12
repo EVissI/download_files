@@ -124,6 +124,47 @@ def web_match_open_links(
     return web_hint_open_links(hints_game_id, red_player, black_player)
 
 
+def match_players_title(
+    red_player: str | None,
+    black_player: str | None,
+    pr_by_player: dict[str, float] | None = None,
+) -> str:
+    """
+    «Иванов Иван - Петров Пётр», а с PR за матч — «Иванов Иван (5.2) - …».
+
+    Пустая строка, если имён нет: вызывающий тогда подставляет имя файла.
+    """
+    names = [" ".join(str(name or "").split()) for name in (red_player, black_player)]
+    if not all(names):
+        return ""
+    parts = []
+    for name in names:
+        pr = (pr_by_player or {}).get(_player_key(name))
+        parts.append(f"{name} ({pr:.1f})" if pr is not None else name)
+    return " - ".join(parts)
+
+
+def _player_key(name: str) -> str:
+    return " ".join(str(name or "").split()).casefold()
+
+
+def match_pr_by_player(analyze_payload: dict[str, Any] | None) -> dict[str, float]:
+    """PR каждого игрока из результата анализа (hints/autoanalyze json в S3)."""
+    players = (analyze_payload or {}).get("players")
+    if not isinstance(players, dict):
+        return {}
+    result: dict[str, float] = {}
+    for name, metrics in players.items():
+        if not isinstance(metrics, dict):
+            continue
+        raw = metrics.get("snowie_error_rate")
+        try:
+            result[_player_key(name)] = abs(float(raw))
+        except (TypeError, ValueError):
+            continue
+    return result
+
+
 def web_board_open_links(game_id: str | None) -> list[dict[str, str]]:
     if not game_id:
         return []

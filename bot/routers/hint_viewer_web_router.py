@@ -53,6 +53,8 @@ from bot.common.service.hint_viewer_web_service import (
     device_id_from_request,
     list_history_for_user,
     list_session_jobs,
+    match_players_title,
+    match_pr_by_player,
     mark_saved_to_match_analysis,
     prune_session_jobs,
     record_history,
@@ -1271,6 +1273,23 @@ async def web_hints_send_to_user(request: Request, body: SendHintToUserBody):
             created = True
         await db.commit()
 
+    # В сообщении получателю имя файла ни о чём не говорит — пишем, кто играл.
+    # Для «Всё о матче» рядом с игроком показываем его PR за этот матч; если
+    # анализ ещё не доехал, обходимся именами.
+    pr_by_player: dict[str, float] = {}
+    if target_service == WEB_SERVICE_MATCH and analyze_game_id:
+        try:
+            payload = await asyncio.to_thread(
+                s3.get_autoanalyze_json, analyze_game_id
+            )
+            pr_by_player = match_pr_by_player(payload)
+        except Exception as exc:
+            logger.warning(
+                "Не удалось прочитать PR матча {}: {}", analyze_game_id, exc
+            )
+    match_title = match_players_title(red_player, black_player, pr_by_player)
+    label = match_title or filename
+
     notify_sent = False
     notify_error = None
     try:
@@ -1285,9 +1304,9 @@ async def web_hints_send_to_user(request: Request, body: SendHintToUserBody):
                 author_role=WebSupportAuthorRole.ADMIN.value,
                 author_login=admin_login,
                 body=(
-                    f"Вам отправлен матч «{filename}» в раздел «Всё о матче»."
+                    f"Вам отправлен матч «{label}» в раздел «Всё о матче»."
                     if target_service == WEB_SERVICE_MATCH
-                    else f"Вам отправлен анализ ошибок «{filename}»."
+                    else f"Вам отправлен анализ ошибок «{label}»."
                 ),
                 source_path=(
                     "/web/match"

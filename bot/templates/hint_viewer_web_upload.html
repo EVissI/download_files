@@ -806,24 +806,44 @@
             if (uploadBtn) uploadBtn.disabled = selectedFiles.length === 0 || uploading;
         }
 
+        // Список разрешённых расширений берём из accept самого инпута: у сервисов
+        // он разный (Анализ принимает ещё .sgf, .gam и прочее), и хардкод здесь
+        // отсекал их ещё до отправки на сервер.
+        const acceptExts = (fileInput ? (fileInput.getAttribute('accept') || '') : '')
+            .split(',')
+            .map(part => part.trim().toLowerCase())
+            .filter(part => part.charAt(0) === '.');
+
+        function fileExt(file) {
+            const name = (file && file.name || '').toLowerCase();
+            const dot = name.lastIndexOf('.');
+            return dot >= 0 ? name.slice(dot) : '';
+        }
+
         function isMatFile(file) {
-            var name = (file && file.name || '').toLowerCase();
-            return name.endsWith('.mat') || name.endsWith('.bin');
+            const ext = fileExt(file);
+            return ext === '.mat' || ext === '.bin';
         }
 
         function isZipFile(file) {
-            return (file && file.name || '').toLowerCase().endsWith('.zip');
+            return fileExt(file) === '.zip';
         }
 
         function isAllowedUpload(file) {
-            return isMatFile(file) || isZipFile(file);
+            if (!acceptExts.length) return isMatFile(file) || isZipFile(file);
+            return acceptExts.indexOf(fileExt(file)) !== -1;
+        }
+
+        function acceptHint() {
+            const shown = acceptExts.filter(ext => ext !== '.bin');
+            return shown.length ? shown.join(', ') : '.mat, .zip';
         }
 
         function addFiles(list) {
             const incoming = Array.from(list || []).filter(isAllowedUpload);
             if (!incoming.length) {
                 uploadStatus.textContent = allowMultiple
-                    ? 'Нужны файлы .mat или .zip'
+                    ? 'Подходят файлы: ' + acceptHint()
                     : 'Нужен один файл .mat';
                 return;
             }
