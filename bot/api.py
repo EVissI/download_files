@@ -53,7 +53,6 @@ from bot.common.utils.static_assets import get_static_asset_version
 from bot.common.utils.http_security import (
     SecurityHeadersMiddleware,
     client_ip,
-    is_secret_probe,
     rate_limit_exceeded,
 )
 from bot.config import settings
@@ -157,40 +156,6 @@ app = FastAPI(
     openapi_url=None,
 )
 
-
-class _SkipHintWebPollAccessLogFilter(logging.Filter):
-    """Не логирует частый опрос веб-загрузки матчей."""
-
-    _SKIP = (
-        "/web/hints/api/jobs",
-        "/web/hints/api/history",
-        "/web/board/api/history",
-        "/web/analyze/api/jobs",
-        "/web/analyze/api/history",
-        "/web/support/api/unread",
-        "/web/support/api/thread",
-        "/web/support/api/inbox",
-        "/web/support/api/threads/",
-    )
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        path = ""
-        args = record.args
-        if isinstance(args, dict):
-            path = str(args.get("full_path") or args.get("path") or "")
-        elif isinstance(args, (tuple, list)) and len(args) >= 3:
-            path = str(args[2])
-        if not path:
-            try:
-                path = record.getMessage()
-            except Exception:
-                path = ""
-        if is_secret_probe(path):
-            return False
-        return not any(skip in path for skip in self._SKIP)
-
-
-logging.getLogger("uvicorn.access").addFilter(_SkipHintWebPollAccessLogFilter())
 
 
 @app.on_event("startup")

@@ -90,6 +90,42 @@ def prepare_mat_file_for_gnubg(src: str) -> str:
         fh.write(converted)
     return path
 
+# gnubg изредка не завершается сам (ждёт ввода на неожиданном приглашении или
+# упирается в битый .mat). Без таймаута communicate() висит вечно, поток держит
+# _gnubg_lock — и все последующие анализы в этом процессе встают за ним
+# в очередь. Поэтому запуск всегда ограничен по времени.
+GNUBG_TIMEOUT_SEC = 15 * 60
+
+
+def _run_gnubg_commands(commands: list[str]) -> tuple[str, str, int]:
+    """Запускает gnubg с набором команд. Возвращает (stdout, stderr, код)."""
+    process = subprocess.Popen(
+        ["gnubg", "-t"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+    )
+    try:
+        stdout, stderr = process.communicate(
+            "\n".join(commands), timeout=GNUBG_TIMEOUT_SEC
+        )
+    except subprocess.TimeoutExpired:
+        logger.error(
+            "gnubg не завершился за %s c — снимаю процесс", GNUBG_TIMEOUT_SEC
+        )
+        process.kill()
+        try:
+            process.communicate(timeout=30)
+        except Exception:
+            logger.exception("не удалось дочитать вывод убитого gnubg")
+        raise RuntimeError(
+            "GNU Backgammon не ответил вовремя — попробуйте загрузить матч ещё раз"
+        )
+    return stdout, stderr, process.returncode
+
+
 def analyze_mat_file(file: str, type: str = None) -> tuple:
     """
     Анализирует файл матча или позиции с помощью GNU Backgammon и возвращает статистику в формате JSON,
@@ -105,7 +141,9 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
             raise FileNotFoundError(f"Файл не найден: {file}")
 
         try:
-            subprocess.run(["gnubg", "--version"], check=True, capture_output=True)
+            subprocess.run(
+                ["gnubg", "--version"], check=True, capture_output=True, timeout=30
+            )
         except FileNotFoundError:
             logger.error("GNU Backgammon не установлен или не найден в PATH")
             raise FileNotFoundError("GNU Backgammon не установлен или не найден в PATH")
@@ -152,20 +190,11 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
         ]
 
         with _gnubg_lock:
-            process = subprocess.Popen(
-                ["gnubg", "-t"],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                encoding="utf-8",
-            )
-
-            stdout, stderr = process.communicate("\n".join(gnubg_commands))
+            stdout, stderr, returncode = _run_gnubg_commands(gnubg_commands)
             logger.debug(f"Вывод gnubg:\n{stdout}")
 
             # Если импорт не удался для .gam, пробуем другие команды
-            if process.returncode != 0 and type in ("gam", "empire", "party"):
+            if returncode != 0 and type in ("gam", "empire", "party"):
                 logger.warning(f"Не удалось импортировать .gam файл как {type}: {stderr}")
                 alternative_types = ["gam", "empire", "party"]
                 alternative_types.remove(type)  # Удаляем уже опробованный тип
@@ -178,23 +207,15 @@ def analyze_mat_file(file: str, type: str = None) -> tuple:
                         "show statistics match",
                         "exit",
                     ]
-                    process = subprocess.Popen(
-                        ["gnubg", "-t"],
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
-                        encoding="utf-8",
-                    )
-                    stdout, stderr = process.communicate("\n".join(gnubg_commands))
-                    if process.returncode == 0:
+                    stdout, stderr, returncode = _run_gnubg_commands(gnubg_commands)
+                    if returncode == 0:
                         logger.info(f"Успешный импорт как {alt_type}")
                         break
                 else:
                     logger.error(f"Ошибка выполнения gnubg для всех типов .gam: {stderr}")
                     raise RuntimeError(f"Ошибка выполнения gnubg: {stderr}")
 
-            if process.returncode != 0:
+            if returncode != 0:
                 logger.error(f"Ошибка выполнения gnubg: {stderr}")
                 raise RuntimeError(f"Ошибка выполнения gnubg: {stderr}")
 

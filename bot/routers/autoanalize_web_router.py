@@ -8,10 +8,11 @@ import json
 import os
 import shutil
 import tempfile
+import time
 import threading
 import uuid
 import zipfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -167,7 +168,12 @@ async def _patch_job(
 
 
 async def _worker_loop() -> None:
+    next_cleanup = 0.0
     while True:
+        now = time.monotonic()
+        if now >= next_cleanup:
+            next_cleanup = now + _CLEANUP_EVERY_SEC
+            await cleanup_dead_analyze_tasks()
         try:
             raw = await redis_client.blpop(ANALYZE_PENDING_KEY, timeout=3)
         except Exception:
@@ -179,7 +185,16 @@ async def _worker_loop() -> None:
         try:
             _key, payload = raw
             item = json.loads(payload)
-            await _process_file_item(item)
+            # Загрузка кладёт в очередь одну задачу на всю пачку: файлы внутри
+            # идут строго по очереди, чтобы несколько запусков gnubg не
+            # накладывались друг на друга.
+            if item.get("bundle"):
+                sub_items = item.get("items") or []
+                logger.info("web autoanalyze: пачка из {} файлов", len(sub_items))
+                for sub in sub_items:
+                    await _process_file_item(sub)
+            else:
+                await _process_file_item(item)
         except Exception:
             logger.exception("web autoanalyze worker failed")
 
@@ -522,8 +537,10 @@ async def _prepare_analyze_file(
     kind: str,
     batch_id: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    stored = _persist_source(src_path, filename, game_id)
-    red_player, black_player = _read_players(stored)
+    # Копирование и разбор файла — синхронные и на пачке ощутимо долгие.
+    # В обработчике запроса это вешало весь event loop, поэтому уводим в поток.
+    stored = await asyncio.to_thread(_persist_source, src_path, filename, game_id)
+    red_player, black_player = await asyncio.to_thread(_read_players, stored)
     await record_history(
         session_id=token,
         user_id=user_id,
@@ -562,6 +579,96 @@ async def _push_analyze_work(item: dict[str, Any]) -> None:
     await redis_client.rpush(
         ANALYZE_PENDING_KEY, json.dumps(item, ensure_ascii=False)
     )
+
+
+async def _push_analyze_bundle(items: list[dict[str, Any]]) -> None:
+    """Вся пачка — одна задача очереди, внутри файлы идут последовательно."""
+    if not items:
+        return
+    await _push_analyze_work({"bundle": True, "items": items})
+
+
+# Дольше этого задача считается мёртвой: воркер перезапускался, файл пропал
+# или процесс убили в середине.
+DEAD_TASK_TIMEOUT_SEC = 3 * 60 * 60
+_CLEANUP_EVERY_SEC = 10 * 60
+
+
+def _work_sources(item: dict[str, Any]) -> list[dict[str, Any]]:
+    return item.get("items") or [item] if item.get("bundle") else [item]
+
+
+async def cleanup_dead_analyze_tasks() -> None:
+    """
+    Разбирает завалы: выкидывает из очереди задачи, чей исходник уже удалён
+    (выполнить их всё равно нельзя), и гасит записи, зависшие в работе.
+    Без этого «вечно считающийся» матч остаётся в интерфейсе навсегда.
+    """
+    dropped = 0
+    try:
+        raw_items = await redis_client.lrange(ANALYZE_PENDING_KEY, 0, -1)
+        alive: list[str] = []
+        for raw in raw_items or []:
+            try:
+                item = json.loads(raw)
+            except json.JSONDecodeError:
+                dropped += 1
+                continue
+            sources = _work_sources(item)
+            if sources and all(
+                not Path(str(src.get("src_path") or "")).is_file() for src in sources
+            ):
+                dropped += 1
+                continue
+            alive.append(raw)
+        if dropped:
+            await redis_client.delete(ANALYZE_PENDING_KEY)
+            for raw in alive:
+                await redis_client.rpush(ANALYZE_PENDING_KEY, raw)
+            logger.warning("web autoanalyze: убрано мёртвых задач из очереди: {}", dropped)
+    except Exception:
+        logger.exception("web autoanalyze: чистка очереди не удалась")
+
+    try:
+        from sqlalchemy import select
+
+        from bot.common.service.hint_viewer_web_service import (
+            WEB_SERVICE_MATCH,
+            prune_session_jobs,
+        )
+        from bot.db.database import async_session_maker
+        from bot.db.models import HintViewerWebUpload
+
+        deadline = datetime.now(timezone.utc) - timedelta(seconds=DEAD_TASK_TIMEOUT_SEC)
+        async with async_session_maker() as session:
+            rows = (
+                await session.scalars(
+                    select(HintViewerWebUpload).where(
+                        HintViewerWebUpload.service.in_(
+                            (WEB_SERVICE_ANALYZE, WEB_SERVICE_MATCH)
+                        ),
+                        HintViewerWebUpload.status.in_(("queued", "processing")),
+                        HintViewerWebUpload.created_at < deadline.replace(tzinfo=None),
+                    )
+                )
+            ).all()
+            stale: dict[str, set[str]] = {}
+            for row in rows:
+                row.status = HintViewerWebUploadStatus.ERROR.value
+                row.error_message = "Задача не завершилась — перезапустите разбор"
+                row.finished_at = datetime.now(timezone.utc)
+                if row.session_id and row.job_id:
+                    stale.setdefault(row.session_id, set()).add(row.job_id)
+            if rows:
+                await session.commit()
+                logger.warning("web autoanalyze: погашено зависших записей: {}", len(rows))
+        for token, job_ids in stale.items():
+            for service in (WEB_SERVICE_ANALYZE, WEB_SERVICE_MATCH):
+                await prune_session_jobs(
+                    token, drop_job_ids=job_ids, service=service
+                )
+    except Exception:
+        logger.exception("web autoanalyze: чистка зависших записей не удалась")
 
 
 async def _pending_analyze_game_ids() -> set[str]:

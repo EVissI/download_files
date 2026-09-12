@@ -18,7 +18,9 @@
   fastapi:
     build: .
     container_name: backgammon_api
-    command: uvicorn bot.api:app --host 0.0.0.0 --port 8000 --no-server-header --proxy-headers --forwarded-allow-ips=127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
+    # --no-access-log: строки вида "GET /web/match/api/jobs 200 OK" забивали лог
+    # частым опросом статусов. Доступ пишет nginx, ошибки приложения — loguru.
+    command: uvicorn bot.api:app --host 0.0.0.0 --port 8000 --no-server-header --no-access-log --proxy-headers --forwarded-allow-ips=127.0.0.1,172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
     ports:
       # Наружу API не публикуется: снаружи только nginx (см. сервис nginx ниже).
       # Порт оставлен на localhost для отладки с самого сервера.

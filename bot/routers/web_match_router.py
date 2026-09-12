@@ -98,7 +98,7 @@ async def web_match_upload(request: Request, files: list[UploadFile] = File(...)
 
     from bot.routers.autoanalize_web_router import (
         _prepare_analyze_file,
-        _push_analyze_work,
+        _push_analyze_bundle,
     )
     from bot.routers.hint_viewer_web_router import _collect_mat_files
 
@@ -115,6 +115,7 @@ async def web_match_upload(request: Request, files: list[UploadFile] = File(...)
                 detail=f"За раз можно отправить не больше {MAX_FILES_PER_UPLOAD} матчей",
             )
 
+        works: list[dict[str, Any]] = []
         for local_path, filename in collected:
             game_id = uuid.uuid4().hex[:16]
             job_id = f"web_match_{abs(int(user_id))}_{uuid.uuid4().hex[:8]}"
@@ -130,6 +131,7 @@ async def web_match_upload(request: Request, files: list[UploadFile] = File(...)
             # стадию ошибок запустит сам обработчик анализа, когда досчитает
             work["service"] = WEB_SERVICE_MATCH
             work["chain_hints"] = True
+            works.append(work)
             job_payload = {
                 "kind": "single",
                 "job_id": job_id,
@@ -137,8 +139,11 @@ async def web_match_upload(request: Request, files: list[UploadFile] = File(...)
                 **meta,
             }
             await append_session_job(token, job_payload, WEB_SERVICE_MATCH)
-            await _push_analyze_work(work)
             started.append(job_payload)
+
+        # Вся пачка уходит одной задачей: файлы разбираются строго по очереди,
+        # а не соревнуются за gnubg между собой и с другими сервисами.
+        await _push_analyze_bundle(works)
 
     logger.info("match: принято матчей {} web_user={}", len(started), user_id)
     return JSONResponse({"ok": True, "jobs": started})
