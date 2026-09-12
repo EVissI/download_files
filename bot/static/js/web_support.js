@@ -392,7 +392,7 @@
 
     var ALLOWED_EXT = {
         '.png': 1, '.jpg': 1, '.jpeg': 1, '.gif': 1, '.webp': 1, '.bmp': 1,
-        '.pdf': 1, '.txt': 1, '.zip': 1, '.mat': 1, '.sgf': 1, '.csv': 1,
+        '.pdf': 1, '.txt': 1, '.zip': 1, '.mat': 1, '.bin': 1, '.sgf': 1, '.csv': 1,
         '.doc': 1, '.docx': 1, '.xlsx': 1,
     };
     var MAX_ATTACH = 5;

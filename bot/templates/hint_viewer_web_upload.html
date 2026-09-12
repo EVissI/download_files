@@ -484,7 +484,7 @@
             <h2>{{ card_title|default('Новый анализ') }}</h2>
             <p class="muted">{{ intro_text|default('Можно загрузить один или несколько .mat, либо zip с матчами. Когда анализ будет готов, появится уведомление.') }}</p>
             <div class="drop" id="dropzone">{{ dropzone_title|default('Нажмите или перетащите файлы сюда') }}<br><span class="muted">{{ dropzone_hint|default('.mat или .zip') }}</span></div>
-            <input id="fileInput" type="file" accept="{{ accept|default('.mat,.zip,application/zip') }}" {% if allow_multiple|default(true) %}multiple{% endif %}>
+            <input id="fileInput" type="file" accept="{{ accept|default('.mat,.bin,.zip,application/zip') }}" {% if allow_multiple|default(true) %}multiple{% endif %}>
             <ul class="file-list" id="fileList"></ul>
             <div class="actions"{% if not allow_multiple|default(true) and open_on_upload|default(false) %} hidden{% endif %}>
                 <button class="primary" id="uploadBtn" type="button" disabled>{{ upload_btn_label|default('Отправить на анализ') }}</button>
@@ -807,7 +807,8 @@
         }
 
         function isMatFile(file) {
-            return (file && file.name || '').toLowerCase().endsWith('.mat');
+            var name = (file && file.name || '').toLowerCase();
+            return name.endsWith('.mat') || name.endsWith('.bin');
         }
 
         function isZipFile(file) {

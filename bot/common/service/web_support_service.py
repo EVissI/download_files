@@ -71,6 +71,7 @@ ALLOWED_EXT = {
     ".txt",
     ".zip",
     ".mat",
+    ".bin",
     ".sgf",
     ".csv",
     ".doc",

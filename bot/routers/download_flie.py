@@ -11,6 +11,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.common.filters.user_info import UserInfo
+from bot.common.utils.match_file_ext import MAT_UPLOAD_EXTENSIONS
 from bot.common.func.func import get_user_file_name
 from bot.common.func.yadisk import save_file_to_yandex_disk
 from bot.common.kbds.inline.answer import get_admin_answer_kb
@@ -49,7 +50,7 @@ async def handle_backgammon_file(
 ):
     try:
         file = message.document
-        if not file.file_name.endswith((".sgf", ".mat")):
+        if not str(file.file_name or "").lower().endswith((".sgf",) + MAT_UPLOAD_EXTENSIONS):
             return await message.answer("Please send .sgf or .mat file.")
 
         # Создаем директорию если её нет

@@ -72,6 +72,7 @@ from bot.common.service.web_support_service import (
     check_rate_limit,
     get_or_create_thread,
 )
+from bot.common.utils.match_file_ext import as_mat_name, is_mat_upload_name
 from bot.common.utils.static_assets import get_static_asset_version
 from bot.common.utils.http_security import (
     client_ip,
@@ -145,7 +146,7 @@ def _safe_filename(name: str) -> str:
 
 
 def _is_mat(name: str) -> bool:
-    return _safe_filename(name).lower().endswith(".mat")
+    return is_mat_upload_name(_safe_filename(name))
 
 
 def _is_zip(name: str) -> bool:
@@ -194,10 +195,11 @@ async def _collect_mat_files(
                             continue
                         if ".." in info.filename.replace("\\", "/"):
                             continue
-                        target = os.path.join(workdir, f"{uuid.uuid4().hex}_{inner}")
+                        stored = as_mat_name(inner)
+                        target = os.path.join(workdir, f"{uuid.uuid4().hex}_{stored}")
                         with zf.open(info) as src, open(target, "wb") as dst:
                             shutil.copyfileobj(src, dst)
-                        collected.append((target, inner))
+                        collected.append((target, stored))
             except zipfile.BadZipFile as exc:
                 raise HTTPException(
                     status_code=400, detail=f"Не удалось открыть архив {raw_name}"
@@ -206,10 +208,11 @@ async def _collect_mat_files(
                 if os.path.isfile(zip_path):
                     os.remove(zip_path)
         elif _is_mat(raw_name):
-            target = os.path.join(workdir, f"{uuid.uuid4().hex}_{raw_name}")
+            stored = as_mat_name(raw_name)
+            target = os.path.join(workdir, f"{uuid.uuid4().hex}_{stored}")
             with open(target, "wb") as f:
                 f.write(data)
-            collected.append((target, raw_name))
+            collected.append((target, stored))
         else:
             raise HTTPException(
                 status_code=400,
@@ -244,9 +247,7 @@ def collect_mat_files_from_bytes(
                         continue
                     if ".." in info.filename.replace("\\", "/"):
                         continue
-                    stored = inner
-                    if stored.lower().endswith(".txt"):
-                        stored = f"{Path(stored).stem}.mat"
+                    stored = as_mat_name(inner)
                     target = os.path.join(workdir, f"{uuid.uuid4().hex}_{stored}")
                     with zf.open(info) as src, open(target, "wb") as dst:
                         shutil.copyfileobj(src, dst)
@@ -261,9 +262,7 @@ def collect_mat_files_from_bytes(
         return collected
     if not _is_mat(raw_name) and not raw_name.lower().endswith(".txt"):
         return []
-    stored = raw_name
-    if stored.lower().endswith(".txt"):
-        stored = f"{Path(stored).stem}.mat"
+    stored = as_mat_name(raw_name)
     target = os.path.join(workdir, f"{uuid.uuid4().hex}_{stored}")
     with open(target, "wb") as f:
         f.write(data)

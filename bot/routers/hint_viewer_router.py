@@ -38,6 +38,7 @@ from redis import Redis
 from bot.db.redis import sync_redis_client, redis_client
 from bot.db.schemas import SUser
 from bot.common.filters.user_info import UserInfo
+from bot.common.utils.match_file_ext import as_mat_name, is_mat_upload_name
 from bot.common.func.hint_viewer import (
     extract_match_length,
     process_mat_file,
@@ -555,7 +556,7 @@ async def handle_sequential_hint_file(
     async with message_lock:
         doc = message.document
         fname = doc.file_name
-        if not (fname.lower().endswith(".mat") or fname.lower().endswith(".zip")):
+        if not (is_mat_upload_name(fname) or fname.lower().endswith(".zip")):
             await message.reply(
                 await message_dao.get_text(
                     "hint_viewer_batch_file_extension_error", user_info.lang_code
@@ -564,6 +565,8 @@ async def handle_sequential_hint_file(
             return
 
         # Скачиваем файл
+        if not fname.lower().endswith(".zip"):
+            fname = as_mat_name(fname)
         temp_path = f"files/{fname}"
         os.makedirs("files", exist_ok=True)
         file = await message.bot.get_file(doc.file_id)
@@ -641,13 +644,14 @@ async def hint_viewer_menu(
     doc = message.document
     fname = doc.file_name
 
-    if not fname.lower().endswith(".mat"):
+    if not is_mat_upload_name(fname):
         await message.reply(
             await message_dao.get_text(
                 "hint_viewer_sin_file_ext_error", user_info.lang_code
             )
         )
         return
+    fname = as_mat_name(fname)
 
     # === Генерируем уникальный ID для этой задачи ===
     game_id = random_filename(ext="")

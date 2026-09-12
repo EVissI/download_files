@@ -64,6 +64,7 @@ from bot.common.service.web_support_service import (
     check_rate_limit,
     get_or_create_thread,
 )
+from bot.common.utils.match_file_ext import as_mat_name
 from bot.common.utils.static_assets import get_static_asset_version
 from bot.config import translator_hub
 from bot.db.models import HintViewerWebUploadStatus, WebSupportAuthorRole, WebUser
@@ -81,7 +82,18 @@ templates.env.globals["cache_timestamp"] = get_static_asset_version()
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
 MAX_ANALYZE_FILES = 40
 ANALYZE_DIR = Path("files/web_analyze")
-ANALYZE_EXTS = {".mat", ".txt", ".sgf", ".sgg", ".bkg", ".gam", ".pos", ".fibs", ".tmg"}
+ANALYZE_EXTS = {
+    ".mat",
+    ".bin",
+    ".txt",
+    ".sgf",
+    ".sgg",
+    ".bkg",
+    ".gam",
+    ".pos",
+    ".fibs",
+    ".tmg",
+}
 ANALYZE_PENDING_KEY = "hint_web:analyze:pending"
 ANALYZE_ACTIVE_KEY = "hint_web:analyze:active:{game_id}"
 ANALYZE_GNU_LOCK_KEY = "hint_web:analyze:gnu_lock"
@@ -118,9 +130,16 @@ def _is_analyze_file(name: str) -> bool:
     return Path(_safe_filename(name)).suffix.lower() in ANALYZE_EXTS
 
 
+def _stored_name(name: str) -> str:
+    """Имя для хранения: .bin от Яндекс.Браузера кладём как обычный .mat."""
+    if Path(name).suffix.lower() == ".bin":
+        return as_mat_name(name)
+    return name
+
+
 def _file_type(name: str) -> str | None:
     ext = Path(name).suffix.lower().lstrip(".")
-    if ext == "txt":
+    if ext in ("txt", "bin"):
         return "mat"
     if ext == "gam":
         return None
@@ -398,10 +417,11 @@ async def _collect_files(uploads: list[UploadFile], workdir: str) -> list[tuple[
                             continue
                         if ".." in info.filename.replace("\\", "/"):
                             continue
-                        target = os.path.join(workdir, f"{uuid.uuid4().hex}_{inner}")
+                        stored = _stored_name(inner)
+                        target = os.path.join(workdir, f"{uuid.uuid4().hex}_{stored}")
                         with zf.open(info) as src, open(target, "wb") as dst:
                             shutil.copyfileobj(src, dst)
-                        collected.append((target, inner))
+                        collected.append((target, stored))
             except zipfile.BadZipFile as exc:
                 raise HTTPException(
                     status_code=400, detail=f"Не удалось открыть архив {raw_name}"
@@ -410,10 +430,11 @@ async def _collect_files(uploads: list[UploadFile], workdir: str) -> list[tuple[
                 if os.path.isfile(zip_path):
                     os.remove(zip_path)
         elif _is_analyze_file(raw_name):
-            target = os.path.join(workdir, f"{uuid.uuid4().hex}_{raw_name}")
+            stored = _stored_name(raw_name)
+            target = os.path.join(workdir, f"{uuid.uuid4().hex}_{stored}")
             with open(target, "wb") as f:
                 f.write(data)
-            collected.append((target, raw_name))
+            collected.append((target, stored))
         else:
             raise HTTPException(
                 status_code=400,

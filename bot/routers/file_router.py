@@ -25,6 +25,11 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from bot.common.filters.user_info import UserInfo
+from bot.common.utils.match_file_ext import (
+    MAT_UPLOAD_EXTENSIONS,
+    as_mat_name,
+    is_mat_upload_name,
+)
 from bot.db.dao import MessagesTextsDAO, UserDAO
 from bot.db.schemas import SUser
 from bot.db.models import User
@@ -62,7 +67,7 @@ class FileSelectionStates:
 
 
 @file_router.message(
-    F.document & F.document.file_name.endswith(".mat"),
+    F.document & F.document.file_name.lower().endswith(MAT_UPLOAD_EXTENSIONS),
     UserInfo(), StateFilter(None),
 )
 async def handle_mat_file_outside_fsm(
@@ -87,7 +92,7 @@ async def handle_mat_file_outside_fsm(
         file = message.document
         
         # Проверяем, что это действительно .mat файл
-        if not file.file_name.lower().endswith(".mat"):
+        if not is_mat_upload_name(file.file_name):
             return
         
         # Создаем временную директорию для файла
@@ -187,7 +192,7 @@ async def handle_file_handler_selection(
             files_dir = os.path.join(os.getcwd(), "files", dir_name)
             os.makedirs(files_dir, exist_ok=True)
             
-            file_name = original_file_name.replace(" ", "").replace(".txt", ".mat")
+            file_name = as_mat_name(original_file_name.replace(" ", ""))
             file_path = os.path.join(files_dir, file_name)
             
             # Копируем файл
@@ -316,7 +321,7 @@ async def handle_auto_type_selection(
         # Перемещаем файл в нужное место
         files_dir = os.path.join(os.getcwd(), "files")
         os.makedirs(files_dir, exist_ok=True)
-        file_name = original_file_name.replace(" ", "").replace(".txt", ".mat")
+        file_name = as_mat_name(original_file_name.replace(" ", ""))
         file_path = os.path.join(files_dir, file_name)
         
         shutil.copy(temp_file_path, file_path)
