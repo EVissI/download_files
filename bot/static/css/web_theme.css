@@ -114,6 +114,9 @@ html[data-theme="light"] {
 .web-cabinet-header .service-nav a {
     flex: 0 0 auto;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     color: var(--web-text-nav);
     text-decoration: none;
     padding: 8px 10px;
@@ -122,6 +125,13 @@ html[data-theme="light"] {
     font-size: 0.85rem;
     font-family: inherit;
     line-height: 1.2;
+}
+/* Иконки пунктов: цвет наследуется от ссылки, поэтому отдельных правил
+   для активного пункта и светлой темы не нужно. */
+.web-cabinet-header .service-nav__icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
 }
 .web-cabinet-header .service-nav a.active,
 .web-cabinet-header .service-nav a.active:hover,
