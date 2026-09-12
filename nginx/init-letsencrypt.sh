@@ -10,11 +10,14 @@ set -eu
 cd "$(dirname "$0")/.."
 
 [ -f .env ] || { echo "Нет .env в корне проекта"; exit 1; }
-# shellcheck disable=SC1091
-. ./.env
+# .env читаем построчно, а НЕ через `. ./.env`: docker-овский .env не обязан
+# быть валидным shell-скриптом — символы вроде # ? ~ в паролях ломают sh.
+env_value() {
+    grep -E "^$1=" .env 2>/dev/null | tail -n 1 | cut -d= -f2- | tr -d '\r' | tr -d '"'
+}
 
-DOMAIN="${APP_DOMAIN:-}"
-EMAIL="${CERTBOT_EMAIL:-}"
+DOMAIN="$(env_value APP_DOMAIN)"
+EMAIL="$(env_value CERTBOT_EMAIL)"
 [ -n "$DOMAIN" ] || { echo "В .env не задан APP_DOMAIN"; exit 1; }
 [ -n "$EMAIL" ]  || { echo "В .env не задан CERTBOT_EMAIL"; exit 1; }
 

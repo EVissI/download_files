@@ -12,9 +12,13 @@ DOMAIN="${1:-}"
 [ -n "$DOMAIN" ] || { echo "Использование: sh nginx/issue-cert.sh <домен>"; exit 1; }
 
 [ -f .env ] || { echo "Нет .env в корне проекта"; exit 1; }
-# shellcheck disable=SC1091
-. ./.env
-EMAIL="${CERTBOT_EMAIL:-}"
+# .env читаем построчно, а НЕ через `. ./.env`: docker-овский .env не обязан
+# быть валидным shell-скриптом — символы вроде # ? ~ в паролях ломают sh.
+env_value() {
+    grep -E "^$1=" .env 2>/dev/null | tail -n 1 | cut -d= -f2- | tr -d '\r' | tr -d '"'
+}
+
+EMAIL="$(env_value CERTBOT_EMAIL)"
 [ -n "$EMAIL" ] || { echo "В .env не задан CERTBOT_EMAIL"; exit 1; }
 
 COMPOSE="docker compose"
