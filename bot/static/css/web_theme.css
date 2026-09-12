@@ -190,6 +190,36 @@ html[data-theme="light"] {
     flex-wrap: nowrap;
     overflow: hidden;
 }
+/* Логин текущего веб-аккаунта: не кнопка, а подпись слева от «Выйти». */
+.header-user {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 180px;
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid var(--web-border-subtle);
+    border-radius: 8px;
+    background: var(--web-bg-nav);
+    color: var(--web-text-muted);
+    font-size: 0.85rem;
+    line-height: 1;
+}
+.header-user svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    opacity: .8;
+}
+.header-user__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--web-text);
+}
 .header-actions form {
     margin: 0;
     display: flex;
@@ -552,12 +582,16 @@ html[data-theme="light"] .player-position-toggle {
         align-items: center;
         gap: 10px;
     }
+    /* бургер уезжает в правый край полосы, название занимает остальное место */
     .web-burger {
         display: inline-flex;
-        order: -1;
+        order: 2;
+        margin-left: auto;
     }
     .web-header-title {
         display: block;
+        order: 1;
+        flex: 1 1 auto;
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -605,9 +639,14 @@ html[data-theme="light"] .player-position-toggle {
     }
     .header-actions {
         flex-wrap: wrap;
-        justify-content: flex-start;
+        justify-content: flex-end;
         padding-top: 8px;
         border-top: 1px solid var(--web-border-subtle);
+    }
+    .web-cabinet-header .header-user {
+        height: 36px;
+        max-width: 140px;
+        font-size: 0.78rem;
     }
 
     .web-cabinet-header .service-nav {

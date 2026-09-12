@@ -390,13 +390,15 @@ async def get_session(token: str | None) -> dict[str, Any] | None:
         return None
     await _ensure_session_indexed(token, data)
     data["is_admin"] = bool(snapshot.get("is_admin"))
+    # логин показывается в шапке кабинета; в payload сессии его нет — берём из снимка
+    data["login"] = snapshot.get("login") or ""
     if "web_uid" not in data:
         data["web_uid"] = -int(data["user_id"])
     return data
 
 
 async def web_account_snapshot(user_id: int | None) -> dict[str, Any] | None:
-    """active + is_admin + max_sessions; кэш в Redis, чтобы не ходить в БД на каждый запрос."""
+    """active + is_admin + max_sessions + login; кэш в Redis, чтобы не ходить в БД на каждый запрос."""
     if not user_id:
         return None
     uid = int(user_id)
@@ -405,7 +407,8 @@ async def web_account_snapshot(user_id: int | None) -> dict[str, Any] | None:
     if cached:
         try:
             data = json.loads(cached)
-            if isinstance(data, dict) and "active" in data and "max_sessions" in data:
+            # login появился позже: записи без него считаем устаревшими
+            if isinstance(data, dict) and "active" in data and "login" in data:
                 return data
         except json.JSONDecodeError:
             pass
@@ -419,6 +422,7 @@ async def web_account_snapshot(user_id: int | None) -> dict[str, Any] | None:
         result = await session.execute(
             select(
                 WebUser.id,
+                WebUser.login,
                 WebUser.is_admin,
                 WebUser.expires_at,
                 WebUser.max_sessions,
@@ -426,12 +430,13 @@ async def web_account_snapshot(user_id: int | None) -> dict[str, Any] | None:
         )
         row = result.one_or_none()
     if row is None:
-        payload = {"active": False, "is_admin": False, "max_sessions": 1}
+        payload = {"active": False, "is_admin": False, "max_sessions": 1, "login": ""}
     else:
         payload = {
             "active": not web_user_expires_at_passed(row.expires_at),
             "is_admin": bool(row.is_admin),
             "max_sessions": WebUser.clamp_max_sessions(row.max_sessions),
+            "login": row.login or "",
         }
     await redis_client.set(
         cache_key, json.dumps(payload), expire=ACCT_CACHE_TTL_SEC

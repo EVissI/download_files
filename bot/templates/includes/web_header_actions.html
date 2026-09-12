@@ -24,6 +24,18 @@
             <path d="M9 3v5H4M15 3v5h5M9 21v-5H4M15 21v-5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
         </svg>
     </button>
+    {# Логин веб-аккаунта: сессию разбирает web_grant_user_middleware, в
+       Telegram Mini App её нет — тогда блок просто не рендерится. #}
+    {% set web_login = (request.state.web_session or {}).get('login') if request else '' %}
+    {% if web_login %}
+    <span class="header-user" title="Вы вошли как {{ web_login }}">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+            <path d="M4.8 20a7.2 7.2 0 0 1 14.4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+        </svg>
+        <span class="header-user__name">{{ web_login }}</span>
+    </span>
+    {% endif %}
     <form method="post" action="/web/hints/logout">
         <button class="ghost" type="submit">Выйти</button>
     </form>
