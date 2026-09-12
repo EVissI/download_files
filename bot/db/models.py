@@ -1809,9 +1809,11 @@ class HintViewerWebUpload(Base):
     )
     session_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     game_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
-    # Только для service="match": game_id второй стадии (разбор ошибок).
-    # В game_id при этом лежит идентификатор стадии анализа.
-    hints_game_id: Mapped[str | None] = mapped_column(
+    # Только для service="match": id стадии анализа. В game_id лежит id разбора
+    # ошибок — он идёт первым, его считает внешний воркер, и он же обновляет
+    # статус записи по job_id. Анализ делается на сервере уже после ответа
+    # воркера, поэтому ему нужно отдельное поле.
+    analyze_game_id: Mapped[str | None] = mapped_column(
         String(64), nullable=True, index=True
     )
     job_id: Mapped[str | None] = mapped_column(String(80), nullable=True)

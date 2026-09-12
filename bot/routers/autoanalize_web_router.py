@@ -209,14 +209,13 @@ async def _process_file_item(item: dict[str, Any]) -> None:
     kind = item.get("kind") or "single"
     user_id = item.get("user_id")
     service = item.get("service") or WEB_SERVICE_ANALYZE
-    chain_hints = bool(item.get("chain_hints"))
     await redis_client.set(
         ANALYZE_ACTIVE_KEY.format(game_id=game_id), "1", expire=ANALYZE_GNU_LOCK_TTL
     )
     try:
         await _process_file_item_inner(
             token, job_id, filename, src_path, file_type, game_id, kind, user_id,
-            service=service, chain_hints=chain_hints,
+            service=service,
         )
     finally:
         await redis_client.delete(ANALYZE_ACTIVE_KEY.format(game_id=game_id))
@@ -233,7 +232,6 @@ async def _process_file_item_inner(
     user_id: int | None = None,
     *,
     service: str = WEB_SERVICE_ANALYZE,
-    chain_hints: bool = False,
 ) -> None:
     async def mark_processing() -> None:
         await update_history_status(
@@ -328,7 +326,9 @@ async def _process_file_item_inner(
             job_id,
             HintViewerWebUploadStatus.DONE.value,
             original_filename=filename,
-            game_id=game_id,
+            # У матча в game_id лежит стадия ошибок, перетирать её нельзя:
+            # id анализа хранится отдельно, в analyze_game_id.
+            game_id=None if service == WEB_SERVICE_MATCH else game_id,
             error_message=None,
             finished=True,
             red_player=red_player,
@@ -367,79 +367,9 @@ async def _process_file_item_inner(
         updated = await _patch_job(token, job_id, mutator, service)
         if updated:
             await sync_history_from_job(updated)
-        if chain_hints:
-            await _chain_to_hints(
-                token=token,
-                job_id=job_id,
-                filename=filename,
-                src_path=src_path,
-                user_id=user_id,
-            )
     except Exception as exc:
         logger.exception("web autoanalyze failed for {}: {}", filename, exc)
         await fail(str(exc)[:400] or "Не удалось проанализировать файл")
-
-
-async def _chain_to_hints(
-    *,
-    token: str,
-    job_id: str,
-    filename: str,
-    src_path: str,
-    user_id: int | None,
-) -> None:
-    """
-    Вторая стадия сервиса «Всё о матче»: тот же исходник уходит в очередь
-    разбора ошибок. Отдельную запись истории не заводим — дописываем
-    hints_game_id в запись матча и возвращаем ей статус «в работе».
-    """
-    from bot.common.service.hint_viewer_web_service import (
-        mark_match_hints_started,
-    )
-    from bot.routers.hint_viewer_web_router import _enqueue_single
-
-    try:
-        source = Path(src_path)
-        if not source.is_file():
-            raise FileNotFoundError(src_path)
-        mat_name = filename
-        if not str(mat_name).lower().endswith(".mat"):
-            mat_name = f"{Path(mat_name).stem}.mat"
-        web_uid = -int(user_id) if user_id else 0
-        job = await _enqueue_single(
-            local_mat=str(source),
-            filename=mat_name,
-            web_uid=web_uid,
-            session_token=token,
-            user_id=user_id,
-            history_service=None,
-        )
-        await mark_match_hints_started(job_id, job.get("game_id"))
-
-        # Задача остаётся в «текущих»: для пользователя матч ещё не готов,
-        # хотя стадия анализа уже отработала.
-        def _back_to_work(entry: dict[str, Any]) -> None:
-            entry["status"] = HintViewerWebUploadStatus.PROCESSING.value
-            entry["stage"] = "hints"
-            entry["expandable"] = False
-            entry.pop("finished_at", None)
-
-        await _patch_job(token, job_id, _back_to_work, WEB_SERVICE_MATCH)
-        logger.info(
-            "match: стадия ошибок запущена job_id={} hints_game_id={}",
-            job_id,
-            job.get("game_id"),
-        )
-    except Exception as exc:
-        logger.exception("match: не удалось запустить стадию ошибок: {}", exc)
-        from bot.common.service.hint_viewer_web_service import update_history_status
-
-        await update_history_status(
-            job_id,
-            HintViewerWebUploadStatus.ERROR.value,
-            error_message="Анализ готов, но разбор ошибок не запустился",
-            finished=True,
-        )
 
 
 async def _collect_files(uploads: list[UploadFile], workdir: str) -> list[tuple[str, str]]:

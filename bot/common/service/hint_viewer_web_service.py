@@ -652,35 +652,6 @@ async def record_history(**kwargs: Any) -> None:
         logger.exception("hint viewer web history write failed: {}", e)
 
 
-async def mark_match_hints_started(job_id: str | None, hints_game_id: str | None) -> None:
-    """
-    Сервис «Всё о матче»: анализ закончен, поставлена вторая стадия.
-    Пишем её game_id и возвращаем записи статус «в работе» — иначе матч
-    выглядел бы готовым, пока ошибки ещё считаются.
-    """
-    if not job_id or not hints_game_id:
-        return
-    try:
-        from sqlalchemy import select, update
-
-        from bot.db.database import async_session_maker
-        from bot.db.models import HintViewerWebUpload
-
-        async with async_session_maker() as session:
-            await session.execute(
-                update(HintViewerWebUpload)
-                .where(HintViewerWebUpload.job_id == job_id)
-                .values(
-                    hints_game_id=str(hints_game_id),
-                    status="processing",
-                    finished_at=None,
-                )
-            )
-            await session.commit()
-    except Exception:
-        logger.exception("match: не удалось отметить стадию ошибок job_id=%s", job_id)
-
-
 async def update_history_status(
     job_id: str | None,
     status: str,
@@ -791,15 +762,16 @@ def _history_item(row) -> dict[str, Any]:
     service = getattr(row, "service", None) or WEB_SERVICE_HINTS
     is_analyze = service == WEB_SERVICE_ANALYZE
     is_match = service == WEB_SERVICE_MATCH
-    hints_game_id = getattr(row, "hints_game_id", None)
+    analyze_game_id = getattr(row, "analyze_game_id", None)
 
-    # У матча game_id — это стадия анализа, ссылки на ошибки строятся по
-    # hints_game_id. Кнопки и таблица появляются только когда готовы ОБЕ
-    # стадии: до этого матч живёт в текущих задачах.
+    # У матча game_id — стадия ошибок (её считает внешний воркер), анализ
+    # лежит в analyze_game_id. Кнопки показываем, только когда готово всё:
+    # ошибки посчитаны и анализ на сервере уже сделан.
+    match_ready = bool(is_match and row.status == "done" and analyze_game_id)
     if is_match:
         links = (
-            web_hint_open_links(hints_game_id, row.red_player, row.black_player)
-            if row.status == "done" and hints_game_id
+            web_hint_open_links(row.game_id, row.red_player, row.black_player)
+            if match_ready
             else []
         )
     elif is_analyze:
@@ -811,10 +783,11 @@ def _history_item(row) -> dict[str, Any]:
             else []
         )
     return {
-        "hints_game_id": hints_game_id,
+        "analyze_game_id": analyze_game_id,
         "stage": (
-            ("hints" if hints_game_id and row.status != "done" else
-             "done" if row.status == "done" else "analyze")
+            # пока нет id анализа — работает воркер; появился — считаем анализ
+            ("done" if match_ready else "analyze" if analyze_game_id
+             or row.status == "done" else "hints")
             if is_match else None
         ),
         "id": row.id,
@@ -829,7 +802,7 @@ def _history_item(row) -> dict[str, Any]:
         "view_url": links[0]["url"] if links else None,
         "open_links": links,
         "expandable": bool(
-            (is_analyze or is_match) and row.status == "done" and game_id
+            (is_analyze and row.status == "done" and game_id) or match_ready
         ),
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "finished_at": row.finished_at.isoformat() if row.finished_at else None,

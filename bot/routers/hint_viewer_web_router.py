@@ -309,7 +309,7 @@ async def _enqueue_single(
             status=HintViewerWebUploadStatus.QUEUED.value,
             service=history_service,
         )
-        await append_session_job(session_token, job_payload)
+        await append_session_job(session_token, job_payload, history_service)
     task_queue.enqueue(
         "bot.workers.hint_worker.analyze_backgammon_job",
         game_id,

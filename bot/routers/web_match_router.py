@@ -1,16 +1,16 @@
 """
 Сервис «Всё о матче» (/web/match).
 
-Загруженный файл проходит две стадии подряд: сначала анализ (gnubg считает
-статистику), затем разбор ошибок. Параллельно их пускать нельзя — gnubg
-одноинстансный и стадии дрались бы за общий лок.
+Порядок стадий: сначала разбор ошибок во внешнем воркере — это единственная
+долгая операция, — и уже по его ответу на сервере считается анализ. Анализ
+и разбор для плеера быстрые, отдельной очереди им не нужно.
 
-Запись истории на матч одна (service="match"): в game_id лежит стадия анализа,
-в hints_game_id — стадия ошибок. Поэтому такие матчи не засоряют историю
-«Анализа» и «Ошибок», отфильтрованную по своему service.
+Запись истории на матч одна (service="match"):
+  game_id          — стадия ошибок; по job_id её статус обновляет сам воркер,
+                     то есть отслеживание готовности работает штатным путём;
+  analyze_game_id  — стадия анализа, заполняется после ответа воркера.
 
-Собственной обработки здесь почти нет: страница, постановка в очередь и тонкие
-обёртки над уже готовыми действиями обоих сервисов.
+Такие матчи не засоряют историю «Анализа» и «Ошибок» — там фильтр по service.
 """
 
 from __future__ import annotations
@@ -29,7 +29,6 @@ from loguru import logger
 from bot.common.service.hint_viewer_web_service import (
     HISTORY_PAGE_SIZE,
     WEB_SERVICE_MATCH,
-    append_session_job,
     list_history_for_user,
     list_session_jobs,
     prune_session_jobs,
@@ -90,18 +89,21 @@ async def web_match_page(request: Request):
 
 @web_match_api_router.post("/web/match/api/upload")
 async def web_match_upload(request: Request, files: list[UploadFile] = File(...)):
-    """Каждый файл — отдельный матч: своя запись, свой конвейер, свои кнопки."""
+    """
+    Каждый файл — отдельный матч. Отправляем его только на разбор ошибок:
+    это единственная долгая стадия, и считает её внешний воркер. Исходник
+    сохраняем рядом, чтобы потом, по ответу воркера, быстро посчитать анализ
+    на сервере, не заставляя пользователя грузить файл второй раз.
+    """
     token, session = await _require_session(request)
     user_id = session.get("user_id")
     if not user_id:
         raise HTTPException(status_code=401, detail="Нужна авторизация")
 
-    from bot.routers.autoanalize_web_router import (
-        _prepare_analyze_file,
-        _push_analyze_bundle,
-    )
-    from bot.routers.hint_viewer_web_router import _collect_mat_files
+    from bot.routers.autoanalize_web_router import _persist_source
+    from bot.routers.hint_viewer_web_router import _collect_mat_files, _enqueue_single
 
+    web_uid = int(session.get("web_uid") or -int(user_id))
     started: list[dict[str, Any]] = []
     with tempfile.TemporaryDirectory() as workdir:
         collected = await _collect_mat_files(files, workdir)
@@ -115,37 +117,22 @@ async def web_match_upload(request: Request, files: list[UploadFile] = File(...)
                 detail=f"За раз можно отправить не больше {MAX_FILES_PER_UPLOAD} матчей",
             )
 
-        works: list[dict[str, Any]] = []
         for local_path, filename in collected:
-            game_id = uuid.uuid4().hex[:16]
-            job_id = f"web_match_{abs(int(user_id))}_{uuid.uuid4().hex[:8]}"
-            meta, work = await _prepare_analyze_file(
-                src_path=local_path,
+            job = await _enqueue_single(
+                local_mat=local_path,
                 filename=filename,
-                token=token,
+                web_uid=web_uid,
+                session_token=token,
                 user_id=int(user_id),
-                job_id=job_id,
-                game_id=game_id,
-                kind="single",
+                history_service=WEB_SERVICE_MATCH,
             )
-            # стадию ошибок запустит сам обработчик анализа, когда досчитает
-            work["service"] = WEB_SERVICE_MATCH
-            work["chain_hints"] = True
-            works.append(work)
-            job_payload = {
-                "kind": "single",
-                "job_id": job_id,
-                "stage": "analyze",
-                **meta,
-            }
-            await append_session_job(token, job_payload, WEB_SERVICE_MATCH)
-            started.append(job_payload)
+            game_id = str(job.get("game_id") or "")
+            # копия исходника переживёт запрос: по ней посчитаем анализ
+            await asyncio.to_thread(_persist_source, local_path, filename, game_id)
+            started.append({**job, "stage": "hints"})
 
-        # Вся пачка уходит одной задачей: файлы разбираются строго по очереди,
-        # а не соревнуются за gnubg между собой и с другими сервисами.
-        await _push_analyze_bundle(works)
-
-    logger.info("match: принято матчей {} web_user={}", len(started), user_id)
+    logger.info("match: отправлено в разбор ошибок матчей {} web_user={}",
+                len(started), user_id)
     return JSONResponse({"ok": True, "jobs": started})
 
 
@@ -163,21 +150,60 @@ async def web_match_jobs_clear(request: Request):
     return {"ok": True}
 
 
+async def _start_analyze_stage(row) -> None:
+    """
+    Ошибки готовы — считаем анализ тем же файлом, что уже лежит на сервере.
+    Операция быстрая, поэтому идёт обычной задачей локальной очереди, а не
+    через внешний воркер.
+    """
+    from bot.routers.autoanalize_web_router import (
+        _find_analyze_source,
+        _prepare_analyze_file,
+        _push_analyze_work,
+    )
+
+    src = _find_analyze_source(row.game_id, row.original_filename)
+    if src is None or not src.is_file():
+        row.status = HintViewerWebUploadStatus.ERROR.value
+        row.error_message = "Исходник матча не найден — загрузите его заново"
+        row.finished_at = datetime.now(timezone.utc)
+        logger.warning("match: исходник не найден для game_id={}", row.game_id)
+        return
+
+    analyze_game_id = uuid.uuid4().hex[:16]
+    _meta, work = await _prepare_analyze_file(
+        src_path=str(src),
+        filename=row.original_filename,
+        token=row.session_id,
+        user_id=row.user_id,
+        job_id=row.job_id,
+        game_id=analyze_game_id,
+        kind="single",
+    )
+    work["service"] = WEB_SERVICE_MATCH
+    row.analyze_game_id = analyze_game_id
+    row.status = HintViewerWebUploadStatus.PROCESSING.value
+    row.finished_at = None
+    await _push_analyze_work(work)
+    logger.info(
+        "match: запущен анализ game_id={} analyze_game_id={}",
+        row.game_id,
+        analyze_game_id,
+    )
+
+
 async def _reconcile_match_history(user_id: int) -> None:
     """
-    Матч считается готовым, когда вторая стадия выложила результат в S3.
-    Воркер ошибок про запись матча не знает (истории для неё не заводили),
-    поэтому статус досчитываем здесь — тем же приёмом, что и в «Ошибках».
+    Запускает вторую стадию и подчищает зависшее.
 
-    Он же единственное место, где ловится сорвавшаяся вторая стадия: воркеру
-    некуда записать ошибку, поэтому давно висящие записи гасим по возрасту,
-    иначе матч остался бы «в работе» навсегда.
+    Воркер сам проставляет записи «done», когда разбор ошибок готов, — это
+    и есть сигнал, что пора считать анализ. Плюс гасим записи, которые висят
+    в работе слишком долго: без этого матч остался бы «в работе» навсегда.
     """
     from sqlalchemy import select
 
     from bot.db.database import async_session_maker
     from bot.db.models import HintViewerWebUpload
-    from bot.routers.hint_viewer_web_router import _hint_s3_ready
 
     try:
         async with async_session_maker() as session:
@@ -186,41 +212,40 @@ async def _reconcile_match_history(user_id: int) -> None:
                     select(HintViewerWebUpload).where(
                         HintViewerWebUpload.user_id == int(user_id),
                         HintViewerWebUpload.service == WEB_SERVICE_MATCH,
-                        HintViewerWebUpload.status
-                        == HintViewerWebUploadStatus.PROCESSING.value,
-                        HintViewerWebUpload.hints_game_id.is_not(None),
+                        HintViewerWebUpload.status.in_(
+                            ("queued", "processing", HintViewerWebUploadStatus.DONE.value)
+                        ),
                     )
                 )
             ).all()
+
             changed = False
             now = datetime.now(timezone.utc)
-            # какие задачи убрать из «текущих» — матч уходит в историю целиком
             finished: dict[str, set[str]] = {}
-
-            def _finish(row) -> None:
-                if row.session_id and row.job_id:
-                    finished.setdefault(row.session_id, set()).add(row.job_id)
-
             for row in rows:
-                ready = await asyncio.to_thread(_hint_s3_ready, row.hints_game_id)
-                if ready:
-                    row.status = HintViewerWebUploadStatus.DONE.value
-                    row.finished_at = now
+                done = row.status == HintViewerWebUploadStatus.DONE.value
+                if done and not row.analyze_game_id:
+                    # ошибки готовы — пора считать анализ
+                    await _start_analyze_stage(row)
                     changed = True
-                    _finish(row)
+                    continue
+                if done:
+                    # готово всё: матч уходит из текущих задач в историю
+                    if row.session_id and row.job_id:
+                        finished.setdefault(row.session_id, set()).add(row.job_id)
                     continue
                 created = row.created_at
-                if created is not None:
-                    if created.tzinfo is None:
-                        created = created.replace(tzinfo=timezone.utc)
-                    if (now - created).total_seconds() > HINTS_STAGE_TIMEOUT_SEC:
-                        row.status = HintViewerWebUploadStatus.ERROR.value
-                        row.error_message = (
-                            "Анализ готов, но разбор ошибок не завершился"
-                        )
-                        row.finished_at = now
-                        changed = True
-                        _finish(row)
+                if created is None:
+                    continue
+                if created.tzinfo is None:
+                    created = created.replace(tzinfo=timezone.utc)
+                if (now - created).total_seconds() > HINTS_STAGE_TIMEOUT_SEC:
+                    row.status = HintViewerWebUploadStatus.ERROR.value
+                    row.error_message = "Разбор ошибок не завершился"
+                    row.finished_at = now
+                    changed = True
+                    if row.session_id and row.job_id:
+                        finished.setdefault(row.session_id, set()).add(row.job_id)
             if changed:
                 await session.commit()
         for token, job_ids in finished.items():

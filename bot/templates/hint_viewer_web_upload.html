@@ -1248,14 +1248,15 @@
         function renderHistoryFile(item, nested) {
             const players = [item.red_player, item.black_player].filter(Boolean).join(' vs ');
             const gameId = item.game_id ? String(item.game_id) : '';
-            const hintsId = item.hints_game_id ? String(item.hints_game_id) : '';
+            // У матча game_id — разбор ошибок, анализ отдельным полем.
+            const analyzeId = item.analyze_game_id ? String(item.analyze_game_id) : '';
+            const matchReady = matchMode && item.status === 'done' && analyzeId;
             let open;
             if (matchMode) {
-                // кнопки разбора ошибок появляются, когда готова вторая стадия
-                const matchExtra = (item.status === 'done' && hintsId)
-                    ? orderAnalysisButton(hintsId)
-                        + matchAnalysisButton(hintsId, item.saved_to_match_analysis)
-                        + sendToUserButton(hintsId, item.original_filename)
+                const matchExtra = matchReady
+                    ? orderAnalysisButton(gameId)
+                        + matchAnalysisButton(gameId, item.saved_to_match_analysis)
+                        + sendToUserButton(gameId, item.original_filename)
                     : '';
                 open = openMatchButtons(item.open_links, matchExtra);
             } else if (historyExpandable) {
@@ -1268,10 +1269,13 @@
             }
             let err = item.error_message ? `<div class="muted">${escapeHtml(item.error_message)}</div>` : '';
             if (!err && matchMode && item.stage === 'hints') {
-                err = '<div class="muted">Анализ готов, считаются ошибки…</div>';
+                err = '<div class="muted">Считаются ошибки…</div>';
+            } else if (!err && matchMode && item.stage === 'analyze') {
+                err = '<div class="muted">Ошибки готовы, считается анализ…</div>';
             }
-            const expandable = !nested && !!(historyExpandable && item.expandable && gameId);
-            const isOpen = expandable && openGameIds.has(gameId);
+            const tableId = matchMode ? analyzeId : gameId;
+            const expandable = !nested && !!(historyExpandable && item.expandable && tableId);
+            const isOpen = expandable && openGameIds.has(tableId);
             const extraClass = [
                 expandable ? ('history-item--expandable' + (isOpen ? ' is-open' : '')) : '',
                 nested ? 'history-item--nested' : '',
@@ -1282,10 +1286,10 @@
                 ? `<div class="history-item-title-row"><strong>${escapeHtml(item.original_filename || 'Матч')}</strong>${toggle}</div>`
                 : `<strong>${escapeHtml(item.original_filename || 'Матч')}</strong>`;
             const pdf = matchMode
-                ? ((item.status === 'done' && gameId) ? pdfLink(gameId) + boardButton(gameId) : '')
+                ? (matchReady ? pdfLink(analyzeId) + boardButton(analyzeId) : '')
                 : ((item.status === 'done' && gameId) ? analyzeFileActions(gameId) : '');
-            const cachedTable = gameId && loadedTables[gameId]
-                ? loadedTables[gameId]
+            const cachedTable = tableId && loadedTables[tableId]
+                ? loadedTables[tableId]
                 : (item.table_html || '');
             let table = '';
             if (nested && item.status === 'done' && gameId) {
@@ -1297,7 +1301,7 @@
                 ? `<label class="history-item-select"><input type="checkbox" data-upload-id="${item.id}"></label>`
                 : '';
             const uploadAttr = (!nested && item.id) ? ` data-upload-id="${item.id}"` : '';
-            return `<div class="history-item ${extraClass}"${expandable ? ` data-game-id="${escapeHtml(gameId)}"` : ''}${uploadAttr}>
+            return `<div class="history-item ${extraClass}"${expandable ? ` data-game-id="${escapeHtml(tableId)}"` : ''}${uploadAttr}>
                 <div class="history-item-head">
                     ${select}
                     <div>
