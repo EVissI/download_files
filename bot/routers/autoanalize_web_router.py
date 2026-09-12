@@ -600,6 +600,14 @@ async def cleanup_dead_analyze_tasks() -> None:
     except Exception:
         logger.exception("web autoanalyze: чистка зависших записей не удалась")
 
+    try:
+        # матчи «Всё о матче» могли застрять на переходе между стадиями
+        from bot.routers.web_match_router import recover_match_tasks
+
+        await recover_match_tasks()
+    except Exception:
+        logger.exception("web autoanalyze: восстановление матчей не удалось")
+
 
 async def _pending_analyze_game_ids() -> set[str]:
     ids: set[str] = set()

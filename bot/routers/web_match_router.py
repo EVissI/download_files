@@ -241,7 +241,12 @@ async def _reconcile_match_history(user_id: int) -> None:
                     created = created.replace(tzinfo=timezone.utc)
                 if (now - created).total_seconds() > HINTS_STAGE_TIMEOUT_SEC:
                     row.status = HintViewerWebUploadStatus.ERROR.value
-                    row.error_message = "Разбор ошибок не завершился"
+                    # какая именно стадия висела — видно по наличию id анализа
+                    row.error_message = (
+                        "Анализ не завершился"
+                        if row.analyze_game_id
+                        else "Разбор ошибок не завершился"
+                    )
                     row.finished_at = now
                     changed = True
                     if row.session_id and row.job_id:
@@ -254,6 +259,96 @@ async def _reconcile_match_history(user_id: int) -> None:
             )
     except Exception:
         logger.exception("match: сверка истории не удалась")
+
+
+async def recover_match_tasks() -> None:
+    """
+    Поднимает матчи, застрявшие из-за перезапуска сервиса.
+
+    Стадия ошибок переживает рестарт сама: её считает внешний воркер и он же
+    пишет статус в базу. А вот стадия анализа живёт в этом процессе, и если
+    перезапуск случился ровно в момент счёта, задача исчезала вместе с ним —
+    запись оставалась «в работе» навсегда.
+
+    Разбираем три случая:
+      * ошибки готовы, анализ не запускался — запускаем;
+      * анализ числится в работе, но его нет ни в очереди, ни в счёте, а
+        результат в S3 есть — значит досчитался перед рестартом, закрываем;
+      * результата нет — ставим анализ заново.
+
+    Вызывается при старте API и раз в 10 минут из обслуживания очереди,
+    поэтому не зависит от того, открыл ли кто-нибудь страницу.
+    """
+    from sqlalchemy import select
+
+    from bot.common.service.hint_s3_service import HintS3Storage
+    from bot.db.database import async_session_maker
+    from bot.db.models import HintViewerWebUpload
+    from bot.db.redis import redis_client
+    from bot.routers.autoanalize_web_router import (
+        ANALYZE_ACTIVE_KEY,
+        _pending_analyze_game_ids,
+    )
+
+    started = requeued = closed = 0
+    try:
+        pending = await _pending_analyze_game_ids()
+        s3 = HintS3Storage.from_settings()
+        async with async_session_maker() as session:
+            rows = (
+                await session.scalars(
+                    select(HintViewerWebUpload).where(
+                        HintViewerWebUpload.service == WEB_SERVICE_MATCH,
+                        HintViewerWebUpload.status.in_(
+                            (HintViewerWebUploadStatus.DONE.value, "processing")
+                        ),
+                    )
+                )
+            ).all()
+
+            for row in rows:
+                done = row.status == HintViewerWebUploadStatus.DONE.value
+                if done and not row.analyze_game_id:
+                    await _start_analyze_stage(row)
+                    started += 1
+                    continue
+                if done or not row.analyze_game_id:
+                    continue
+
+                # анализ числится в работе — проверяем, жив ли он на самом деле
+                if row.analyze_game_id in pending:
+                    continue
+                active = await redis_client.get(
+                    ANALYZE_ACTIVE_KEY.format(game_id=row.analyze_game_id)
+                )
+                if active:
+                    continue
+
+                ready = await asyncio.to_thread(
+                    s3.get_autoanalyze_json, row.analyze_game_id
+                )
+                if ready:
+                    row.status = HintViewerWebUploadStatus.DONE.value
+                    row.finished_at = datetime.now(timezone.utc)
+                    closed += 1
+                    continue
+
+                # задача пропала вместе с процессом — ставим заново
+                row.analyze_game_id = None
+                row.status = HintViewerWebUploadStatus.DONE.value
+                await _start_analyze_stage(row)
+                requeued += 1
+
+            if started or requeued or closed:
+                await session.commit()
+                logger.info(
+                    "match: восстановление — запущено {}, переставлено {}, закрыто {}",
+                    started,
+                    requeued,
+                    closed,
+                )
+    except Exception:
+        logger.exception("match: восстановление задач не удалось")
 
 
 @web_match_api_router.get("/web/match/api/history")

@@ -186,6 +186,14 @@ async def start_web_analyze_worker():
         ensure_web_analyze_worker()
     except Exception as e:
         logger.warning(f"web analyze worker startup failed: {e}")
+    # Матчи, у которых рестарт застал стадию анализа, сами не поднимутся —
+    # она живёт в этом процессе. Поднимаем их сразу, не дожидаясь визита.
+    try:
+        from bot.routers.web_match_router import recover_match_tasks
+
+        asyncio.create_task(recover_match_tasks())
+    except Exception as e:
+        logger.warning(f"match recovery startup failed: {e}")
     """Подчищает просроченные временные ZIP/аудио экспорта на S3 после рестарта API."""
     try:
         from bot.routers.match_analysis_router import _maybe_cleanup_expired_tmp_downloads
