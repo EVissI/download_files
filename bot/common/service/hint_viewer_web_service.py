@@ -912,6 +912,38 @@ def _history_batch_item(rows: list[Any]) -> dict[str, Any]:
     }
 
 
+def _apply_batch_players(items: list[dict[str, Any]], prs_by_game: dict) -> None:
+    """
+    Свёрнутому пакету дописывает players — кто играл в пакете и с каким
+    средним PR. Порядок как в раскрытой сводке: от меньшего PR к большему.
+    """
+    for item in items:
+        if item.get("kind") != "batch" or item.get("status") != "done":
+            continue
+        totals: dict[str, dict[str, Any]] = {}
+        for child in item.get("files") or []:
+            gid = str(child.get("game_id") or "").strip()
+            for row in prs_by_game.get(gid) or []:
+                key = row.get("name_norm") or row.get("name")
+                entry = totals.setdefault(
+                    key, {"name": row.get("name") or "", "values": []}
+                )
+                entry["values"].append(float(row.get("pr") or 0))
+        if not totals:
+            continue
+        players = [
+            {
+                "name": entry["name"],
+                "avg_pr": sum(entry["values"]) / len(entry["values"]),
+                "games": len(entry["values"]),
+            }
+            for entry in totals.values()
+            if entry["values"]
+        ]
+        players.sort(key=lambda row: (row["avg_pr"], row["name"]))
+        item["players"] = players
+
+
 def _iter_history_nodes(items: list[dict[str, Any]]):
     for item in items:
         yield item
@@ -1044,6 +1076,13 @@ async def list_history_for_user(
                 nested["labels"] = list(labels_map.get(nested.get("id"), []) or [])
             if item.get("kind") == "batch":
                 item["labels"] = _labels_union(item.get("files") or [])
+        if service == WEB_SERVICE_ANALYZE:
+            from bot.db.dao import WebAnalyzePlayerStatDAO
+
+            prs_by_game = await WebAnalyzePlayerStatDAO(session).list_prs_by_game(
+                _collect_history_game_ids(items)
+            )
+            _apply_batch_players(items, prs_by_game)
         if service == WEB_SERVICE_HINTS:
             from bot.db.dao import MatchAnalysisDAO
 

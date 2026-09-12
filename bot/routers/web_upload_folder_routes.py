@@ -251,15 +251,6 @@ def register_web_upload_folder_routes(
                         schedules.get(parent_folder.id),
                         viewer_id=user_id,
                     )
-            # В «Анализе» под папкой показываем, кто в ней играл и с каким PR.
-            # У остальных сервисов статистики нет, ключ просто не отдаём.
-            players: list[dict[str, Any]] = []
-            if folder_service == WEB_SERVICE_ANALYZE:
-                from bot.db.dao import WebAnalyzePlayerStatDAO
-
-                players = await WebAnalyzePlayerStatDAO(db).list_players_for_uploads(
-                    int(folder.id)
-                )
             return {
                 "ok": True,
                 "folder": _serialize_folder(
@@ -268,7 +259,6 @@ def register_web_upload_folder_routes(
                     schedules.get(folder.id),
                     viewer_id=user_id,
                 ),
-                "players": players,
                 "parent": parent,
                 "child_folders": [
                     _serialize_folder(

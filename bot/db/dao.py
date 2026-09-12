@@ -3096,47 +3096,34 @@ class WebAnalyzePlayerStatDAO(BaseDAO[WebAnalyzePlayerStat]):
         result = await self._session.execute(query)
         return list(result.scalars().all())
 
-    async def list_players_for_uploads(self, folder_id: int) -> list[dict]:
+    async def list_prs_by_game(self, game_ids: list[str]) -> dict[str, list[dict]]:
         """
-        Игроки и их средний PR по матчам, лежащим в папке.
+        PR игроков по списку матчей: {game_id: [{name, name_norm, pr}, …]}.
 
-        Считаем по game_id самих загрузок, а не по владельцу статистики:
-        общая папка видна и тому, кто её не загружал.
+        Одним запросом на всю страницу истории, чтобы сводка в свёрнутом
+        пакете не стоила похода в S3 за каждым файлом.
         """
-        games = (
-            select(HintViewerWebUpload.game_id)
-            .join(
-                HintWebFolderItem,
-                HintWebFolderItem.upload_id == HintViewerWebUpload.id,
-            )
-            .where(
-                HintWebFolderItem.folder_id == int(folder_id),
-                HintViewerWebUpload.game_id.is_not(None),
-            )
-        )
+        ids = [str(gid) for gid in (game_ids or []) if gid]
+        if not ids:
+            return {}
         result = await self._session.execute(
             select(
+                self.model.game_id,
+                self.model.player_name,
                 self.model.player_name_norm,
-                func.max(self.model.player_name).label("player_name"),
-                func.avg(self.model.snowie_error_rate).label("avg_pr"),
-                func.count(self.model.id).label("games"),
-            )
-            .where(self.model.game_id.in_(games))
-            .group_by(self.model.player_name_norm)
-            .order_by(
-                func.count(self.model.id).desc(),
-                func.max(self.model.player_name).asc(),
-            )
+                self.model.snowie_error_rate,
+            ).where(self.model.game_id.in_(ids))
         )
-        return [
-            {
-                "name": str(player_name or ""),
-                "name_norm": str(name_norm or ""),
-                "avg_pr": float(avg_pr or 0),
-                "games": int(games_count or 0),
-            }
-            for name_norm, player_name, avg_pr, games_count in result.all()
-        ]
+        by_game: dict[str, list[dict]] = {}
+        for game_id, player_name, name_norm, pr in result.all():
+            by_game.setdefault(str(game_id), []).append(
+                {
+                    "name": str(player_name or ""),
+                    "name_norm": str(name_norm or ""),
+                    "pr": abs(float(pr or 0)),
+                }
+            )
+        return by_game
 
     async def delete_player_rows(
         self,

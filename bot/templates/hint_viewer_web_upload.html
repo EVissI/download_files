@@ -555,7 +555,6 @@
                     </button>
                 </div>
                 <div id="folderViewSubfolders" class="folder-view-bar__subfolders"></div>
-                <div id="folderViewPlayers" class="folder-view-bar__players" hidden></div>
             </div>
             {% endif %}
             <div id="history" class="muted">Загрузка истории…</div>
@@ -1288,6 +1287,17 @@
             });
         }
 
+        // «Иванов Иван (5.2), Петров Пётр (12.8)» — players приходит только от
+        // «Анализа» и только у пакетов с завершённым разбором.
+        function batchPlayersLine(item) {
+            const players = (item && item.players) || [];
+            if (!Array.isArray(players) || !players.length) return '';
+            return players.map((row) => {
+                const name = String((row && row.name) || '').trim() || '—';
+                return `${name} (${Number((row && row.avg_pr) || 0).toFixed(1)})`;
+            }).join(', ');
+        }
+
         function historyLabelsHtml(item, uploadIds) {
             const ids = (uploadIds && uploadIds.length)
                 ? uploadIds.filter((id) => id > 0)
@@ -1443,6 +1453,12 @@
                     const countLabel = item.ready_count != null
                         ? `готово ${item.ready_count}/${item.total_files || 0}`
                         : '';
+                    // Когда разбор пакета закончен, в свёрнутой строке вместо
+                    // счётчика полезнее видеть, кто играл и с каким средним PR.
+                    const playersLine = batchPlayersLine(item);
+                    const metaHtml = playersLine
+                        ? escapeHtml(playersLine)
+                        : `${escapeHtml(countLabel || '—')} · ${historyStatusLabel(item.status)}`;
                     const select = (enableUserFolders && fileIds.length)
                         ? `<label class="history-item-select"><input type="checkbox" data-upload-ids="${fileIds.join(',')}"></label>`
                         : '';
@@ -1452,7 +1468,7 @@
                             ${select}
                             <div>
                                 ${titleHtml}
-                                <div class="muted">${escapeHtml(countLabel || '—')} · ${historyStatusLabel(item.status)}</div>
+                                <div class="muted">${metaHtml}</div>
                                 ${batchLabels}
                             </div>
                             <div class="history-item-actions">${pdf}</div>
