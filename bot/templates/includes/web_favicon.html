@@ -1,0 +1,8 @@
+{# Иконки сайта. Подключается в <head> всех страниц с разметкой.
+   Файлы лежат в bot/static/favicon/, отдаются с длинным кэшем, поэтому
+   при замене набора меняйте имена или дождитесь смены cache_timestamp. #}
+<link rel="icon" type="image/png" href="/static/favicon/favicon-96x96.png?t={{ cache_timestamp }}" sizes="96x96">
+<link rel="icon" type="image/svg+xml" href="/static/favicon/favicon.svg?t={{ cache_timestamp }}">
+<link rel="shortcut icon" href="/static/favicon/favicon.ico?t={{ cache_timestamp }}">
+<link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png?t={{ cache_timestamp }}">
+<link rel="manifest" href="/static/favicon/site.webmanifest?t={{ cache_timestamp }}">

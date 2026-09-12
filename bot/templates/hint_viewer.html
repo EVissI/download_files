@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% include "includes/web_favicon.html" %}
     <meta name="hint-screenshot-font-scale" content="{{ hint_viewer_screenshot_font_scale_percent | default(100) }}">
     <meta name="match-analysis-mode" content="{% if match_analysis_mode|default(false) %}1{% else %}0{% endif %}">
     <meta name="web-standalone-mode" content="{% if web_standalone_mode|default(false) %}1{% else %}0{% endif %}">

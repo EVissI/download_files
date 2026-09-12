@@ -4,7 +4,12 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, Request, Response, HTTPException, File, Form, UploadFile, Query
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -306,6 +311,16 @@ async def web_grant_user_middleware(request: Request, call_next):
 
 
 app.mount("/static", CachedStaticFiles(directory=str(static_dir)), name="static")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Браузеры и мессенджеры просят иконку из корня, минуя разметку страницы."""
+    return FileResponse(
+        static_dir / "favicon" / "favicon.ico",
+        media_type="image/x-icon",
+        headers={"Cache-Control": "public, max-age=604800"},
+    )
 templates = Jinja2Templates(directory=str(templates_dir))
 templates.env.globals["cache_timestamp"] = get_static_asset_version()
 
