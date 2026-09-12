@@ -400,6 +400,16 @@ async def _chain_to_hints(
             history_service=None,
         )
         await mark_match_hints_started(job_id, job.get("game_id"))
+
+        # Задача остаётся в «текущих»: для пользователя матч ещё не готов,
+        # хотя стадия анализа уже отработала.
+        def _back_to_work(entry: dict[str, Any]) -> None:
+            entry["status"] = HintViewerWebUploadStatus.PROCESSING.value
+            entry["stage"] = "hints"
+            entry["expandable"] = False
+            entry.pop("finished_at", None)
+
+        await _patch_job(token, job_id, _back_to_work, WEB_SERVICE_MATCH)
         logger.info(
             "match: стадия ошибок запущена job_id={} hints_game_id={}",
             job_id,

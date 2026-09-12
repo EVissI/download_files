@@ -793,10 +793,9 @@ def _history_item(row) -> dict[str, Any]:
     is_match = service == WEB_SERVICE_MATCH
     hints_game_id = getattr(row, "hints_game_id", None)
 
-    # У матча game_id — это стадия анализа, а ссылки на ошибки строятся по
-    # hints_game_id. Таблица доступна раньше кнопок: как только анализ готов
-    # (признак — появился hints_game_id), хотя ошибки ещё считаются.
-    analyze_ready = bool(game_id) and (row.status == "done" or bool(hints_game_id))
+    # У матча game_id — это стадия анализа, ссылки на ошибки строятся по
+    # hints_game_id. Кнопки и таблица появляются только когда готовы ОБЕ
+    # стадии: до этого матч живёт в текущих задачах.
     if is_match:
         links = (
             web_hint_open_links(hints_game_id, row.red_player, row.black_player)
@@ -813,7 +812,6 @@ def _history_item(row) -> dict[str, Any]:
         )
     return {
         "hints_game_id": hints_game_id,
-        "analyze_ready": analyze_ready if is_match else None,
         "stage": (
             ("hints" if hints_game_id and row.status != "done" else
              "done" if row.status == "done" else "analyze")
@@ -831,8 +829,7 @@ def _history_item(row) -> dict[str, Any]:
         "view_url": links[0]["url"] if links else None,
         "open_links": links,
         "expandable": bool(
-            (is_analyze and row.status == "done" and game_id)
-            or (is_match and analyze_ready)
+            (is_analyze or is_match) and row.status == "done" and game_id
         ),
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "finished_at": row.finished_at.isoformat() if row.finished_at else None,

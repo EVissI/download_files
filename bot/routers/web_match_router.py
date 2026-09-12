@@ -32,6 +32,7 @@ from bot.common.service.hint_viewer_web_service import (
     append_session_job,
     list_history_for_user,
     list_session_jobs,
+    prune_session_jobs,
     replace_session_jobs,
     resolve_web_session,
     web_cabinet_page_vars,
@@ -188,12 +189,20 @@ async def _reconcile_match_history(user_id: int) -> None:
             ).all()
             changed = False
             now = datetime.now(timezone.utc)
+            # какие задачи убрать из «текущих» — матч уходит в историю целиком
+            finished: dict[str, set[str]] = {}
+
+            def _finish(row) -> None:
+                if row.session_id and row.job_id:
+                    finished.setdefault(row.session_id, set()).add(row.job_id)
+
             for row in rows:
                 ready = await asyncio.to_thread(_hint_s3_ready, row.hints_game_id)
                 if ready:
                     row.status = HintViewerWebUploadStatus.DONE.value
                     row.finished_at = now
                     changed = True
+                    _finish(row)
                     continue
                 created = row.created_at
                 if created is not None:
@@ -206,8 +215,13 @@ async def _reconcile_match_history(user_id: int) -> None:
                         )
                         row.finished_at = now
                         changed = True
+                        _finish(row)
             if changed:
                 await session.commit()
+        for token, job_ids in finished.items():
+            await prune_session_jobs(
+                token, drop_job_ids=job_ids, service=WEB_SERVICE_MATCH
+            )
     except Exception:
         logger.exception("match: сверка истории не удалась")
 

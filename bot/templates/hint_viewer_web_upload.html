@@ -1282,7 +1282,7 @@
                 ? `<div class="history-item-title-row"><strong>${escapeHtml(item.original_filename || 'Матч')}</strong>${toggle}</div>`
                 : `<strong>${escapeHtml(item.original_filename || 'Матч')}</strong>`;
             const pdf = matchMode
-                ? ((item.analyze_ready && gameId) ? pdfLink(gameId) + boardButton(gameId) : '')
+                ? ((item.status === 'done' && gameId) ? pdfLink(gameId) + boardButton(gameId) : '')
                 : ((item.status === 'done' && gameId) ? analyzeFileActions(gameId) : '');
             const cachedTable = gameId && loadedTables[gameId]
                 ? loadedTables[gameId]
