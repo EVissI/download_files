@@ -359,10 +359,19 @@
         html[data-theme="light"] .analyze-table td,
         html[data-theme="light"] .history-table-wrap,
         html[data-theme="light"] .batch-summary {
-            color: #1a1a1a;
+            color: #000000;
         }
         html[data-theme="light"] .history-table-wrap .muted {
-            color: #3f4650;
+            color: #000000;
+        }
+        /* В светлой теме содержимое разбора читается с чисто белого фона:
+           серым остаётся только шапка таблицы, чтобы колонки различались. */
+        html[data-theme="light"] .batch-summary,
+        html[data-theme="light"] .analyze-table td,
+        html[data-theme="light"] .player-stats-field select,
+        html[data-theme="light"] .player-stats-field input,
+        html[data-theme="light"] .player-stats-result {
+            background: #ffffff;
         }
         .history-item-actions { display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
         .history-pdf-btn { font-size: 0.8rem; padding: 6px 10px; white-space: nowrap; }

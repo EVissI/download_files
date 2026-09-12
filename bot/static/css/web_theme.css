@@ -47,15 +47,17 @@ html[data-theme="light"] {
     --web-border: #d8dbe2;
     --web-border-subtle: #e2e5eb;
     --web-border-dashed: #b4b9c3;
-    --web-text: #1c1d21;
-    --web-text-muted: #6b7280;
-    --web-text-soft: #4b5563;
-    --web-text-nav: #3f4650;
+    /* Светлая тема без серого текста: вся типографика чёрная, оттенки
+       остаются только у фонов, рамок и у состояния disabled. */
+    --web-text: #000000;
+    --web-text-muted: #000000;
+    --web-text-soft: #000000;
+    --web-text-nav: #000000;
     --web-link: #1b6e3a;
     --web-accent: #1f8a38;
     --web-accent-2: #43a047;
     --web-ghost-bg: #eceef2;
-    --web-ghost-fg: #2a2d34;
+    --web-ghost-fg: #000000;
     --web-ghost-hover: #d8dce4;
     --web-nav-hover: #e0e3e9;
     --web-disabled: #9aa0ab;
@@ -63,7 +65,7 @@ html[data-theme="light"] {
     --web-table-border: #d8dbe2;
     --web-table-th: #d8dce4;
     --web-table-td: #e8eaee;
-    --web-analyze-h: #1c1d21;
+    --web-analyze-h: #000000;
     --web-progress-bg: #e5e7eb;
     --web-input-bg: #ffffff;
     --web-input-border: #cfd3db;
@@ -469,7 +471,7 @@ html[data-theme="light"] .cabinet-admin-btn,
 html[data-theme="light"] .cabinet-footer .cabinet-hints-toggle {
     background: #fff;
     border-color: #cfd3db;
-    color: #2a2d34;
+    color: #000000;
 }
 html[data-theme="light"] .cabinet-shuffle-btn:active,
 html[data-theme="light"] .cabinet-id-toggle-btn:active,
@@ -497,7 +499,7 @@ html[data-theme="light"] .shuffle-modal__input {
 html[data-theme="light"] .ma-audio-only-filter {
     background: #fff;
     border-color: #cfd3db;
-    color: #3f4650;
+    color: #000000;
 }
 html[data-theme="light"] .ma-audio-only-filter__mark {
     background: #fff;
@@ -549,7 +551,7 @@ html[data-theme="light"] .label-scroll-bottom-btn,
 html[data-theme="light"] .card-bg-open-btn {
     background: #fff;
     border-color: #cfd3db;
-    color: #2a2d34;
+    color: #000000;
 }
 html[data-theme="light"] .card-bg-modal__color-text,
 html[data-theme="light"] .card-bg-modal__cell {
@@ -686,4 +688,25 @@ html[data-theme="light"] .player-position-toggle {
         min-height: 36px;
         padding: 0;
     }
+}
+
+/* Светлая тема: остатки серого текста на светлых поверхностях.
+   Переменные темы уже чёрные, здесь добиваем места с жёстко прописанным
+   серым. Панели, которые и в светлой теме остаются тёмными (инструменты
+   «Показа», модалки папок и аудио, панель доски), намеренно не трогаем —
+   там серый по-прежнему читается. */
+html[data-theme="light"] .card-bg-modal__selected,
+html[data-theme="light"] .card-bg-modal__color-label,
+html[data-theme="light"] .card-bg-modal__cell-cap,
+html[data-theme="light"] .card-bg-modal__empty,
+html[data-theme="light"] .shuffle-modal__msg,
+html[data-theme="light"] .shuffle-modal__status-row,
+html[data-theme="light"] .folder-schedule-modal__label-row,
+html[data-theme="light"] .folder-schedule-modal__toggle-row,
+html[data-theme="light"] .folder-schedule-modal__meta,
+html[data-theme="light"] .tile--create,
+html[data-theme="light"] .label-text,
+html[data-theme="light"] #adminButtonContainer .admin-screenshot-font-scale,
+html[data-theme="light"] #adminButtonContainer .admin-screenshot-font-scale label {
+    color: #000000;
 }
