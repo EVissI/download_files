@@ -466,23 +466,30 @@ async def _prepare_analyze_file(
     game_id: str,
     kind: str,
     batch_id: str | None = None,
+    history_service: str | None = WEB_SERVICE_ANALYZE,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
+    """
+    history_service=None — не заводить запись истории. Так вызывает «Всё о
+    матче»: у него уже есть своя запись, и вторая появилась бы во вкладке
+    «Анализ» дублем.
+    """
     # Копирование и разбор файла — синхронные и на пачке ощутимо долгие.
     # В обработчике запроса это вешало весь event loop, поэтому уводим в поток.
     stored = await asyncio.to_thread(_persist_source, src_path, filename, game_id)
     red_player, black_player = await asyncio.to_thread(_read_players, stored)
-    await record_history(
-        session_id=token,
-        user_id=user_id,
-        original_filename=filename,
-        game_id=game_id,
-        job_id=job_id,
-        batch_id=batch_id,
-        red_player=red_player,
-        black_player=black_player,
-        status=HintViewerWebUploadStatus.QUEUED.value,
-        service=WEB_SERVICE_ANALYZE,
-    )
+    if history_service:
+        await record_history(
+            session_id=token,
+            user_id=user_id,
+            original_filename=filename,
+            game_id=game_id,
+            job_id=job_id,
+            batch_id=batch_id,
+            red_player=red_player,
+            black_player=black_player,
+            status=HintViewerWebUploadStatus.QUEUED.value,
+            service=history_service,
+        )
     meta = {
         "filename": filename,
         "game_id": game_id,

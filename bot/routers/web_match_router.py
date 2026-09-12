@@ -6,9 +6,12 @@
 и разбор для плеера быстрые, отдельной очереди им не нужно.
 
 Запись истории на матч одна (service="match"):
-  game_id          — стадия ошибок; по job_id её статус обновляет сам воркер,
-                     то есть отслеживание готовности работает штатным путём;
+  game_id          — стадия ошибок;
   analyze_game_id  — стадия анализа, заполняется после ответа воркера.
+
+Готовность стадии ошибок определяет сервер по наличию результата в S3 — так же,
+как это делает вкладка «Ошибки». Сам воркер в базу не пишет: у него есть доступ
+только к Redis и S3.
 
 Такие матчи не засоряют историю «Анализа» и «Ошибок» — там фильтр по service.
 """
@@ -179,6 +182,8 @@ async def _start_analyze_stage(row) -> None:
         job_id=row.job_id,
         game_id=analyze_game_id,
         kind="single",
+        # запись матча уже есть — второй, во вкладке «Анализ», быть не должно
+        history_service=None,
     )
     work["service"] = WEB_SERVICE_MATCH
     row.analyze_game_id = analyze_game_id
@@ -194,16 +199,18 @@ async def _start_analyze_stage(row) -> None:
 
 async def _reconcile_match_history(user_id: int) -> None:
     """
-    Запускает вторую стадию и подчищает зависшее.
+    Двигает матчи по стадиям и подчищает зависшее.
 
-    Воркер сам проставляет записи «done», когда разбор ошибок готов, — это
-    и есть сигнал, что пора считать анализ. Плюс гасим записи, которые висят
-    в работе слишком долго: без этого матч остался бы «в работе» навсегда.
+    Воркер про запись матча ничего не знает и в базу не ходит, поэтому
+    готовность разбора ошибок проверяем сами — по наличию результата в S3,
+    ровно как это делает «Ошибки» (_hint_s3_ready). Как только он появился,
+    запускаем быстрый анализ на сервере.
     """
     from sqlalchemy import select
 
     from bot.db.database import async_session_maker
     from bot.db.models import HintViewerWebUpload
+    from bot.routers.hint_viewer_web_router import _hint_s3_ready
 
     try:
         async with async_session_maker() as session:
@@ -223,17 +230,20 @@ async def _reconcile_match_history(user_id: int) -> None:
             now = datetime.now(timezone.utc)
             finished: dict[str, set[str]] = {}
             for row in rows:
-                done = row.status == HintViewerWebUploadStatus.DONE.value
-                if done and not row.analyze_game_id:
-                    # ошибки готовы — пора считать анализ
+                if row.analyze_game_id:
+                    # анализ уже идёт или закончен: его статус ставит локальный
+                    # обработчик, здесь ничего не решаем
+                    if row.status == HintViewerWebUploadStatus.DONE.value:
+                        if row.session_id and row.job_id:
+                            finished.setdefault(row.session_id, set()).add(row.job_id)
+                    continue
+
+                ready = await asyncio.to_thread(_hint_s3_ready, row.game_id)
+                if ready:
                     await _start_analyze_stage(row)
                     changed = True
                     continue
-                if done:
-                    # готово всё: матч уходит из текущих задач в историю
-                    if row.session_id and row.job_id:
-                        finished.setdefault(row.session_id, set()).add(row.job_id)
-                    continue
+
                 created = row.created_at
                 if created is None:
                     continue
@@ -241,12 +251,7 @@ async def _reconcile_match_history(user_id: int) -> None:
                     created = created.replace(tzinfo=timezone.utc)
                 if (now - created).total_seconds() > HINTS_STAGE_TIMEOUT_SEC:
                     row.status = HintViewerWebUploadStatus.ERROR.value
-                    # какая именно стадия висела — видно по наличию id анализа
-                    row.error_message = (
-                        "Анализ не завершился"
-                        if row.analyze_game_id
-                        else "Разбор ошибок не завершился"
-                    )
+                    row.error_message = "Разбор ошибок не завершился"
                     row.finished_at = now
                     changed = True
                     if row.session_id and row.job_id:
@@ -271,7 +276,7 @@ async def recover_match_tasks() -> None:
     запись оставалась «в работе» навсегда.
 
     Разбираем три случая:
-      * ошибки готовы, анализ не запускался — запускаем;
+      * результат разбора ошибок уже в S3, а анализ не запускался — запускаем;
       * анализ числится в работе, но его нет ни в очереди, ни в счёте, а
         результат в S3 есть — значит досчитался перед рестартом, закрываем;
       * результата нет — ставим анализ заново.
@@ -306,13 +311,17 @@ async def recover_match_tasks() -> None:
                 )
             ).all()
 
+            from bot.routers.hint_viewer_web_router import _hint_s3_ready
+
             for row in rows:
                 done = row.status == HintViewerWebUploadStatus.DONE.value
-                if done and not row.analyze_game_id:
-                    await _start_analyze_stage(row)
-                    started += 1
+                if not row.analyze_game_id:
+                    # ошибки могли досчитаться, пока сервис был выключен
+                    if await asyncio.to_thread(_hint_s3_ready, row.game_id):
+                        await _start_analyze_stage(row)
+                        started += 1
                     continue
-                if done or not row.analyze_game_id:
+                if done:
                     continue
 
                 # анализ числится в работе — проверяем, жив ли он на самом деле
