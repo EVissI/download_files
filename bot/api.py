@@ -3659,12 +3659,14 @@ async def folder_share(body: FolderShareBody):
     from bot.common.service.cabinet_admin import (
         notify_cabinet_assignment,
         web_cabinet_source_path_for_pool,
+        web_cabinet_title_for_pool,
     )
 
     source_path = f"{web_cabinet_source_path_for_pool(folder_pool)}/folder/{folder_id}"
+    section = web_cabinet_title_for_pool(folder_pool)
     notify_sent, notify_error = await notify_cabinet_assignment(
         body.target_user_id,
-        text=f"Вам открыт доступ к папке «{folder_name}».",
+        text=f"Вам открыт доступ к папке «{folder_name}» в разделе «{section}».",
         source_path=source_path,
         author_user_id=user_id,
         telegram_markup=_folder_cabinet_webapp_markup(folder_pool, folder_id),

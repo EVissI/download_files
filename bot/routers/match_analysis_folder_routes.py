@@ -547,7 +547,7 @@ async def ma_folder_share(body: MaFolderShareBody):
     kb.adjust(1)
     notify_sent, notify_error = await notify_cabinet_assignment(
         body.target_user_id,
-        text=f"Вам открыт доступ к папке «{folder_name}».",
+        text=f"Вам открыт доступ к папке «{folder_name}» в разделе «Анализ матча».",
         source_path=f"/web/match-analysis/folder/{folder_id}",
         author_user_id=user_id,
         telegram_markup=kb.as_markup(),

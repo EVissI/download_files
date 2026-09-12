@@ -615,6 +615,13 @@ def register_web_upload_folder_routes(
             )
             await db.commit()
 
+        # название раздела берём оттуда же, откуда заголовок страницы,
+        # чтобы формулировки не разъезжались
+        from bot.common.service.hint_viewer_web_service import web_cabinet_page_vars
+
+        service_title = web_cabinet_page_vars(folder_service).get(
+            "page_title", folder_service
+        )
         notify_sent = False
         notify_error = None
         try:
@@ -630,7 +637,10 @@ def register_web_upload_folder_routes(
                     author_user_id=user_id,
                     author_role=WebSupportAuthorRole.ADMIN.value,
                     author_login=admin_login,
-                    body=f"Вам открыт доступ к папке «{folder_name}».",
+                    body=(
+                        f"Вам открыт доступ к папке «{folder_name}» "
+                        f"в разделе «{service_title}»."
+                    ),
                     source_path=f"/web/{folder_service}/folder/{folder_id}",
                     files=[],
                 )

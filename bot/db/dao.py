@@ -3196,11 +3196,13 @@ class HintViewerWebUploadDAO(BaseDAO[HintViewerWebUpload]):
         status: str = HintViewerWebUploadStatus.QUEUED.value,
         service: str = "hints",
         error_message: str | None = None,
+        analyze_game_id: str | None = None,
     ) -> HintViewerWebUpload:
         row = HintViewerWebUpload(
             user_id=user_id,
             session_id=session_id,
             game_id=game_id,
+            analyze_game_id=analyze_game_id,
             job_id=job_id,
             batch_id=batch_id,
             original_filename=original_filename,

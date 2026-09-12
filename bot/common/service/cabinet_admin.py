@@ -245,6 +245,20 @@ async def grant_match_analysis_to_cabinet_admins(
         )
 
 
+def web_cabinet_title_for_pool(pool) -> str:
+    """Название раздела для писем и сообщений: «Карточки», «Подсчёт пипсов»…"""
+    from bot.db.models import ContentCardPool
+
+    if pool == ContentCardPool.PIP_COUNT or str(pool) == ContentCardPool.PIP_COUNT.value:
+        return "Подсчёт пипсов"
+    if (
+        pool == ContentCardPool.MATCH_ANALYSIS
+        or str(pool) == ContentCardPool.MATCH_ANALYSIS.value
+    ):
+        return "Анализ матча"
+    return "Карточки"
+
+
 def web_cabinet_source_path_for_pool(pool) -> str:
     from bot.db.models import ContentCardPool
 

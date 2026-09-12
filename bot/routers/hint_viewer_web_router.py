@@ -1238,14 +1238,23 @@ async def web_hints_send_to_user(request: Request, body: SendHintToUserBody):
         filename = source.original_filename or f"{gid}.mat"
         red_player = source.red_player
         black_player = source.black_player
+        # Матч отдаём получателю тем же сервисом: у «Всё о матче» своя вкладка,
+        # свои папки и метки, и вторая стадия (анализ) должна поехать вместе с ним.
+        target_service = (
+            WEB_SERVICE_MATCH
+            if source.service == WEB_SERVICE_MATCH
+            else WEB_SERVICE_HINTS
+        )
+        analyze_game_id = (
+            source.analyze_game_id if target_service == WEB_SERVICE_MATCH else None
+        )
 
         target = await db.get(WebUser, target_user_id)
         if not target or target.is_expired():
             raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-        # получателю запись всегда кладётся в «Ошибки», поэтому проверяем там же
         existing = await dao.find_for_user_game(
-            target_user_id, gid, WEB_SERVICE_HINTS
+            target_user_id, gid, target_service
         )
         created = False
         if existing is None:
@@ -1257,7 +1266,8 @@ async def web_hints_send_to_user(request: Request, body: SendHintToUserBody):
                 red_player=red_player,
                 black_player=black_player,
                 status=HintViewerWebUploadStatus.DONE.value,
-                service=WEB_SERVICE_HINTS,
+                service=target_service,
+                analyze_game_id=analyze_game_id,
             )
             created = True
         await db.commit()
@@ -1275,8 +1285,16 @@ async def web_hints_send_to_user(request: Request, body: SendHintToUserBody):
                 author_user_id=user_id,
                 author_role=WebSupportAuthorRole.ADMIN.value,
                 author_login=admin_login,
-                body=f"Вам отправлен анализ ошибок «{filename}».",
-                source_path=f"/web/hints/game/{gid}",
+                body=(
+                    f"Вам отправлен матч «{filename}» в раздел «Всё о матче»."
+                    if target_service == WEB_SERVICE_MATCH
+                    else f"Вам отправлен анализ ошибок «{filename}»."
+                ),
+                source_path=(
+                    "/web/match"
+                    if target_service == WEB_SERVICE_MATCH
+                    else f"/web/hints/game/{gid}"
+                ),
                 files=[],
             )
         notify_sent = True
