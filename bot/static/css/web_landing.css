@@ -129,8 +129,11 @@ html[data-theme="light"] .lbg-shotbox .lbg-shot--light{display:block}
   .lbg-burger{display:inline-flex}
   .lbg-header__login{display:none}
   .lbg-header__inner{position:relative}
+  /* nav уходит из потока, поэтому его margin-left:auto больше не работает —
+     кнопки прижимаем вправо явно */
+  .lbg-header__actions{margin-left:auto}
   .lbg-nav{
-    position:absolute;top:calc(100% + 8px);left:12px;right:12px;
+    position:absolute;top:calc(100% + 8px);left:20px;right:20px;
     flex-direction:column;align-items:stretch;gap:2px;
     margin-left:0;padding:8px;border-radius:12px;overflow:visible;
     background:var(--lbg-header);border:1px solid var(--lbg-border);
