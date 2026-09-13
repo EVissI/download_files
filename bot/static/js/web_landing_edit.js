@@ -33,12 +33,35 @@
         defaults = {};
     }
 
+    // Исходные адреса ссылок — для тех, что уже переопределены в БД.
+    var hrefDefaults = {};
+    try {
+        var rawHrefs = document.getElementById('lp-href-defaults');
+        if (rawHrefs) hrefDefaults = JSON.parse(rawHrefs.textContent) || {};
+    } catch (e) {
+        hrefDefaults = {};
+    }
+
     nodes.forEach(function (el) {
         var key = el.getAttribute('data-lp');
         var text = el.textContent.trim();
         state[key] = { text: text, style: parseStyle(el) };
         if (!(key in defaults)) defaults[key] = text;
+        if (el.tagName === 'A') {
+            // getAttribute, а не .href: браузер достраивает адрес до полного
+            var href = el.getAttribute('href') || '';
+            state[key].href = href;
+            if (!(key in hrefDefaults)) hrefDefaults[key] = href;
+        }
     });
+
+    function defaultHref(key) {
+        return hrefDefaults[key] != null ? hrefDefaults[key] : '';
+    }
+
+    function isLink(el) {
+        return !!el && el.tagName === 'A';
+    }
 
     function defaultText(key) {
         return defaults[key] != null ? defaults[key] : '';
@@ -46,6 +69,7 @@
 
     function isPristine(key) {
         var st = state[key];
+        if (st.href !== undefined && st.href !== defaultHref(key)) return false;
         return st.text === defaultText(key) && !Object.keys(st.style).length;
     }
 
@@ -128,6 +152,11 @@
             '  </label>',
             '  <button type="button" data-act="clear" title="Вернуть исходный текст и оформление">Сброс</button>',
             '</div>',
+            '<label class="lbg-ed__href" id="lbg-ed-href-box" title="Куда ведёт ссылка">',
+            '  <span>Ссылка</span>',
+            '  <input type="text" id="lbg-ed-href" data-act="href" spellcheck="false"',
+            '         placeholder="/web/analyze или https://…">',
+            '</label>',
             '<div class="lbg-ed__actions">',
             '  <span class="lbg-ed__counter" id="lbg-ed-counter"></span>',
             '  <button type="button" class="lbg-ed__cancel" data-act="cancel">Отменить</button>',
@@ -153,6 +182,7 @@
         if (!tools) return;
         tools.style.display = active ? 'flex' : 'none';
         if (hint) hint.style.display = active ? 'none' : 'block';
+        refreshHrefBox();
         if (!active) return;
 
         var st = state[keyOf(active)].style;
@@ -172,6 +202,15 @@
 
         var sColor = tools.querySelector('[data-act="stroke-color"]');
         if (sColor && st.stroke) sColor.value = st.stroke.color;
+    }
+
+    function refreshHrefBox() {
+        var box = document.getElementById('lbg-ed-href-box');
+        var input = document.getElementById('lbg-ed-href');
+        if (!box || !input) return;
+        var show = !!active && isLink(active);
+        box.style.display = show ? 'inline-flex' : 'none';
+        if (show) input.value = state[keyOf(active)].href || '';
     }
 
     function onPanelClick(e) {
@@ -206,6 +245,11 @@
             state[k].text = defaultText(k);
             state[k].style = {};
             st = state[k].style;
+            if (state[k].href !== undefined) {
+                state[k].href = defaultHref(k);
+                active.setAttribute('href', state[k].href);
+                refreshHrefBox();
+            }
             renderColors();
         }
 
@@ -220,6 +264,14 @@
         var act = input.getAttribute('data-act');
         var st = state[keyOf(active)].style;
 
+        if (act === 'href') {
+            if (!isLink(active)) return;
+            var key = keyOf(active);
+            state[key].href = input.value.trim();
+            active.setAttribute('href', state[key].href || defaultHref(key));
+            markDirty(active);
+            return;
+        }
         if (act === 'color-dark' || act === 'color-light') {
             st.color = st.color || {};
             st.color[act === 'color-dark' ? 'dark' : 'light'] = input.value;
@@ -279,6 +331,15 @@
         document.body.classList.toggle('lp-editing', on);
         toggle.classList.toggle('is-on', on);
         toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+
+        blockAddBtns.forEach(function (el) {
+            if (on) el.addEventListener('click', onBlockAdd);
+            else el.removeEventListener('click', onBlockAdd);
+        });
+        blockDelBtns.forEach(function (el) {
+            if (on) el.addEventListener('click', onBlockDel);
+            else el.removeEventListener('click', onBlockDel);
+        });
 
         imageSlots.forEach(function (el) {
             el.classList.toggle('is-lp-img', on);
@@ -372,6 +433,64 @@
         });
     }
 
+    // --- блоки секций ------------------------------------------------------
+
+    // Состав секций меняется сразу на сервере: это правка структуры, копить
+    // её вместе с текстами нельзя — новый блок должен прийти уже отрисованным.
+    var blockAddBtns = [].slice.call(document.querySelectorAll('[data-lp-block-add]'));
+    var blockDelBtns = [].slice.call(document.querySelectorAll('[data-lp-block-del]'));
+
+    function blockApi(payload) {
+        return fetch('/web/landing/api/blocks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+        }).then(function (r) {
+            return r.json().then(function (data) {
+                if (!r.ok) throw new Error(data.detail || ('HTTP ' + r.status));
+                return data;
+            });
+        });
+    }
+
+    function sectionOf(el) {
+        var holder = el.closest('[data-lp-section]');
+        return holder ? holder.getAttribute('data-lp-section') : '';
+    }
+
+    function onBlockAdd(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!editing) return;
+        var btn = this;
+        btn.disabled = true;
+        blockApi({ section: btn.getAttribute('data-lp-block-add'), action: 'add' })
+            .then(function () { location.reload(); })
+            .catch(function (err) {
+                btn.disabled = false;
+                alert('Не удалось добавить блок: ' + err.message);
+            });
+    }
+
+    function onBlockDel(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!editing) return;
+        var btn = this;
+        if (!confirm('Убрать блок со страницы?')) return;
+        btn.disabled = true;
+        blockApi({
+            section: sectionOf(btn),
+            action: 'remove',
+            block_id: btn.getAttribute('data-lp-block-del')
+        }).then(function () { location.reload(); })
+            .catch(function (err) {
+                btn.disabled = false;
+                alert('Не удалось убрать блок: ' + err.message);
+            });
+    }
+
     // --- сохранение --------------------------------------------------------
 
     function save() {
@@ -380,14 +499,23 @@
 
         var items = keys.map(function (key) {
             var st = state[key].style;
+            var item;
             // пустой текст без стилей сервер понимает как «вернуть шаблонный»
             // и удаляет строку — именно это нужно после «Сброса»
-            if (isPristine(key)) return { key: key, text: '', style: null };
-            return {
-                key: key,
-                text: state[key].text,
-                style: Object.keys(st).length ? st : null
-            };
+            if (isPristine(key)) {
+                item = { key: key, text: '', style: null };
+            } else {
+                item = {
+                    key: key,
+                    text: state[key].text,
+                    style: Object.keys(st).length ? st : null
+                };
+            }
+            if (state[key].href !== undefined) {
+                // адрес, совпавший с шаблонным, сервер удалит из БД
+                item.href = state[key].href === defaultHref(key) ? '' : state[key].href;
+            }
+            return item;
         });
 
         var btn = panel.querySelector('.lbg-ed__save');
@@ -432,6 +560,7 @@
     document.addEventListener('click', function (e) {
         if (!editing) return;
         if (e.target.closest('[data-lp]') || e.target.closest('.lbg-ed')) return;
+        if (e.target.closest('[data-lp-block-add], [data-lp-block-del]')) return;
         select(null);
     });
 

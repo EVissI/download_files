@@ -31,6 +31,15 @@ MAX_KEYS_PER_SAVE = 200
 # Картинки лежат в тех же строках, что и тексты, но под своим префиксом —
 # чтобы не путались с ключами текстовых узлов.
 IMAGE_KEY_PREFIX = "img-"
+# Адреса ссылок — там же, своим префиксом.
+HREF_KEY_PREFIX = "href-"
+MAX_HREF_LEN = 500
+# Что разрешено в href: свои страницы, обычные сайты и мессенджеры.
+# javascript:, data: и прочее сюда не проходит.
+_HREF_RE = re.compile(
+    r"""^(?:https?://[^\s<>"']+|/[^\s<>"']*|\#[A-Za-z0-9_-]*"""
+    r"""|mailto:[^\s<>"']+|tel:[+0-9][0-9 ()-]*|tg://[^\s<>"']+)$"""
+)
 
 # Границы стилей. Намеренно узкие: размер — множитель к тому, что задано в CSS,
 # поэтому адаптивные clamp() продолжают работать и вёрстка не разъезжается.
@@ -45,6 +54,16 @@ _WS_RE = re.compile(r"[ \t ]+")
 
 def valid_key(key: Any) -> bool:
     return isinstance(key, str) and bool(KEY_RE.match(key))
+
+
+def clean_href(raw: Any) -> str:
+    """Адрес ссылки. Пустая строка — значит вернуть тот, что в шаблоне."""
+    if raw is None:
+        return ""
+    value = "".join(str(raw).split())[:MAX_HREF_LEN]
+    if not value:
+        return ""
+    return value if _HREF_RE.match(value) else ""
 
 
 def clean_text(raw: Any) -> str:
@@ -222,6 +241,11 @@ async def save_items(items: list[dict[str, Any]], user_id: int | None) -> int:
             text = clean_text(item.get("text"))
             style = clean_style(item.get("style"))
 
+            # Ссылка живёт отдельной строкой: у одного узла могут отличаться
+            # текст и адрес, а сброс текста не должен ронять адрес.
+            if "href" in item:
+                await _write_href(session, key, clean_href(item.get("href")), user_id)
+
             if not text and not style:
                 await session.execute(
                     LandingText.__table__.delete().where(
@@ -253,6 +277,98 @@ async def save_items(items: list[dict[str, Any]], user_id: int | None) -> int:
 
     await invalidate_cache()
     return saved
+
+
+async def _delete_key(session, key: str) -> None:
+    await session.execute(
+        LandingText.__table__.delete().where(
+            (LandingText.page == PAGE) & (LandingText.key == key)
+        )
+    )
+
+
+async def _upsert(session, key: str, text: str | None, style, user_id) -> None:
+    stmt = insert(LandingText).values(
+        page=PAGE, key=key, text=text, style_json=style, updated_by=user_id
+    )
+    await session.execute(
+        stmt.on_conflict_do_update(
+            index_elements=[LandingText.page, LandingText.key],
+            set_={
+                "text": stmt.excluded.text,
+                "style_json": stmt.excluded.style_json,
+                "updated_by": stmt.excluded.updated_by,
+            },
+        )
+    )
+
+
+async def _write_href(session, key: str, href: str, user_id: int | None) -> None:
+    full = f"{HREF_KEY_PREFIX}{key}"
+    if len(full) > KEY_MAX_LEN:
+        return
+    if not href:
+        await _delete_key(session, full)
+        return
+    await _upsert(session, full, href, None, user_id)
+
+
+async def get_layouts(
+    overrides: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, list[str] | None]:
+    """
+    Раскладка каждой секции: None — состав по умолчанию.
+
+    Правки можно передать уже прочитанными — страница читает их один раз и
+    не ходит в Redis повторно.
+    """
+    from bot.common.service.landing_blocks import SECTIONS, clean_layout, layout_key
+
+    if overrides is None:
+        overrides = await get_overrides()
+    out: dict[str, list[str] | None] = {}
+    for section in SECTIONS:
+        entry = overrides.get(layout_key(section)) or {}
+        raw = (entry.get("style") or {}).get("blocks")
+        out[section] = clean_layout(section, raw)
+    return out
+
+
+async def save_layout(section: str, blocks: list[str], user_id: int | None) -> None:
+    """Запоминает состав и порядок блоков секции."""
+    from bot.common.service.landing_blocks import SECTIONS, clean_layout, layout_key
+
+    if section not in SECTIONS:
+        return
+    cleaned = clean_layout(section, blocks) or []
+    async with async_session_maker() as session:
+        await _upsert(
+            session, layout_key(section), None, {"blocks": cleaned}, user_id
+        )
+        await session.commit()
+    await invalidate_cache()
+
+
+async def drop_block_keys(section: str, block_id: str) -> None:
+    """Убирает тексты, ссылки и картинку удалённого своего блока."""
+    from bot.common.service.landing_blocks import CUSTOM_ID_RE
+
+    if not CUSTOM_ID_RE.match(block_id or ""):
+        return
+    prefix = f"{section}-{block_id}"
+    async with async_session_maker() as session:
+        await session.execute(
+            LandingText.__table__.delete().where(
+                (LandingText.page == PAGE)
+                & (
+                    LandingText.key.like(f"{prefix}%")
+                    | LandingText.key.like(f"{HREF_KEY_PREFIX}{prefix}%")
+                    | LandingText.key.like(f"{IMAGE_KEY_PREFIX}{prefix}%")
+                )
+            )
+        )
+        await session.commit()
+    await invalidate_cache()
 
 
 async def reset_all() -> int:

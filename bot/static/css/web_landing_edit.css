@@ -173,3 +173,87 @@
     opacity: .5;
     pointer-events: none;
 }
+
+/* Адрес ссылки: поле появляется, только когда выбрана ссылка. */
+.lbg-ed__href {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 260px;
+    min-width: 0;
+    color: var(--lbg-soft);
+}
+
+.lbg-ed__href input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--lbg-border);
+    border-radius: 8px;
+    background: var(--lbg-sunken);
+    color: var(--lbg-text);
+    font: inherit;
+    font-size: .85rem;
+}
+
+/* Кнопки состава секций. Видны только в режиме правки — вне его в разметке
+   они есть (их отдаёт сервер админу), но не показываются. */
+.lbg-block-add,
+.lbg-block-del {
+    display: none;
+}
+
+.lp-editing .lbg-block-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 12px 18px;
+    border: 1px dashed var(--lbg-border);
+    border-radius: 14px;
+    background: none;
+    color: var(--lbg-soft);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.lp-editing .lbg-block-add:hover {
+    border-color: var(--lbg-accent-2);
+    color: var(--lbg-text);
+}
+
+.lp-editing [data-lp-block] {
+    position: relative;
+}
+
+.lp-editing .lbg-block-del {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid var(--lbg-border);
+    border-radius: 50%;
+    background: var(--lbg-header);
+    color: var(--lbg-soft);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.lp-editing .lbg-block-del:hover {
+    border-color: #c62828;
+    color: #c62828;
+}
+
+.lp-editing .lbg-block-del:disabled {
+    opacity: .5;
+    cursor: default;
+}

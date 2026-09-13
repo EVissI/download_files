@@ -33,7 +33,19 @@ from bot.common.service.landing_text_service import (
     save_items,
     style_to_css,
 )
-from bot.common.service.landing_text_service import IMAGE_KEY_PREFIX
+from bot.common.service.landing_blocks import (
+    MAX_BLOCKS_PER_SECTION,
+    SECTIONS,
+    build_blocks,
+    new_block_id,
+)
+from bot.common.service.landing_text_service import (
+    HREF_KEY_PREFIX,
+    IMAGE_KEY_PREFIX,
+    drop_block_keys,
+    get_layouts,
+    save_layout,
+)
 from bot.common.utils.static_assets import get_static_asset_version
 
 web_landing_api_router = APIRouter()
@@ -47,6 +59,15 @@ class LandingSaveItem(BaseModel):
     key: str = Field(max_length=80)
     text: str = Field(default="", max_length=4000)
     style: dict[str, Any] | None = None
+    # None — адрес не трогаем; строка (в том числе пустая) — записать или
+    # вернуть шаблонный
+    href: str | None = Field(default=None, max_length=500)
+
+
+class LandingBlockBody(BaseModel):
+    section: str = Field(max_length=20)
+    action: str = Field(max_length=10)
+    block_id: str = Field(default="", max_length=40)
 
 
 class LandingSaveBody(BaseModel):
@@ -65,6 +86,7 @@ def _build_helpers(overrides: dict[str, dict[str, Any]]):
     Собираются по ходу рендера, поэтому lp_defaults() вызывается в конце body.
     """
     defaults: dict[str, str] = {}
+    href_defaults: dict[str, str] = {}
 
     def lp_attr(key: str) -> Markup:
         entry = overrides.get(key) or {}
@@ -90,12 +112,45 @@ def _build_helpers(overrides: dict[str, dict[str, Any]]):
         entry = overrides.get(f"{IMAGE_KEY_PREFIX}{key}") or {}
         return entry.get("text") or default_src
 
+    def lp_href(key: str, default_href: str) -> str:
+        """Адрес ссылки: заданный админом либо тот, что в шаблоне."""
+        entry = overrides.get(f"{HREF_KEY_PREFIX}{key}") or {}
+        value = (entry.get("text") or "").strip()
+        if value:
+            href_defaults[key] = default_href
+            return value
+        return default_href
+
     def lp_defaults() -> Markup:
         # "</" экранируем, иначе текст с тегом закроет <script> раньше времени
         raw = json.dumps(defaults, ensure_ascii=False).replace("</", "<\\/")
         return Markup(raw)
 
-    return lp_attr, lp_text, lp_defaults, lp_img
+    def lp_href_defaults() -> Markup:
+        raw = json.dumps(href_defaults, ensure_ascii=False).replace("</", "<\\/")
+        return Markup(raw)
+
+    return lp_attr, lp_text, lp_defaults, lp_img, lp_href, lp_href_defaults
+
+
+def _no_html(*_args: Any) -> Markup:
+    """Для обычных посетителей управляющих кнопок в разметке просто нет."""
+    return Markup("")
+
+
+def _block_remove_html(block: dict[str, Any]) -> Markup:
+    return Markup(
+        '<button type="button" class="lbg-block-del" data-lp-block-del="%s"'
+        ' title="Убрать блок" aria-label="Убрать блок">×</button>'
+        % escape(block.get("id") or "")
+    )
+
+
+def _block_add_html(section: str) -> Markup:
+    return Markup(
+        '<button type="button" class="lbg-block-add" data-lp-block-add="%s">'
+        "+ Добавить блок</button>" % escape(section)
+    )
 
 
 async def _is_landing_admin(request: Request) -> bool:
@@ -117,7 +172,18 @@ async def web_landing(request: Request):
     is_admin = bool((session or {}).get("is_admin"))
 
     overrides = await get_overrides()
-    lp_attr, lp_text, lp_defaults, lp_img = _build_helpers(overrides)
+    (
+        lp_attr,
+        lp_text,
+        lp_defaults,
+        lp_img,
+        lp_href,
+        lp_href_defaults,
+    ) = _build_helpers(overrides)
+    layouts = await get_layouts(overrides)
+    blocks = {
+        section: build_blocks(section, layouts.get(section)) for section in SECTIONS
+    }
     # Цвета зависят от темы, поэтому идут правилами в <style>, а не инлайном.
     # Markup обязателен: внутри <style> HTML-сущности не декодируются, и
     # экранированные кавычки сломали бы селекторы. Содержимое безопасно —
@@ -136,6 +202,11 @@ async def web_landing(request: Request):
             "lp_text": lp_text,
             "lp_defaults": lp_defaults,
             "lp_img": lp_img,
+            "lp_href": lp_href,
+            "lp_href_defaults": lp_href_defaults,
+            "lp_block_remove": _block_remove_html if is_admin else _no_html,
+            "lp_block_add": _block_add_html if is_admin else _no_html,
+            "blocks": blocks,
             "lp_color_css": color_css,
         },
     )
@@ -163,6 +234,50 @@ async def web_landing_reset(request: Request):
     removed = await reset_all()
     logger.info("landing texts reset: {} строк", removed)
     return JSONResponse({"status": "ok", "removed": removed})
+
+
+@web_landing_api_router.post("/web/landing/api/blocks")
+async def web_landing_blocks(request: Request, body: LandingBlockBody):
+    """
+    Добавляет или убирает блок секции. Меняется только раскладка: тексты
+    штатных блоков остаются в БД, поэтому убранный блок можно вернуть
+    «Сбросом» без потери правок.
+    """
+    if not await _is_landing_admin(request):
+        raise HTTPException(status_code=403, detail="forbidden")
+    section = (body.section or "").strip()
+    if section not in SECTIONS:
+        raise HTTPException(status_code=400, detail="Неизвестная секция")
+
+    session = getattr(request.state, "web_session", None) or {}
+    user_id = session.get("user_id")
+    user_id = int(user_id) if user_id else None
+
+    layouts = await get_layouts()
+    current = layouts.get(section)
+    if current is None:
+        current = [block["id"] for block in build_blocks(section, None)]
+
+    action = (body.action or "").strip()
+    block_id = (body.block_id or "").strip()
+    if action == "add":
+        if len(current) >= MAX_BLOCKS_PER_SECTION:
+            raise HTTPException(status_code=400, detail="Слишком много блоков")
+        block_id = new_block_id()
+        current = current + [block_id]
+    elif action == "remove":
+        if block_id not in current:
+            raise HTTPException(status_code=404, detail="Блок не найден")
+        current = [item for item in current if item != block_id]
+    else:
+        raise HTTPException(status_code=400, detail="Неизвестное действие")
+
+    await save_layout(section, current, user_id)
+    if action == "remove":
+        # свой блок уносим целиком: возвращать его неоткуда
+        await drop_block_keys(section, block_id)
+    logger.info("landing block {}: {} / {}", action, section, block_id)
+    return JSONResponse({"ok": True, "block_id": block_id, "blocks": current})
 
 
 # Картинки лендинга: меняются админом в режиме редактирования, лежат в S3
