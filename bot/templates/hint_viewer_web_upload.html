@@ -1123,6 +1123,32 @@
             } catch (e) {}
         }
 
+        // detail у FastAPI бывает не строкой: при 422 это список
+        // {loc, msg, type}. Подставлять его в textContent напрямую нельзя —
+        // получается «[object Object]» вместо причины.
+        function errorText(data, res, fallback) {
+            const detail = data && data.detail;
+            let text = '';
+            if (typeof detail === 'string') {
+                text = detail.trim();
+            } else if (Array.isArray(detail)) {
+                text = detail.map((item) => {
+                    if (typeof item === 'string') return item;
+                    if (!item || typeof item !== 'object') return '';
+                    const where = Array.isArray(item.loc) ? item.loc.join('.') : '';
+                    return [where, item.msg].filter(Boolean).join(': ');
+                }).filter(Boolean).join('; ');
+            } else if (detail && typeof detail === 'object') {
+                text = String(detail.msg || detail.message || '').trim();
+            }
+            if (!text && data && typeof data.message === 'string') text = data.message.trim();
+            const base = text || fallback || 'Ошибка';
+            const code = res && res.status ? res.status : 0;
+            // код держим в сообщении: по нему видно, что ответил сервер,
+            // когда причину присылают скриншотом
+            return code && code !== 400 ? base + ' (код ' + code + ')' : base;
+        }
+
         async function startUpload() {
             if (!selectedFiles.length || uploading) return;
             uploading = true;
@@ -1133,10 +1159,14 @@
             const fd = new FormData();
             selectedFiles.forEach((f) => fd.append('files', f));
             try {
-                const res = await fetch(apiBase + '/api/upload', { method: 'POST', body: fd });
+                const res = await fetch(apiBase + '/api/upload', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    body: fd
+                });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) {
-                    uploadStatus.textContent = data.detail || 'Ошибка загрузки';
+                    uploadStatus.textContent = errorText(data, res, 'Ошибка загрузки');
                     uploading = false;
                     if (uploadBtn) uploadBtn.disabled = false;
                     fileInput.value = '';
@@ -1162,7 +1192,9 @@
                         }
                     } else if (!doneJobs.length) {
                         const errJob = jobs[0] || {};
-                        uploadStatus.textContent = data.detail || errJob.error || 'Не удалось открыть матч';
+                        uploadStatus.textContent = errorText(
+                            data, res, errJob.error || 'Не удалось открыть матч'
+                        );
                         uploading = false;
                         if (uploadBtn) uploadBtn.disabled = false;
                         fileInput.value = '';
@@ -1184,7 +1216,9 @@
                 setTimeout(pollJobs, 700);
                 setTimeout(pollHistory, 700);
             } catch (e) {
-                uploadStatus.textContent = 'Сеть недоступна';
+                // сюда попадаем, когда запрос не дошёл вовсе: обрыв связи,
+                // закрытая вкладка, блокировка запроса браузером
+                uploadStatus.textContent = 'Сеть недоступна: ' + (e && e.message ? e.message : e);
                 uploading = false;
                 if (uploadBtn) uploadBtn.disabled = false;
                 fileInput.value = '';
@@ -1512,7 +1546,7 @@
             const res = await fetch(apiBase + '/api/batch?batch_id=' + encodeURIComponent(batchId));
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
-                throw new Error(data.detail || 'Не удалось загрузить пакет');
+                throw new Error(errorText(data, res, 'Не удалось загрузить пакет'));
             }
             cacheBatchPayload(batchId, data);
             return data;
@@ -1580,7 +1614,9 @@
                     const res = await fetch(apiBase + '/api/table?game_id=' + encodeURIComponent(gameId));
                     const data = await res.json().catch(() => ({}));
                     if (!res.ok) {
-                        wrap.innerHTML = '<div class="muted">' + escapeHtml(data.detail || 'Не удалось загрузить таблицу') + '</div>';
+                        wrap.innerHTML = '<div class="muted">'
+                            + escapeHtml(errorText(data, res, 'Не удалось загрузить таблицу'))
+                            + '</div>';
                         return;
                     }
                     loadedTables[gameId] = data.html || '<div class="muted">Нет данных</div>';

@@ -75,6 +75,7 @@ from bot.common.service.web_support_service import (
     get_or_create_thread,
 )
 from bot.common.utils.match_file_ext import as_mat_name, is_mat_upload_name
+from bot.common.utils.upload_form import require_uploads
 from bot.common.utils.static_assets import get_static_asset_version
 from bot.common.utils.http_security import (
     client_ip,
@@ -779,10 +780,9 @@ async def web_hints_upload_page(request: Request):
 
 
 @hint_viewer_web_api_router.post("/web/hints/api/upload")
-async def web_hints_upload(request: Request, files: list[UploadFile] = File(...)):
+async def web_hints_upload(request: Request):
     token, session = await _require_session(request)
-    if not files:
-        raise HTTPException(status_code=400, detail="Файлы не выбраны")
+    files = await require_uploads(request)
     workdir = tempfile.mkdtemp(prefix="hint_web_")
     try:
         collected = await _collect_mat_files(files, workdir)

@@ -37,6 +37,7 @@ from bot.routers.web_upload_folder_routes import (
     resolve_scoped_folder_id,
 )
 from bot.routers.web_upload_label_routes import register_web_upload_label_routes
+from bot.common.utils.upload_form import require_uploads
 
 board_viewer_web_api_router = APIRouter()
 templates = Jinja2Templates(directory="bot/templates")
@@ -149,11 +150,9 @@ async def web_board_upload_page(request: Request):
 
 
 @board_viewer_web_api_router.post("/web/board/api/upload")
-async def web_board_upload(request: Request, files: list[UploadFile] = File(...)):
+async def web_board_upload(request: Request):
     token, session = await _require_session(request)
-    uploads = [item for item in files if item and item.filename]
-    if not uploads:
-        raise HTTPException(status_code=400, detail="Файлы не выбраны")
+    uploads = await require_uploads(request)
     from bot.routers.hint_viewer_web_router import _collect_mat_files
 
     workdir = tempfile.mkdtemp(prefix="board_web_")

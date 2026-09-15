@@ -1,9 +1,20 @@
 ﻿import redis.asyncio as aioredis
 from redis import Redis
-from redis.asyncio.connection import ConnectionPool
+from redis.asyncio.connection import BlockingConnectionPool
 from typing import Optional, List, Tuple
 from loguru import logger
 from bot.config import settings
+
+# Обычный ConnectionPool при нехватке соединений сразу бросает
+# «Too many connections», а веб-кабинет ходит в Redis почти на каждом запросе:
+# сессия, текущие задачи, история, счётчик поддержки. Блокирующий пул в такой
+# ситуации ждёт освобождения соединения, и всплеск запросов превращается в
+# короткую задержку вместо ошибки.
+REDIS_MAX_CONNECTIONS = 100
+REDIS_POOL_TIMEOUT_SEC = 5
+# Соединение до Redis в докере может тихо отвалиться: проверяем его перед
+# использованием, если оно простаивало дольше этого времени.
+REDIS_HEALTH_CHECK_SEC = 30
 
 
 class RedisClient:
@@ -11,7 +22,7 @@ class RedisClient:
     
     def __init__(self, url: str = settings.REDIS_URL):
         self.url = url
-        self.pool: Optional[ConnectionPool] = None
+        self.pool: Optional[BlockingConnectionPool] = None
         self.redis: Optional[aioredis.Redis] = None
         self._connected = False
 
@@ -19,10 +30,12 @@ class RedisClient:
         """Ensures Redis connection is established using a connection pool"""
         if not self._connected:
             try:
-                self.pool = ConnectionPool.from_url(
+                self.pool = BlockingConnectionPool.from_url(
                     self.url,
                     decode_responses=True,
-                    max_connections=10
+                    max_connections=REDIS_MAX_CONNECTIONS,
+                    timeout=REDIS_POOL_TIMEOUT_SEC,
+                    health_check_interval=REDIS_HEALTH_CHECK_SEC,
                 )
                 self.redis = aioredis.Redis(connection_pool=self.pool)
                 self._connected = True
@@ -75,6 +88,7 @@ class RedisClient:
         await self.redis.rpush(key, value)
 
     async def get_admin_messages(self, user_id: int) -> List[Tuple[int, int]]:
+        await self.ensure_connection()
         key = f"admin_msgs:{user_id}"
         values = await self.redis.lrange(key, 0, -1)
         result = []
@@ -87,6 +101,7 @@ class RedisClient:
         return result
 
     async def clear_admin_messages(self, user_id: int):
+        await self.ensure_connection()
         key = f"admin_msgs:{user_id}"
         await self.redis.delete(key)
 
@@ -133,5 +148,7 @@ redis_client = RedisClient()
 
 sync_redis_client = Redis.from_url(
     settings.REDIS_URL,
-    decode_responses=True,  
+    decode_responses=True,
+    max_connections=REDIS_MAX_CONNECTIONS,
+    health_check_interval=REDIS_HEALTH_CHECK_SEC,  
 )

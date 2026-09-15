@@ -46,6 +46,7 @@ from bot.routers.web_upload_folder_routes import (
     resolve_scoped_folder_id,
 )
 from bot.routers.web_upload_label_routes import register_web_upload_label_routes
+from bot.common.utils.upload_form import require_uploads
 
 web_match_api_router = APIRouter()
 
@@ -91,7 +92,7 @@ async def web_match_page(request: Request):
 
 
 @web_match_api_router.post("/web/match/api/upload")
-async def web_match_upload(request: Request, files: list[UploadFile] = File(...)):
+async def web_match_upload(request: Request):
     """
     Каждый файл — отдельный матч. Отправляем его только на разбор ошибок:
     это единственная долгая стадия, и считает её внешний воркер. Исходник
@@ -106,6 +107,7 @@ async def web_match_upload(request: Request, files: list[UploadFile] = File(...)
     from bot.routers.autoanalize_web_router import _persist_source
     from bot.routers.hint_viewer_web_router import _collect_mat_files, _enqueue_single
 
+    files = await require_uploads(request)
     web_uid = int(session.get("web_uid") or -int(user_id))
     started: list[dict[str, Any]] = []
     with tempfile.TemporaryDirectory() as workdir:
