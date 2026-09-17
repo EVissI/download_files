@@ -5,7 +5,7 @@ from flask import flash, redirect, request, url_for
 from flask_appbuilder import ModelView, expose, has_access, permission_name
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_wtf.csrf import generate_csrf
-from sqlalchemy import func, select
+from sqlalchemy import asc, desc, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from wtforms import BooleanField, DateTimeLocalField, IntegerField, PasswordField
 from wtforms.validators import DataRequired, Length, NumberRange, Optional
@@ -41,8 +41,29 @@ def _is_admin_checked() -> bool:
     return request.form.get("is_admin") in ("y", "on", "1", "true", "True")
 
 
+class WebUserInterface(SQLAInterface):
+    """
+    «Активен до» в списке — вычисляемое свойство expires_at_display, а не
+    колонка: FAB подставлял его в ORDER BY как есть и падал с 500. Сортируем
+    по настоящей expires_at. Бессрочные (NULL) считаем самыми дальними:
+    по возрастанию они в конце, по убыванию — в начале.
+    """
+
+    SORT_ALIASES = {"expires_at_display": "expires_at"}
+
+    def apply_order_by(self, query, order_column, order_direction, *args, **kwargs):
+        if order_column not in self.SORT_ALIASES:
+            return super().apply_order_by(
+                query, order_column, order_direction, *args, **kwargs
+            )
+        column = getattr(WebUser, self.SORT_ALIASES[order_column])
+        if order_direction == "asc":
+            return query.order_by(asc(column).nulls_last(), asc(WebUser.id))
+        return query.order_by(desc(column).nulls_first(), desc(WebUser.id))
+
+
 class WebUserModelView(ModelView):
-    datamodel = SQLAInterface(WebUser)
+    datamodel = WebUserInterface(WebUser)
 
     list_title = "Веб-пользователи"
     show_title = "Веб-пользователь"
@@ -71,6 +92,8 @@ class WebUserModelView(ModelView):
     add_columns = ["login", "password", "is_admin", "unlimited", "expires_at", "max_sessions"]
     edit_columns = ["login", "password", "is_admin", "unlimited", "expires_at", "max_sessions"]
     search_columns = ["login"]
+    # Статус и пароль вычисляются в Python — сортировать их в БД нечем.
+    order_columns = ["id", "login", "is_admin", "expires_at_display", "max_sessions"]
     exclude_columns = ["password_hash", "password_encrypted", "uploads", "support_thread"]
 
     label_columns = {

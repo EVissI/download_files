@@ -120,8 +120,14 @@ def web_match_open_links(
     red_player: str | None = None,
     black_player: str | None = None,
 ) -> list[dict[str, str]]:
-    """Кнопки просмотра ошибок для матча — те же режимы, что в «Ошибках»."""
-    return web_hint_open_links(hints_game_id, red_player, black_player)
+    """
+    Кнопки просмотра ошибок для матча — те же режимы, что в «Ошибках», но
+    кнопки ошибок конкретных игроков идут в обратном порядке.
+    """
+    links = web_hint_open_links(hints_game_id, red_player, black_player)
+    if len(links) == 4:
+        links[2], links[3] = links[3], links[2]
+    return links
 
 
 def match_players_title(
@@ -816,7 +822,7 @@ def _history_item(row) -> dict[str, Any]:
     match_ready = bool(is_match and row.status == "done" and analyze_game_id)
     if is_match:
         links = (
-            web_hint_open_links(row.game_id, row.red_player, row.black_player)
+            web_match_open_links(row.game_id, row.red_player, row.black_player)
             if match_ready
             else []
         )
