@@ -121,12 +121,29 @@ def web_match_open_links(
     black_player: str | None = None,
 ) -> list[dict[str, str]]:
     """
-    Кнопки просмотра ошибок для матча — те же режимы, что в «Ошибках», но
-    кнопки ошибок конкретных игроков идут в обратном порядке.
+    Кнопки просмотра ошибок для матча — те же режимы, что в «Ошибках».
+
+    Имена в записи матча перезаписывает стадия анализа, а gnubg отдаёт игроков
+    в обратном порядке относительно просмотрщика: его «red» (error=2) — это
+    второй игрок из .mat. Поэтому режим по порядку имён здесь не угадать, и
+    кнопка игрока передаёт его имя: просмотрщик сам сопоставит его со своими
+    red/black. error остаётся запасным вариантом для старых ссылок.
     """
     links = web_hint_open_links(hints_game_id, red_player, black_player)
-    if len(links) == 4:
-        links[2], links[3] = links[3], links[2]
+    if len(links) != 4:
+        return links
+    # запасной error тоже с учётом порядка gnubg: первый игрок записи — это
+    # «black» просмотрщика (error=3), второй — «red» (error=2)
+    for link, name, mode in (
+        (links[2], red_player, "3"),
+        (links[3], black_player, "2"),
+    ):
+        link["url"] = link["url"].rsplit("&error=", 1)[0] + f"&error={mode}"
+        player = (name or "").strip()
+        if player:
+            link["url"] += "&player=" + quote(player, safe="")
+    # как просили: сначала второй игрок, потом первый
+    links[2], links[3] = links[3], links[2]
     return links
 
 

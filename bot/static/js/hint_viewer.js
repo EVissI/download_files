@@ -97,7 +97,11 @@ async function ensureContentEditor() {
 
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('game_id') || 'default';
-        const error = urlParams.get('error') || '0';
+        let error = urlParams.get('error') || '0';
+        // Имя игрока из ссылки: режим 2/3 выбираем по нему, когда станут
+        // известны red/black партии. Порядок имён у разных сервисов разный,
+        // а имя однозначно.
+        const errorPlayerParam = (urlParams.get('player') || '').trim();
         const matchAnalysisIdParam = urlParams.get('id') || urlParams.get('match_analysis_id');
         let matchAnalysisId = matchAnalysisIdParam ? parseInt(matchAnalysisIdParam, 10) : null;
         if (matchAnalysisId != null && Number.isNaN(matchAnalysisId)) matchAnalysisId = null;
@@ -398,6 +402,12 @@ async function ensureContentEditor() {
             }
             redPlayer = gameInfo.red_player || 'Unknown';
             blackPlayer = gameInfo.black_player || 'Unknown';
+            if (errorPlayerParam) {
+                const norm = (v) => String(v || '').replace(/\s+/g, ' ').trim().toLowerCase();
+                const wanted = norm(errorPlayerParam);
+                if (wanted === norm(redPlayer)) error = '2';
+                else if (wanted === norm(blackPlayer)) error = '3';
+            }
             invertColors = gameInfo.invert_colors || false;
             matchLength = gameInfo.match_length || 0;
             enable_crawford_game_number = parseInt(gameInfo.enable_crawford_game) || null;
