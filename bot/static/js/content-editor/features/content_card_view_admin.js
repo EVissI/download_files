@@ -232,7 +232,7 @@ export function openContentCardAdminInfoModalImpl(editor) {
     const body = document.getElementById('contentCardAdminInfoBody');
     if (!modal || !body) return;
     const rawFn = String(editor._contentCardAdminMeta.file_name || '').trim();
-    const fnEsc = editor.escapeHtml(rawFn || '—');
+    const fnEsc = editor.escapeHtml(rawFn || '-');
     const sharedBoard = editor._contentCardSharedContext && editor._contentCardSharedContext.board
         ? editor._contentCardSharedContext.board
         : null;

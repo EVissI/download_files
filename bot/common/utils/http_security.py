@@ -130,7 +130,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers.setdefault(
             "Permissions-Policy", "camera=(), microphone=(self), geolocation=()"
         )
-        # Mini App в web.telegram.org открывается во iframe — глобальный
+        # Mini App в web.telegram.org открывается во iframe - глобальный
         # X-Frame-Options: SAMEORIGIN его сломает. Только админка.
         if path.startswith("/admin"):
             response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")

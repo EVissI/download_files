@@ -1,18 +1,18 @@
 {# Тексты страницы редактируются админом прямо на сайте (режим редактирования).
-   lp_attr(key)  — вешает data-lp и инлайновый стиль из БД;
-   lp_text(key, default) — подставляет текст: в шаблоне лежит значение по
+   lp_attr(key)  - вешает data-lp и инлайновый стиль из БД;
+   lp_text(key, default) - подставляет текст: в шаблоне лежит значение по
    умолчанию, в БД хранятся только правки.
    Ключи позиционные (секция-тег-номер): при перестановке блоков правки съедут,
    после таких изменений их надо сбросить через POST /web/landing/api/reset.
-   Шапка намеренно без data-lp — она не редактируется. #}
+   Шапка намеренно без data-lp - она не редактируется. #}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {% include "includes/web_favicon.html" %}
-<title>LearnBG — веб-сервисы для коротких нард</title>
-<meta name="description" content="Анализ игр, разбор ошибок, работа с позицией и счёт пипсов для коротких нард — в браузере, без установки программ.">
+<title>LearnBG - веб-сервисы для коротких нард</title>
+<meta name="description" content="Анализ игр, разбор ошибок, работа с позицией и счёт пипсов для коротких нард - в браузере, без установки программ.">
 <script>
   (function () {
     try {
@@ -37,6 +37,7 @@
       <a href="#steps">По шагам</a>
       <a href="#guides">Руководства</a>
       <a href="#play">Где играть</a>
+      <a href="/web/faq">Вопросы</a>
       <a class="lbg-nav__cta" href="{{ login_url }}">{{ login_label }}</a>
     </nav>
     <div class="lbg-header__actions">
@@ -62,7 +63,7 @@
   <div class="lbg-hero__inner">
     <p class="lbg-eyebrow" {{ lp_attr('top-p-1') }}>{{ lp_text('top-p-1', 'Платформа сервисов для коротких нард') }}</p>
     <h1 {{ lp_attr('top-h1-2') }}>{{ lp_text('top-h1-2', 'Веб-сервисы для коротких нард') }}</h1>
-    <p class="lbg-hero__lead" {{ lp_attr('top-p-3') }}>{{ lp_text('top-p-3', 'Анализ игр, разбор ошибок, работа с позицией и счёт пипсов — в браузере, со смартфона или планшета, без установки программ на компьютер.') }}</p>
+    <p class="lbg-hero__lead" {{ lp_attr('top-p-3') }}>{{ lp_text('top-p-3', 'Анализ игр, разбор ошибок, работа с позицией и счёт пипсов - в браузере, со смартфона или планшета, без установки программ на компьютер.') }}</p>
     <div class="lbg-btns">
       <a class="lbg-btn lbg-btn--primary" href="{{ login_url }}">{{ login_label }}</a>
       <a class="lbg-btn lbg-btn--ghost" href="https://t.me/Learn_bg" target="_blank" rel="noopener" {{ lp_attr('top-a-4') }}>{{ lp_text('top-a-4', 'Написать') }}</a>
@@ -72,7 +73,7 @@
 
 <section class="lbg-section" id="services">
   <h2 {{ lp_attr('services-h2-1') }}>{{ lp_text('services-h2-1', 'Сервисы') }}</h2>
-  <p class="lbg-section__lead" {{ lp_attr('services-p-2') }}>{{ lp_text('services-p-2', 'Загружаете протокол игры — получаете разбор. Каждый сервис работает отдельно, но данные передаются между ними одной кнопкой.') }}</p>
+  <p class="lbg-section__lead" {{ lp_attr('services-p-2') }}>{{ lp_text('services-p-2', 'Загружаете протокол игры - получаете разбор. Каждый сервис работает отдельно, но данные передаются между ними одной кнопкой.') }}</p>
   <div class="lbg-grid" data-lp-section="services">
     {% for block in blocks.services %}
     <article class="lbg-card" data-lp-block="{{ block.id }}">
@@ -89,7 +90,7 @@
 
 <section class="lbg-section" id="steps">
   <h2 {{ lp_attr('steps-h2-1') }}>{{ lp_text('steps-h2-1', 'По шагам') }}</h2>
-  <p class="lbg-section__lead" {{ lp_attr('steps-p-2') }}>{{ lp_text('steps-p-2', 'Один сценарий — от сыгранного матча до проработанной позиции. Сначала по шагам, сервис за сервисом, а в конце то же самое одной загрузкой.') }}</p>
+  <p class="lbg-section__lead" {{ lp_attr('steps-p-2') }}>{{ lp_text('steps-p-2', 'Один сценарий - от сыгранного матча до проработанной позиции. Сначала по шагам, сервис за сервисом, а в конце то же самое одной загрузкой.') }}</p>
   <div class="lbg-steps" data-lp-section="steps">
     {% for block in blocks.steps %}
     <div class="lbg-step" data-lp-block="{{ block.id }}">
@@ -133,6 +134,19 @@
   </div>
 </section>
 
+<section class="lbg-section" id="faq">
+  <a class="lbg-faq-link" href="/web/faq">
+    <span class="lbg-faq-link__icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M9.1 9a3 3 0 1 1 4.2 2.8c-.8.4-1.3 1.1-1.3 2v.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path><circle cx="12" cy="17.4" r="1.15" fill="currentColor"></circle></svg>
+    </span>
+    <span class="lbg-faq-link__body">
+      <span class="lbg-faq-link__title" {{ lp_attr('faq-link-h2-1') }}>{{ lp_text('faq-link-h2-1', 'Вопросы и ответы') }}</span>
+      <span class="lbg-faq-link__text" {{ lp_attr('faq-link-p-2') }}>{{ lp_text('faq-link-p-2', 'Доступ к сервисам, где взять протокол матча, сколько ждать разбор и что делать, если файл не подошёл.') }}</span>
+    </span>
+    <span class="lbg-faq-link__go" {{ lp_attr('faq-link-a-3') }}>{{ lp_text('faq-link-a-3', 'Открыть') }}</span>
+  </a>
+</section>
+
 <section class="lbg-section" id="play">
   <h2 {{ lp_attr('play-h2-1') }}>{{ lp_text('play-h2-1', 'Где играть') }}</h2>
   <p class="lbg-section__lead" {{ lp_attr('play-p-2') }}>{{ lp_text('play-p-2', 'Протоколы для сервисов берутся с площадок, где вы играете.') }}</p>
@@ -152,7 +166,7 @@
 <section class="lbg-section lbg-section--last">
   <div class="lbg-cta">
     <h2 {{ lp_attr('play-h2-9') }}>{{ lp_text('play-h2-9', 'Остались вопросы?') }}</h2>
-    <p {{ lp_attr('play-p-10') }}>{{ lp_text('play-p-10', 'Напишите мне о сервисах, подписке, вариантах оплаты или индивидуальном обучении — отвечу и помогу начать.') }}</p>
+    <p {{ lp_attr('play-p-10') }}>{{ lp_text('play-p-10', 'Напишите мне о сервисах, подписке, вариантах оплаты или индивидуальном обучении - отвечу и помогу начать.') }}</p>
     <div class="lbg-btns">
       <a class="lbg-btn lbg-btn--primary" href="{{ lp_href('play-a-11', 'https://t.me/Learn_bg') }}" target="_blank" rel="noopener" {{ lp_attr('play-a-11') }}>{{ lp_text('play-a-11', 'Написать') }}</a>
       <a class="lbg-btn lbg-btn--ghost" href="{{ login_url }}">{{ login_label }}</a>

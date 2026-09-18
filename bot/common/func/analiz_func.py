@@ -92,7 +92,7 @@ def prepare_mat_file_for_gnubg(src: str) -> str:
 
 # gnubg изредка не завершается сам (ждёт ввода на неожиданном приглашении или
 # упирается в битый .mat). Без таймаута communicate() висит вечно, поток держит
-# _gnubg_lock — и все последующие анализы в этом процессе встают за ним
+# _gnubg_lock - и все последующие анализы в этом процессе встают за ним
 # в очередь. Поэтому запуск всегда ограничен по времени.
 GNUBG_TIMEOUT_SEC = 15 * 60
 
@@ -113,7 +113,7 @@ def _run_gnubg_commands(commands: list[str]) -> tuple[str, str, int]:
         )
     except subprocess.TimeoutExpired:
         logger.error(
-            "gnubg не завершился за %s c — снимаю процесс", GNUBG_TIMEOUT_SEC
+            "gnubg не завершился за %s c - снимаю процесс", GNUBG_TIMEOUT_SEC
         )
         process.kill()
         try:
@@ -121,7 +121,7 @@ def _run_gnubg_commands(commands: list[str]) -> tuple[str, str, int]:
         except Exception:
             logger.exception("не удалось дочитать вывод убитого gnubg")
         raise RuntimeError(
-            "GNU Backgammon не ответил вовремя — попробуйте загрузить матч ещё раз"
+            "GNU Backgammon не ответил вовремя - попробуйте загрузить матч ещё раз"
         )
     return stdout, stderr, process.returncode
 

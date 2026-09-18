@@ -123,7 +123,7 @@ def _parse_scheduled_at(raw_value: str) -> datetime:
 
 def _default_broadcast_name(group_name: str) -> str:
     stamp = datetime.now(MSK).strftime("%d.%m.%Y %H:%M")
-    return f"Группа «{group_name}» — {stamp}"
+    return f"Группа «{group_name}» - {stamp}"
 
 
 def _is_allowed_document(content_type: str, filename: str) -> bool:
@@ -388,7 +388,7 @@ def _media_type_label(media_type: str | None) -> str:
 
 
 class FabUserGroupsModelView(ModelView):
-    """Группы пользователей (уникальное имя класса — blueprint FAB)."""
+    """Группы пользователей (уникальное имя класса - blueprint FAB)."""
 
     route_base = "/fabusergroups"
     datamodel = SQLAInterface(UserGroup)

@@ -32,7 +32,7 @@ def log_telegram_proxy_config() -> list[str]:
     legacy_env = (os.getenv("TELEGRAM_PROXY") or "").strip()
     if legacy_env:
         logger.warning(
-            "TELEGRAM_PROXY в окружении ({}) игнорируется — прокси берутся только из БД (FAB)",
+            "TELEGRAM_PROXY в окружении ({}) игнорируется - прокси берутся только из БД (FAB)",
             mask_proxy_url(legacy_env),
         )
 

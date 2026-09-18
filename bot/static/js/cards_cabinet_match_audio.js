@@ -676,13 +676,13 @@
         var moveContent = document.createElement('div');
         moveContent.className = 'ma-audio-modal__hints-content is-active';
         moveContent.innerHTML = item && item.action === 'win'
-            ? '<p class="ma-audio-modal__hints-empty">Победа — таблица ходов не нужна</p>'
+            ? '<p class="ma-audio-modal__hints-empty">Победа - таблица ходов не нужна</p>'
             : buildMoveHintsTableHtml(item);
 
         var cubeContent = document.createElement('div');
         cubeContent.className = 'ma-audio-modal__hints-content';
         cubeContent.innerHTML = item && item.action === 'win'
-            ? '<p class="ma-audio-modal__hints-empty">Победа — таблица куба не нужна</p>'
+            ? '<p class="ma-audio-modal__hints-empty">Победа - таблица куба не нужна</p>'
             : buildCubeHintsTableHtml(item);
 
         function showMove() {
@@ -1011,7 +1011,7 @@
         state.editItem = item;
         if (editSub) {
             editSub.textContent =
-                (state.matchTitle ? state.matchTitle + ' — ' : '') + frameLabel(item) +
+                (state.matchTitle ? state.matchTitle + ' - ' : '') + frameLabel(item) +
                 (item.audio_name ? '\nТекущий файл: ' + item.audio_name : '');
         }
         setEditMsg('');
@@ -1191,7 +1191,7 @@
             };
             var onErr = function () { finish(null); };
             try {
-                // Современные браузеры возвращают Promise; старые — только callbacks.
+                // Современные браузеры возвращают Promise; старые - только callbacks.
                 var result = ctx.decodeAudioData(copy);
                 if (result && typeof result.then === 'function') {
                     result.then(onOk).catch(onErr);
@@ -1426,7 +1426,7 @@
                     );
                 });
 
-                // Оставшиеся webm без duration — последовательно на клиенте.
+                // Оставшиеся webm без duration - последовательно на клиенте.
                 var pending = items.filter(function (it) {
                     return Array.isArray(it.missing) && it.missing.length > 0;
                 });
@@ -1863,7 +1863,7 @@
         state.convertActive = !!isBusy;
         if (listImportBtn) listImportBtn.disabled = !!isBusy;
         if (listExportBtn) listExportBtn.disabled = !!isBusy;
-        // «Закрыть» не блокируем — закрытие модалки не отменяет конвертацию.
+        // «Закрыть» не блокируем - закрытие модалки не отменяет конвертацию.
         if (listCloseBtn) listCloseBtn.disabled = false;
         if (!isBusy) {
             stopConvertEstimate();
@@ -2190,7 +2190,7 @@
                 showNotice(
                     result && result.via === 'blob'
                         ? ('ZIP с ' + formatLabel + ' скачан')
-                        : 'Скачивание запущено — проверьте загрузки Telegram',
+                        : 'Скачивание запущено - проверьте загрузки Telegram',
                     'Экспорт'
                 );
             })

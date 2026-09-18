@@ -43,7 +43,7 @@ redis_conn = Redis.from_url(redis_url, decode_responses=False)
 
 # История веб-кабинета отсюда НЕ обновляется: у воркеров есть доступ только
 # к Redis и S3, база живёт на главном сервере и имя "db" тут не резолвится.
-# Готовность определяет сам сервер — по наличию результата в S3
+# Готовность определяет сам сервер - по наличию результата в S3
 # (_hint_s3_ready) и по статусам пачки в Redis (publish_batch_file_ready).
 
 
@@ -71,7 +71,7 @@ def _upload_hint_results(
 def analyze_backgammon_job(game_id: str, user_id: str, job_id: str = None):
     """
     Анализирует один .mat: источник в S3 hints/{game_id}.mat, результат туда же.
-    Уведомления в Telegram — только на стороне бота (check_job_status).
+    Уведомления в Telegram - только на стороне бота (check_job_status).
     """
     s3 = HintS3Storage.from_settings()
     src_key = s3.mat_key(game_id)
@@ -117,7 +117,7 @@ def analyze_backgammon_batch_job(
 ):
     """
     mat_s3_keys: ключи входных .mat в S3 (например hints/batch_in/...).
-    Статусы файлов пишет в Redis; Telegram — только бот (check_batch_job_status).
+    Статусы файлов пишет в Redis; Telegram - только бот (check_batch_job_status).
     """
     processed = 0
     errors = 0

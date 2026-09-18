@@ -220,7 +220,7 @@ auto-batch-summary_pr_header = Игр: { $count }
 auto-batch-summary_pr = <b>{ $player }</b>: <b>{ $average_pr }</b>:
     ({ $pr_list })
 
-# Pokaz page (редактор позиций) — ru
+# Pokaz page (редактор позиций) - ru
 pokaz-page-title = Редактор позиции
 pokaz-page-hide-pips = Скрыть пипсы
 pokaz-page-hide-point-dropdowns = Скрыть дропдауны точек

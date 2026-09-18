@@ -60,7 +60,7 @@ function calculatePipsForPositions(positions, playerRole) {
 }
 
 /**
- * @param {object | null | undefined} snapshot — board из карточки / hint viewer
+ * @param {object | null | undefined} snapshot - board из карточки / hint viewer
  * @returns {{ upperPips: number, lowerPips: number } | null}
  */
 export function resolveReferencePips(snapshot) {
@@ -86,7 +86,7 @@ function tryResolveFromBoard(board) {
 }
 
 /**
- * @param {object | null | undefined} payload — кадр с board / sharedContext
+ * @param {object | null | undefined} payload - кадр с board / sharedContext
  * @param {object | null | undefined} [sharedContext]
  */
 export function resolveReferencePipsFromPayload(payload, sharedContext) {
@@ -112,7 +112,7 @@ export function resolveReferencePipsFromPayload(payload, sharedContext) {
 }
 
 /**
- * Эталонная разница пипсов (верх − низ). Проверка ответа — по модулю.
+ * Эталонная разница пипсов (верх − низ). Проверка ответа - по модулю.
  * @returns {{ upperPips: number, lowerPips: number, pipDiff: number, pipDiffAbs: number } | null}
  */
 export function resolveReferencePipDiffFromPayload(payload, sharedContext) {

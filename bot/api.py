@@ -186,7 +186,7 @@ async def start_web_analyze_worker():
         ensure_web_analyze_worker()
     except Exception as e:
         logger.warning(f"web analyze worker startup failed: {e}")
-    # Матчи, у которых рестарт застал стадию анализа, сами не поднимутся —
+    # Матчи, у которых рестарт застал стадию анализа, сами не поднимутся -
     # она живёт в этом процессе. Поднимаем их сразу, не дожидаясь визита.
     try:
         from bot.routers.web_match_router import recover_match_tasks
@@ -214,7 +214,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # CORS: Mini App на том же origin. credentials+* невалидны по спецификации,
-# но оставляем отражение Origin — иначе ломается downloadFile в Telegram Web.
+# но оставляем отражение Origin - иначе ломается downloadFile в Telegram Web.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -869,14 +869,14 @@ def _guess_content_upload_extension(filename: str | None, content_type: str | No
 
 
 def _require_content_card_admin(user_id: int) -> None:
-    """Карточки контента и медиа к ним — ROOT_ADMIN_IDS и веб-админы кабинета."""
+    """Карточки контента и медиа к ним - ROOT_ADMIN_IDS и веб-админы кабинета."""
     from bot.common.service.cabinet_admin import require_cabinet_admin
 
     require_cabinet_admin(user_id)
 
 
 def _build_empty_content_card_frames() -> dict[str, Any]:
-    """Один пустой кадр — как buildEmptyContentCardFramePayload в редакторе."""
+    """Один пустой кадр - как buildEmptyContentCardFramePayload в редакторе."""
     frame_id = f"cc_0_{int(datetime.now(timezone.utc).timestamp() * 1000)}_{secrets.token_hex(4)}"
     saved_at = datetime.now(timezone.utc).isoformat()
     payload: dict[str, Any] = {
@@ -935,7 +935,7 @@ def _board_xgid_from_board_snapshot(board: Any) -> str | None:
 
 def _extract_board_xgid_from_frames(frames: dict[str, Any] | None) -> str | None:
     """
-    Если в JSON карточки есть доска со строкой позиции — сохраняем её в колонке board_xgid.
+    Если в JSON карточки есть доска со строкой позиции - сохраняем её в колонке board_xgid.
     Смотрим sharedContext, затем по порядку payload каждого кадра.
     """
     if not frames or not isinstance(frames, dict):
@@ -1278,7 +1278,7 @@ class BulkCanvasBgSetColorBody(BaseModel):
 
 
 class CabinetGalleryListBody(BaseModel):
-    """Список изображений общей галереи кабинета карточек (S3); просмотр — любой авторизованный WebApp."""
+    """Список изображений общей галереи кабинета карточек (S3); просмотр - любой авторизованный WebApp."""
 
     init_data: str | None = None
     fab_token: str | None = None
@@ -1537,7 +1537,7 @@ async def admin_content_card_view_bridge(content_card_id: int, request: Request)
 @app.post("/api/content_cards/check_file_name")
 async def check_content_card_file_name(body: ContentCardFileNameCheckBody):
     """
-    Возвращает, существует ли карточка с таким же file_name (как при сохранении — basename, обрезка).
+    Возвращает, существует ли карточка с таким же file_name (как при сохранении - basename, обрезка).
     """
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
     _require_content_card_admin(user_id)
@@ -2604,7 +2604,7 @@ async def fetch_content_card(body: ContentCardFetchBody):
 async def download_content_card_hint_mat(body: ContentCardHintMatBody):
     """
     Исходный .mat анализа в S3 по ключу hints/{game_id}.mat.
-    Имя файла карточки (file_name) должно быть вида {game_id}.mat — как при сохранении из hint viewer.
+    Имя файла карточки (file_name) должно быть вида {game_id}.mat - как при сохранении из hint viewer.
     Только ROOT_ADMIN_IDS (тот же контур, что и поле «Файл» в информации о карточке).
     """
     user_id = await _resolve_content_cards_user_id(body.init_data, body.fab_token)
@@ -2962,12 +2962,12 @@ async def cabinet_gallery_share_link(body: CabinetGalleryShareBody):
 @app.get("/api/content_cards/media")
 async def content_card_media_proxy(
     key: str,
-    download: int | None = Query(None, description="1 — Content-Disposition: attachment (скачивание)"),
+    download: int | None = Query(None, description="1 - Content-Disposition: attachment (скачивание)"),
     filename: str | None = Query(None, description="Имя файла для заголовка attachment"),
 ):
     """
     Отдаёт файл из S3 по ключу. Доступ не привязан к владельцу: любой, кто знает key
-    (обычно из JSON карточки), может отобразить медиа — для будущего шаринга карточек.
+    (обычно из JSON карточки), может отобразить медиа - для будущего шаринга карточек.
     Загрузка: POST .../upload с Telegram init_data и id из ROOT_ADMIN_IDS.
     При download=1 добавляется Content-Disposition: attachment (Telegram WebApp downloadFile и браузеры).
     """
@@ -3269,7 +3269,7 @@ async def folder_tree(body: FolderBaseBody):
 
 @app.post("/api/content_cards/folders/create")
 async def folder_create(body: FolderCreateBody):
-    """Создать папку (своя ветка; админ — в общем каталоге)."""
+    """Создать папку (своя ветка; админ - в общем каталоге)."""
     user_id, is_admin = await _folder_actor(body.init_data, body.fab_token)
     folder_pool = _parse_content_card_pool(body.pool)
 
@@ -3859,7 +3859,7 @@ async def folder_navigate_link(body: FolderNavigateLinkBody):
 async def folder_link_resolve(body: FolderLinkResolveBody):
     """
     По folder_token вернуть папку и список карточек (read-only, без записи в user_content_cards).
-    direct_only=True — только карточки этой папки, без подпапок.
+    direct_only=True - только карточки этой папки, без подпапок.
     """
     from bot.common.service.cabinet_admin import is_cabinet_admin
 

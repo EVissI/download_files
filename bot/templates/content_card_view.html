@@ -32,7 +32,7 @@
         *, *::before, *::after {
             box-sizing: inherit;
         }
-        /* 100vh на планшете (iPad/Telegram) выше видимой области — футер уезжает вниз. */
+        /* 100vh на планшете (iPad/Telegram) выше видимой области - футер уезжает вниз. */
         #contentCardViewRoot {
             position: fixed;
             top: var(--app-offset-top, 0px);
@@ -261,7 +261,7 @@
             border-color: #5f8fbd;
             background: #3e6f9f;
         }
-        /* "Открыть подсказки" в кабинете снят (localStorage='0') — скрываем все блоки интерактива на всех кадрах. */
+        /* "Открыть подсказки" в кабинете снят (localStorage='0') - скрываем все блоки интерактива на всех кадрах. */
         html.cards-cabinet-hints-closed .canvas-element[data-tool-id="interactive-best-move"],
         html.cards-cabinet-hints-closed .canvas-element.ce-interactive-best-move {
             display: none !important;
@@ -289,7 +289,7 @@
 </head>
 
 <body{% if web_standalone_mode|default(false) %} class="web-standalone"{% endif %}>
-    <!-- Кнопки админа (добавление/удаление кадра и т.д.) — content_editor.js (initContentCardViewOnly + _ensureContentCardAddFrameUi). -->
+    <!-- Кнопки админа (добавление/удаление кадра и т.д.) - content_editor.js (initContentCardViewOnly + _ensureContentCardAddFrameUi). -->
     <script>
         if (window.Telegram && window.Telegram.WebApp) {
             var tg = window.Telegram.WebApp;

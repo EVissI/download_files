@@ -448,7 +448,7 @@ def json_to_gnubg_commands(
                 tokens.append({"cmd": " ".join(move_cmds), "type": "cmd", "target": i})
                 tokens.append({"cmd": "hint", "type": "cube_hint", "target": i + 1})
             else:
-                # Пустой ход: кости брошены, но шашки не двигались — завершаем ход,
+                # Пустой ход: кости брошены, но шашки не двигались - завершаем ход,
                 # иначе gnubg остаётся ждать ход и ломается следующее удвоение.
                 tokens.append({"cmd": "move", "type": "cmd", "target": i})
             i += 1
@@ -1223,7 +1223,7 @@ class BackgammonPositionTracker:
                 for m in moves:
                     self.apply_move(player, m)
 
-            # после обычного хода — передаём очередь
+            # после обычного хода - передаём очередь
             self.current_player = "black" if player == "red" else "red"
             e["positions"] = copy.deepcopy(self.positions)
             # Create inverted positions
@@ -1308,7 +1308,7 @@ def parse_mat_games(content):
 
 
 def _append_gnubg_stdout_log(log_parts: list[str], header: str, text: str) -> None:
-    """DEBUG: накопление полного stdout gnubg — пишется в game_N.stdout.log для admin zip."""
+    """DEBUG: накопление полного stdout gnubg - пишется в game_N.stdout.log для admin zip."""
     if not text:
         return
     log_parts.append(f"=== {header} ===\n{text.rstrip()}\n\n")
@@ -1732,7 +1732,7 @@ def process_single_game(game_data, output_dir, game_number):
         json.dump(game_data_json, f, indent=2, ensure_ascii=False)
     logger.info(f"Game {game_number} processed and saved to {game_output_file}")
 
-    # DEBUG: полный stdout gnubg по игре — попадает в S3 и admin zip
+    # DEBUG: полный stdout gnubg по игре - попадает в S3 и admin zip
     stdout_log_file = os.path.join(output_dir, f"game_{game_number}.stdout.log")
     with open(stdout_log_file, "w", encoding="utf-8") as log_f:
         log_f.write("".join(stdout_log_parts))

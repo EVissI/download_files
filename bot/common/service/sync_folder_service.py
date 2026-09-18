@@ -21,7 +21,7 @@ class SyncthingSync:
 
     async def trigger_scan(self) -> bool:
         """
-        Запустить db/scan на отправителе (бот) — Syncthing сразу заметит новый файл.
+        Запустить db/scan на отправителе (бот) - Syncthing сразу заметит новый файл.
         Вызывать после сохранения файла, до постановки задачи в очередь.
         """
         if not self.api_key:
@@ -47,7 +47,7 @@ class SyncthingSync:
         """
         Ожидание появления файла на диске после синхронизации Syncthing.
 
-        Использует polling — надёжно работает когда воркер в Docker и не может
+        Использует polling - надёжно работает когда воркер в Docker и не может
         достучаться до Syncthing API (localhost:8384). Events API (ItemFinished)
         не подходит для приёмника в отдельном контейнере.
 
@@ -74,7 +74,7 @@ class SyncthingSync:
     async def sync_and_wait(self, max_wait=30) -> bool:
         """
         Запустить scan и ждать, пока локальное устройство синхронизировано (needBytes=0).
-        Важно: на отправителе needBytes=0 сразу — этот метод надёжен только на приёмнике.
+        Важно: на отправителе needBytes=0 сразу - этот метод надёжен только на приёмнике.
         """
         if not self.api_key:
             logger.warning("⚠️ Syncthing API ключ не установлен")

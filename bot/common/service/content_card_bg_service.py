@@ -101,7 +101,7 @@ def apply_color_bg_to_all_frames(
 ) -> int:
     """
     Ставит canvasBackground всем кадрам и снимает картинку-фон,
-    чтобы цвет был виден. color — уже нормализованный #rrggbb.
+    чтобы цвет был виден. color - уже нормализованный #rrggbb.
     """
     updated = 0
     for item in iter_frame_entries(frames_wrap):
@@ -184,7 +184,7 @@ async def set_image_backgrounds_on_all(
 async def set_color_backgrounds_on_all(
     session, color: str
 ) -> tuple[int, int, int]:
-    """Возвращает (cards_updated, frames_updated, cards_total). color — #rrggbb."""
+    """Возвращает (cards_updated, frames_updated, cards_total). color - #rrggbb."""
     dao = ContentCardDAO(session)
     cards = await dao.find_all()
     cards_updated = 0

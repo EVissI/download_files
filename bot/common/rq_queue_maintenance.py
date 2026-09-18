@@ -115,11 +115,11 @@ def _serialize_worker(worker: Worker) -> dict:
     hb = _parse_rq_datetime(worker.last_heartbeat)
     return {
         "name": worker.name,
-        "hostname": worker.hostname or "—",
-        "pid": worker.pid or "—",
+        "hostname": worker.hostname or "-",
+        "pid": worker.pid or "-",
         "state": worker.get_state(),
-        "queues": ", ".join(worker.queue_names()) if worker.queue_names() else "—",
-        "last_heartbeat": hb.strftime("%d.%m.%Y %H:%M:%S UTC") if hb else "—",
+        "queues": ", ".join(worker.queue_names()) if worker.queue_names() else "-",
+        "last_heartbeat": hb.strftime("%d.%m.%Y %H:%M:%S UTC") if hb else "-",
     }
 
 

@@ -223,7 +223,7 @@ async def get_max_usage(message: Message, state: FSMContext):
     max_usage = int(message.text)
     await state.update_data(max_usage=max_usage)
     await state.set_state(PromoCreateStates.waiting_for_duration)
-    await message.answer("Введите срок действия промокода в днях (0 — бессрочно):")
+    await message.answer("Введите срок действия промокода в днях (0 - бессрочно):")
 
 
 @promo_create_router.message(StateFilter(PromoCreateStates.waiting_for_duration))

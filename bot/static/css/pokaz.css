@@ -186,7 +186,7 @@ body {
             font-size: 0.8rem;
         }
 
-        /* Point selector (число шашек на позиции) — кастомный дропдаун как в проекте */
+        /* Point selector (число шашек на позиции) - кастомный дропдаун как в проекте */
         .point-selector-custom {
             position: absolute;
             display: inline-block;
@@ -3115,7 +3115,7 @@ body {
                 width: 100%;
             }
 
-            /* При открытой таблице: доска слева, справа таблица; управление и aux — под таблицей */
+            /* При открытой таблице: доска слева, справа таблица; управление и aux - под таблицей */
             .container.pokaz-board-open .pokaz-workspace {
                 flex-direction: row;
                 align-items: flex-start;
@@ -3285,7 +3285,7 @@ body {
             }
         }
 
-        /* 900–1300: контролы в один ряд; лейблы «Куб» и «Чей куб?» — под своими элементами */
+        /* 900-1300: контролы в один ряд; лейблы «Куб» и «Чей куб?» - под своими элементами */
         @media (min-width: 900px) and (max-width: 1300px) {
             .pokaz-tools .cube-controls-block-wrapper.has-crawford {
                 display: grid;
@@ -4155,7 +4155,7 @@ body {
                 margin-right: 0;
             }
 
-            /* Стрелки и шар — отдельным блоком сразу под пипсами, пипсы остаются у доски */
+            /* Стрелки и шар - отдельным блоком сразу под пипсами, пипсы остаются у доски */
             .board-wrapper.has-mobile-history-nav > .history-nav {
                 justify-content: center;
                 width: 100%;

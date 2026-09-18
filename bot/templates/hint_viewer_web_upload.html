@@ -173,7 +173,7 @@
             padding: 8px 10px;
             font: inherit;
         }
-        /* Обнуление — действие необратимое, поэтому отделено цветом от Excel. */
+        /* Обнуление - действие необратимое, поэтому отделено цветом от Excel. */
         .player-stats-reset {
             margin-left: auto;
             border: 1px solid var(--web-danger-border);
@@ -565,7 +565,7 @@
         <div id="analyzePlayersPanel" hidden>
             <div class="card">
                 <h2>Статистика</h2>
-                <p class="muted">PR по загруженным в Анализ матчам. Новые значения слева, среднее — по выбранному числу игр.</p>
+                <p class="muted">PR по загруженным в Анализ матчам. Новые значения слева, среднее - по выбранному числу игр.</p>
                 <div class="player-stats-row">
                     {% if is_admin|default(false) %}
                     <div class="player-stats-field">
@@ -712,7 +712,7 @@
             <input id="folderScheduleCountInput" class="hw-link-modal__input" type="number" min="1" max="3000"
                 step="1" inputmode="numeric" value="1">
             {% if enable_user_labels|default(false) %}
-            <div class="hw-folder-schedule-modal__label">Метки (необязательно; без выбора — все файлы)</div>
+            <div class="hw-folder-schedule-modal__label">Метки (необязательно; без выбора - все файлы)</div>
             <div id="folderScheduleLabels" class="hw-folder-schedule-modal__labels"></div>
             {% endif %}
             <label class="hw-folder-schedule-modal__toggle-row">
@@ -760,7 +760,7 @@
         <div id="labelPresetsModalOverlay" class="hw-link-modal__overlay"></div>
         <div class="hw-link-modal__box hw-presets-modal__box" role="dialog" aria-modal="true" aria-labelledby="labelPresetsModalTitle">
             <h3 id="labelPresetsModalTitle" class="hw-link-modal__title">Пресеты меток</h3>
-            <p class="hw-link-modal__subtitle">Нажмите пресет — он добавится к меткам файла.</p>
+            <p class="hw-link-modal__subtitle">Нажмите пресет - он добавится к меткам файла.</p>
             <div class="hw-labels-modal__input-row">
                 <input id="labelPresetsModalInput" type="text" maxlength="255" placeholder="Новый пресет" autocomplete="off">
                 <button id="labelPresetsModalAddBtn" type="button" class="hw-link-modal__btn hw-link-modal__btn--primary">Добавить</button>
@@ -788,7 +788,7 @@
         const sendToUserEnabled = {{ (is_admin|default(false) and send_to_user|default(false))|tojson }};
         const saveMatchAnalysisEnabled = {{ (is_admin|default(false) and (web_service|default('') in ['hints', 'match']))|tojson }};
         // «Всё о матче»: в одной строке живут обе стадии, поэтому у кнопок
-        // разные идентификаторы — таблица и плеер по game_id стадии анализа,
+        // разные идентификаторы - таблица и плеер по game_id стадии анализа,
         // просмотр ошибок и заказ по hints_game_id.
         const matchMode = {{ (web_service|default('') == 'match')|tojson }};
         const orderAnalysisEnabled = {{ order_analysis|default(false)|tojson }};
@@ -1124,7 +1124,7 @@
         }
 
         // detail у FastAPI бывает не строкой: при 422 это список
-        // {loc, msg, type}. Подставлять его в textContent напрямую нельзя —
+        // {loc, msg, type}. Подставлять его в textContent напрямую нельзя -
         // получается «[object Object]» вместо причины.
         function errorText(data, res, fallback) {
             const detail = data && data.detail;
@@ -1321,13 +1321,13 @@
             });
         }
 
-        // «Иванов Иван (5.2), Петров Пётр (12.8)» — players приходит только от
+        // «Иванов Иван (5.2), Петров Пётр (12.8)» - players приходит только от
         // «Анализа» и только у пакетов с завершённым разбором.
         function batchPlayersLine(item) {
             const players = (item && item.players) || [];
             if (!Array.isArray(players) || !players.length) return '';
             return players.map((row) => {
-                const name = String((row && row.name) || '').trim() || '—';
+                const name = String((row && row.name) || '').trim() || '-';
                 return `${name} (${Number((row && row.avg_pr) || 0).toFixed(1)})`;
             }).join(', ');
         }
@@ -1348,7 +1348,7 @@
         function renderHistoryFile(item, nested) {
             const players = [item.red_player, item.black_player].filter(Boolean).join(' vs ');
             const gameId = item.game_id ? String(item.game_id) : '';
-            // У матча game_id — разбор ошибок, анализ отдельным полем.
+            // У матча game_id - разбор ошибок, анализ отдельным полем.
             const analyzeId = item.analyze_game_id ? String(item.analyze_game_id) : '';
             const matchReady = matchMode && item.status === 'done' && analyzeId;
             let open;
@@ -1406,7 +1406,7 @@
                     ${select}
                     <div>
                         ${titleHtml}
-                        <div class="muted">${escapeHtml(players || '—')} · ${historyStatusLabel(item.status)}</div>
+                        <div class="muted">${escapeHtml(players || '-')} · ${historyStatusLabel(item.status)}</div>
                         ${err}
                         ${open}
                         ${historyLabelsHtml(item)}
@@ -1492,7 +1492,7 @@
                     const playersLine = batchPlayersLine(item);
                     const metaHtml = playersLine
                         ? escapeHtml(playersLine)
-                        : `${escapeHtml(countLabel || '—')} · ${historyStatusLabel(item.status)}`;
+                        : `${escapeHtml(countLabel || '-')} · ${historyStatusLabel(item.status)}`;
                     const select = (enableUserFolders && fileIds.length)
                         ? `<label class="history-item-select"><input type="checkbox" data-upload-ids="${fileIds.join(',')}"></label>`
                         : '';

@@ -1,4 +1,4 @@
-/* Все фича-модули — только dynamic import с ?t= от bootstrap, иначе WebView кеширует старые версии. */
+/* Все фича-модули - только dynamic import с ?t= от bootstrap, иначе WebView кеширует старые версии. */
 const _featureModuleCacheQs = (() => {
     try {
         return new URL(import.meta.url).search || '';
@@ -199,12 +199,12 @@ export class ContentEditor {
         this._editorBoardCollapsed = false;
         this._onCardPreviewResize = () => this.refreshCardPreviewScale();
 
-        /** Редактор открыт из предпросмотра карточки — одна кнопка «Сохранить», перезапись того же кадра */
+        /** Редактор открыт из предпросмотра карточки - одна кнопка «Сохранить», перезапись того же кадра */
         this.editorOpenedFromPreview = false;
         this.previewEditStorageKey = null;
         this.previewEditFrameId = null;
         this.previewEditSaveSlotIndex = null;
-        /** После сохранения из предпросмотра-редактора — открыть предпросмотр на этом кадре */
+        /** После сохранения из предпросмотра-редактора - открыть предпросмотр на этом кадре */
         this._resumePreviewStorageKey = null;
 
         /** Редактор открыт со страницы /content-card-view (root-админ): сохранение кадра на сервер */
@@ -394,7 +394,7 @@ export class ContentEditor {
 
     /**
      * Общий контекст карточки: явный `sharedContext` в JSON или первый кадр с board / cardData (hints).
-     * Не показывается в предпросмотре пустого кадра — подмешивается только при открытии редактора.
+     * Не показывается в предпросмотре пустого кадра - подмешивается только при открытии редактора.
      */
     _assignContentCardSharedContextFromWrapper(fw) {
         return assignContentCardSharedContextFromWrapperImpl(this, fw);
@@ -422,7 +422,7 @@ export class ContentEditor {
         return applyContentCardSharedToEditorPayloadImpl(this, payload);
     }
 
-    /** Обёртка кадров для POST /api/content_cards/update — сохраняет sharedContext карточки. */
+    /** Обёртка кадров для POST /api/content_cards/update - сохраняет sharedContext карточки. */
     wrapContentCardFramesWithShared(framesArray) {
         return wrapContentCardFramesWithSharedImpl(this, framesArray);
     }
@@ -1000,7 +1000,7 @@ export class ContentEditor {
                             <h3 id="labelPresetsModalTitle" class="card-labels-title">Пресеты меток</h3>
                             <button type="button" class="label-presets-modal-close" onclick="contentEditor.closeLabelPresetsModal()" aria-label="Закрыть">&times;</button>
                         </div>
-                        <p class="card-labels-presets-hint">Нажмите текст пресета — он добавится в список меток карточки (в окне ниже после возврата).</p>
+                        <p class="card-labels-presets-hint">Нажмите текст пресета - он добавится в список меток карточки (в окне ниже после возврата).</p>
                         <div id="labelPresetsList" class="card-labels-presets-list" aria-live="polite"></div>
                         <div class="card-labels-preset-admin-row">
                             <input type="text" id="labelPresetNewInput" class="card-labels-input" maxlength="255" placeholder="Новый пресет для всех" autocomplete="off" />
@@ -1404,7 +1404,7 @@ export class ContentEditor {
     }
 
     /**
-     * Первая колонка tbody таблицы хода на холсте — те же подписи, что видит автор (как в createHintsTable).
+     * Первая колонка tbody таблицы хода на холсте - те же подписи, что видит автор (как в createHintsTable).
      * Нужна, если cardData в сессии без hints, а таблица заполнена из сохранённого HTML.
      */
     parseMovesFromHintsTableDom(tableWrapper) {
@@ -1435,7 +1435,7 @@ export class ContentEditor {
     }
 
     /**
-     * Первая колонка tbody таблицы по кубу на холсте — те же подписи, что видит автор (как в createCubeTable).
+     * Первая колонка tbody таблицы по кубу на холсте - те же подписи, что видит автор (как в createCubeTable).
      * Нужна, если cardData в сессии без cube_hints, а таблица заполнена из сохранённого HTML.
      */
     parseActionsFromCubeTableDom(tableWrapper) {
@@ -1470,17 +1470,17 @@ export class ContentEditor {
         const log = '[CE:interactive-best-move]';
         if (!this.canvas) {
             if (typeof console !== 'undefined' && console.info) {
-                console.info(log, 'refreshInteractiveBestMoveElementsFromCardData: пропуск — нет canvas');
+                console.info(log, 'refreshInteractiveBestMoveElementsFromCardData: пропуск - нет canvas');
             }
             return;
         }
-        /* Только страница карточки: не трогаем канвас редактора, пока модалка закрыта (интерактив в превью заполняет setupInteractiveBestMoveAfterCardPreviewRender). Когда редактор уже открыт — всегда собираем кнопки, даже если window.__CONTENT_CARD_VIEW_ONLY__ ещё true. */
+        /* Только страница карточки: не трогаем канвас редактора, пока модалка закрыта (интерактив в превью заполняет setupInteractiveBestMoveAfterCardPreviewRender). Когда редактор уже открыт - всегда собираем кнопки, даже если window.__CONTENT_CARD_VIEW_ONLY__ ещё true. */
         const viewOnlyCardPage =
             typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true;
         const editorModalOpen = !!(this.modal && this.modal.style.display === 'flex');
         if (viewOnlyCardPage && !editorModalOpen) {
             if (typeof console !== 'undefined' && console.info) {
-                console.info(log, 'refreshInteractiveBestMoveElementsFromCardData: пропуск — только карточка, редактор закрыт', {
+                console.info(log, 'refreshInteractiveBestMoveElementsFromCardData: пропуск - только карточка, редактор закрыт', {
                     viewOnly: true,
                     editorModalOpen: false,
                 });
@@ -1649,7 +1649,7 @@ export class ContentEditor {
         this._pipCountImportMode = false;
     }
 
-    /** Страницы hint_viewer / pokaz / board_viewer — снимок доски с страницы, не из карточки. */
+    /** Страницы hint_viewer / pokaz / board_viewer - снимок доски с страницы, не из карточки. */
     _isEditorHostWithLiveBoardPage() {
         return typeof window !== 'undefined' && typeof window.getHintViewerBoardSnapshot === 'function';
     }
@@ -1820,7 +1820,7 @@ export class ContentEditor {
 
     /**
      * При каждом открытии редактора начинаем с одинакового состояния панели свойств;
-     * кнопки «Сохранить / Предпросмотр / Удалить / Кабинет» — в панели инструментов.
+     * кнопки «Сохранить / Предпросмотр / Удалить / Кабинет» - в панели инструментов.
      */
     resetSelectionForFreshOpen() {
         this.selectedElement = null;
@@ -1908,7 +1908,7 @@ export class ContentEditor {
         this._restoreLiveHintBoardCanvasIfNeeded();
         const fromContentCardView = this.editorOpenedFromContentCardView;
         this.modal.style.display = 'none';
-        /* После openEditorFromSelectedPreview со страницы карточки editorOpenedFromContentCardView может быть false — всё равно снимаем suspend. */
+        /* После openEditorFromSelectedPreview со страницы карточки editorOpenedFromContentCardView может быть false - всё равно снимаем suspend. */
         this._resumeContentCardViewOnlyAfterEditor();
         if (fromContentCardView) {
             const savedFrameIndex = this._contentCardEditFrameIndex;
@@ -1968,7 +1968,7 @@ export class ContentEditor {
         // Сохраняем данные карточки для использования при выборе инструмента таблицы
         this.cardData = options.pipCountImport ? null : cardData;
 
-        // Таблицы и интерактив «лучший ход» зависят от cardData — пересобрать, если холст уже был открыт
+        // Таблицы и интерактив «лучший ход» зависят от cardData - пересобрать, если холст уже был открыт
         if (this.canvas) {
             this.refreshTableElementsFromCardData();
         }
@@ -2118,7 +2118,7 @@ export class ContentEditor {
             element.classList.add('editor-table--collapsed');
         }
 
-        // innerHTML был очищен — ручка перетаскивания (.ce-block-drag-handle) исчезла вместе с ним,
+        // innerHTML был очищен - ручка перетаскивания (.ce-block-drag-handle) исчезла вместе с ним,
         // а флаг ceBlockReorderBound остался. Сбрасываем флаг и заново привязываем drag-интеракции,
         // иначе блок таблицы перестаёт перетаскиваться после обновления контента.
         if (!element.classList.contains('card-preview-canvas-clone')) {
@@ -2138,7 +2138,7 @@ export class ContentEditor {
     /**
      * Таблица ходов (как moveTableHtml в hint_viewer.html, без цветовой подсветки строк).
      * @param {Array} hints
-     * @param {object|null} item — строка кадра (gnu_move, action, player_name, points …)
+     * @param {object|null} item - строка кадра (gnu_move, action, player_name, points …)
      */
     createHintsTable(hints, item) {
         const table = document.createElement('table');
@@ -2198,7 +2198,7 @@ export class ContentEditor {
     /**
      * Таблица куба (как cubeTableHtml в hint_viewer.html, без цветовой подсветки строк).
      * @param {Array} cubeHints
-     * @param {object|null} _item — строка кадра (оставлен для совместимости вызовов)
+     * @param {object|null} _item - строка кадра (оставлен для совместимости вызовов)
      */
     createCubeTable(cubeHints, _item) {
         const table = document.createElement('table');
@@ -2247,7 +2247,7 @@ export class ContentEditor {
         });
     }
 
-    /** Классы `ce-content-table` — единые стили в редакторе и в предпросмотре/content-card-view (см. content_editor.css). */
+    /** Классы `ce-content-table` - единые стили в редакторе и в предпросмотре/content-card-view (см. content_editor.css). */
     applyContentTableMarkupClasses(wrapperEl) {
         const first = wrapperEl.firstElementChild;
         const tbl = first && first.tagName === 'TABLE' ? first : wrapperEl.querySelector('table');
@@ -2331,7 +2331,7 @@ export class ContentEditor {
         syncA11y();
     }
 
-    /** Фактическая ширина видимой области канваса (без getMaxCanvasWidth — это лимит карточки, не layout). */
+    /** Фактическая ширина видимой области канваса (без getMaxCanvasWidth - это лимит карточки, не layout). */
     getCanvasContentWidth() {
         if (!this.canvas) return 0;
         const clientW = this.canvas.clientWidth || 0;
@@ -2672,7 +2672,7 @@ export class ContentEditor {
     }
 
     /**
-     * Перестановка блоков только по вертикали: тянуть за ручку слева, отпустить — новая позиция в стопке.
+     * Перестановка блоков только по вертикали: тянуть за ручку слева, отпустить - новая позиция в стопке.
      */
     attachBlockReorderInteractions(element) {
         if (!this.canvas || !element) return;
@@ -3001,13 +3001,13 @@ export class ContentEditor {
             return;
         }
 
-        // Особое поведение для upload-image — модалка: устройство или медиатека S3
+        // Особое поведение для upload-image - модалка: устройство или медиатека S3
         if (toolId === 'upload-image') {
             this.openImageSourceModal();
             return;
         }
 
-        // Особое поведение для audio-file — модалка: файл или запись
+        // Особое поведение для audio-file - модалка: файл или запись
         if (toolId === 'audio-file') {
             this.openAudioSourceModal();
             return;
@@ -3300,7 +3300,7 @@ export class ContentEditor {
     }
 
     _shortenImageLibraryFilename(name, maxLen = 22) {
-        const s = String(name || '').trim() || '—';
+        const s = String(name || '').trim() || '-';
         if (s.length <= maxLen) return s;
         const ext = s.includes('.') ? s.slice(s.lastIndexOf('.')) : '';
         const base = ext ? s.slice(0, s.length - ext.length) : s;
@@ -3995,7 +3995,7 @@ export class ContentEditor {
             delete element.dataset.audioKnownDurationSec;
         }
 
-        // Get audio duration (blob/WebM часто даёт Infinity до полной загрузки — не показываем)
+        // Get audio duration (blob/WebM часто даёт Infinity до полной загрузки - не показываем)
         audio.addEventListener('loadedmetadata', () => {
             const duration = audio.duration;
             if (Number.isFinite(duration) && duration > 0 && duration < 86400) {
@@ -4330,7 +4330,7 @@ export class ContentEditor {
 
     /**
      * Возвращает элемент, ниже которого должна быть установлена новая вставка,
-     * если на холсте выделен какой-либо блок. Иначе — null.
+     * если на холсте выделен какой-либо блок. Иначе - null.
      */
     _getInsertionAnchorElement() {
         const sel = this.selectedElement;
@@ -4357,7 +4357,7 @@ export class ContentEditor {
         const startY = 0; // No top margin for first element
         const elementSpacing = 0; // No spacing between elements
 
-        // Если на холсте есть выделенный блок — новый элемент ставится сразу под ним,
+        // Если на холсте есть выделенный блок - новый элемент ставится сразу под ним,
         // а блоки, оказавшиеся ниже точки вставки, будут сдвинуты вниз вызывающей стороной.
         const anchor = this._getInsertionAnchorElement();
         if (anchor) {
@@ -4606,7 +4606,7 @@ export class ContentEditor {
             } else {
                 /* Без якоря: иногда сохранённые элементы лежат с зазорами по top (например,
                    когда кадр сохранён с включённой доской); чтобы новый элемент не оставлял
-                   видимой пустоты между блоками — пересобираем стопку вплотную. */
+                   видимой пустоты между блоками - пересобираем стопку вплотную. */
                 this.recalculateAllElementPositions();
             }
 
@@ -4764,7 +4764,7 @@ export class ContentEditor {
                         <p class="ce-interactive-best-move__title">${titleText}</p>
                         <div class="ce-interactive-best-move__grid" data-ce-interactive-grid></div>
                     </div>`;
-                /* refreshInteractiveBestMoveElementsFromCardData вызывается после appendChild в addElementToCanvas —
+                /* refreshInteractiveBestMoveElementsFromCardData вызывается после appendChild в addElementToCanvas -
                    иначе блок ещё не в DOM и querySelector не находит интерактив (interactiveBlocksCount: 0). */
                 break;
             }
@@ -5034,7 +5034,7 @@ export class ContentEditor {
 
     /**
      * Предпросмотр карточки: открытие URL из поля ссылки и диплинков внутри HTML текста (tg:// и т.д.).
-     * В режиме предпросмотра setupLinkEditing не вызывается — события до блока не доходили из‑за pointer-events.
+     * В режиме предпросмотра setupLinkEditing не вызывается - события до блока не доходили из‑за pointer-events.
      */
     attachPreviewLinkNavigation(element) {
         const linkUrl = element.querySelector('.link-url');
@@ -5187,7 +5187,7 @@ export class ContentEditor {
 
     /**
      * Блок «Ссылка»: скрытое поле link-url синхронизируется с полем свойств;
-     * при applyToDom — createLink на выделение или обновление единственного <a>.
+     * при applyToDom - createLink на выделение или обновление единственного <a>.
      */
     updateLinkBlockUrlFromProperties(value, applyToDom) {
         if (!this.selectedElement || !this.selectedElement.classList.contains('link-element')) {
@@ -5327,8 +5327,8 @@ export class ContentEditor {
 
         if (maxMoves < 2) {
             const msg = isCube
-                ? 'В данных только один вариант действия — отображается одна кнопка.'
-                : 'В данных только один вариант хода — отображается одна кнопка.';
+                ? 'В данных только один вариант действия - отображается одна кнопка.'
+                : 'В данных только один вариант хода - отображается одна кнопка.';
             return `
                 <div class="property-item">
                     <p class="property-hint" style="margin:0;font-size:11px;color:#aaa;line-height:1.35;">${msg}</p>
@@ -5506,7 +5506,7 @@ export class ContentEditor {
                            oninput="contentEditor.updateLinkBlockUrlFromProperties(this.value, false)"
                            onchange="contentEditor.updateLinkBlockUrlFromProperties(this.value, true)"
                            onkeydown="if(event.key==='Enter'){ event.preventDefault(); this.blur(); }">
-                    <p class="property-hint ce-link-url-hint">Выделите в блоке слова или фразу, введите адрес и нажмите Enter или уйдите с поля — ссылка появится только на выделении. Если в блоке одна ссылка, URL обновит её.</p>
+                    <p class="property-hint ce-link-url-hint">Выделите в блоке слова или фразу, введите адрес и нажмите Enter или уйдите с поля - ссылка появится только на выделении. Если в блоке одна ссылка, URL обновит её.</p>
                 </div>
                 ` : ''}
                 ${element.classList.contains('audio-element') ? `
@@ -5970,7 +5970,7 @@ export class ContentEditor {
     }
 
     adjustCanvasHeightAfterDeletion() {
-        // Высота канваса больше не подстраивается под элементы —
+        // Высота канваса больше не подстраивается под элементы -
         // они скроллятся внутри фиксированной области.
     }
 
@@ -6175,7 +6175,7 @@ export class ContentEditor {
     }
 
     /**
-     * Снимок текущих блоков «таблица подсказок / по кубу» с канваса (сверху вниз по `top`) —
+     * Снимок текущих блоков «таблица подсказок / по кубу» с канваса (сверху вниз по `top`) -
      * при вставке шаблона они остаются первыми, контент шаблона идёт ниже.
      */
     serializeMoveHintsTableElementsFromCanvas() {
@@ -6212,7 +6212,7 @@ export class ContentEditor {
 
     /**
      * Доп. обработка payload перед сохранением шаблона в БД (при необходимости).
-     * Раньше вырезались доска, таблицы и cardData — теперь шаблон хранит кадр как есть, чтобы при вставке
+     * Раньше вырезались доска, таблицы и cardData - теперь шаблон хранит кадр как есть, чтобы при вставке
      * не терялись блоки доски/таблицы и данные подсказок.
      */
     sanitizePayloadForTemplate(payload) {
@@ -6224,7 +6224,7 @@ export class ContentEditor {
      * Вставка шаблона кадра: восстанавливает элементы из шаблона.
      * Если на канвасе уже есть таблица подсказок (`moveHintsTable`), она сохраняется **верхним**
      * блоком (все такие таблицы по порядку сверху вниз), из шаблона таблицы исключаются, остальной
-     * контент шаблона идёт ниже. Снимок доски и cardData — с текущей сессии / hint viewer.
+     * контент шаблона идёт ниже. Снимок доски и cardData - с текущей сессии / hint viewer.
      */
     async applyFrameTemplatePayload(rawTemplatePayload) {
         let p;
@@ -6329,7 +6329,7 @@ export class ContentEditor {
         return applyCanvasPatternConfigImpl(this, pattern);
     }
 
-    /** Стили обёртки .canvas-element (фон блока; padding — только если задан в панели свойств, не из computed) */
+    /** Стили обёртки .canvas-element (фон блока; padding - только если задан в панели свойств, не из computed) */
     collectBlockStyle(el) {
         const cs = window.getComputedStyle(el);
         const out = {};
@@ -6457,7 +6457,7 @@ export class ContentEditor {
     }
 
     /**
-     * Подставляет blob из IndexedDB и вешает плеер (data: URL не кладём в localStorage — квота).
+     * Подставляет blob из IndexedDB и вешает плеер (data: URL не кладём в localStorage - квота).
      */
     async hydrateAudioElementFromIDB(element) {
         const id = element.dataset.audioStorageId;
@@ -6649,7 +6649,7 @@ export class ContentEditor {
 
     /**
      * Те же данные таблицы/кадра, что при входе из hint_viewer (data[current]).
-     * Доска не хранится в редакторе — снимается через getHintViewerBoardSnapshot() при каждом сохранении.
+     * Доска не хранится в редакторе - снимается через getHintViewerBoardSnapshot() при каждом сохранении.
      */
     syncCardDataFromHintViewerPage() {
         if (typeof window.getHintViewerCurrentCardData !== 'function') {
@@ -6747,7 +6747,7 @@ export class ContentEditor {
             .replace(/[\\/]/g, '_')
             .trim() || 'default';
 
-        // Имена вроде source.mat с бэка — не уникальны; для карточки нужен стем gameId и реальное расширение (.mat)
+        // Имена вроде source.mat с бэка - не уникальны; для карточки нужен стем gameId и реальное расширение (.mat)
         const PLACEHOLDER_STEMS = new Set(['source', 'file', 'game', 'card', 'default']);
         let stem = '';
         let ext = '.mat';
@@ -6767,7 +6767,7 @@ export class ContentEditor {
             stem = gameId;
         }
 
-        // Имя файла карточки в облаке: только стем + расширение (без _gN — совпадает с id матча/анализа)
+        // Имя файла карточки в облаке: только стем + расширение (без _gN - совпадает с id матча/анализа)
         let base = `${stem}${ext}`;
         if (base.length > 255) {
             base = base.slice(0, 255);
@@ -7035,7 +7035,7 @@ export class ContentEditor {
 
     /**
      * Перед сохранением кадра/карточки: заливает тяжёлые медиа в S3, в JSON остаются s3_key.
-     * Нужна авторизация контент-админа (Telegram, FAB или веб-сессия) — иначе upload не вызывается,
+     * Нужна авторизация контент-админа (Telegram, FAB или веб-сессия) - иначе upload не вызывается,
      * в JSON остаются data/blob URL (см. uploadBinaryToContentCardMedia).
      */
     async uploadPayloadMediaToS3(payload) {
@@ -7632,7 +7632,7 @@ export class ContentEditor {
     }
 
     /**
-     * Для предпросмотра с flex-колонкой высота inner считается из потока; иначе — из absolute top + height.
+     * Для предпросмотра с flex-колонкой высота inner считается из потока; иначе - из absolute top + height.
      */
     updateCardPreviewInnerMinHeight(inner) {
         return updateCardPreviewInnerMinHeightImpl(this, inner);
@@ -7735,7 +7735,7 @@ export class ContentEditor {
                             <h3 id="labelPresetsModalTitle" class="card-labels-title">Пресеты меток</h3>
                             <button type="button" class="label-presets-modal-close" onclick="contentEditor.closeLabelPresetsModal()" aria-label="Закрыть">&times;</button>
                         </div>
-                        <p class="card-labels-presets-hint">Нажмите текст пресета — он добавится в список меток карточки (в окне ниже после возврата).</p>
+                        <p class="card-labels-presets-hint">Нажмите текст пресета - он добавится в список меток карточки (в окне ниже после возврата).</p>
                         <div id="labelPresetsList" class="card-labels-presets-list" aria-live="polite"></div>
                         <div class="card-labels-preset-admin-row">
                             <input type="text" id="labelPresetNewInput" class="card-labels-input" maxlength="255" placeholder="Новый пресет для всех" autocomplete="off" />
@@ -8288,7 +8288,7 @@ export class ContentEditor {
         if (!listEl) return;
         if (!this._labelPresetsList.length) {
             listEl.innerHTML =
-                '<span class="card-labels-presets-empty">Пока нет пресетов — задайте строку ниже и нажмите «В пресеты».</span>';
+                '<span class="card-labels-presets-empty">Пока нет пресетов - задайте строку ниже и нажмите «В пресеты».</span>';
             return;
         }
         listEl.innerHTML = this._labelPresetsList
@@ -8365,7 +8365,7 @@ export class ContentEditor {
     }
 
     /**
-     * В Telegram WebApp часто блокируют множественные window.confirm — используем showConfirm.
+     * В Telegram WebApp часто блокируют множественные window.confirm - используем showConfirm.
      */
     confirmPresetDanger(message) {
         return new Promise((resolve) => {
@@ -8833,7 +8833,7 @@ export class ContentEditor {
         }
         if (toolId === 'interactive-best-move') {
             const ds = item.dataset || {};
-            /* Явные поля элемента важнее вложенного dataset: в старых сохранениях в dataset мог остаться дефолт «4», а актуальное число — только в корне объекта. */
+            /* Явные поля элемента важнее вложенного dataset: в старых сохранениях в dataset мог остаться дефолт «4», а актуальное число - только в корне объекта. */
             const cand = [
                 item.ceInteractiveButtonCount,
                 item.ce_interactive_button_count,
@@ -9032,7 +9032,7 @@ export class ContentEditor {
                         <div class="audio-icon" style="font-size: 24px; margin-right: 12px; color: #667eea;">🎵</div>
                         <div class="audio-info" style="flex: 1;">
                             <div class="audio-name" style="font-size: 14px; font-weight: 500; color: #333; margin-bottom: 4px;">${audioHead}</div>
-                            <div class="audio-duration" style="font-size: 12px; color: #666;">—</div>
+                            <div class="audio-duration" style="font-size: 12px; color: #666;">-</div>
                         </div>
                         <div class="audio-play-btn" style="width: 32px; height: 32px; border-radius: 50%; background: #667eea; color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px;">▶</div>
                     </div>`;
@@ -9241,7 +9241,7 @@ export class ContentEditor {
                 }
             }
 
-            // Special handling for uploaded images — ширина/высота блока по масштабу (100% = вся ширина кадра)
+            // Special handling for uploaded images - ширина/высота блока по масштабу (100% = вся ширина кадра)
             if (toolId === 'upload-image') {
                 const oldHeight = parseInt(element.style.height, 10);
                 const smartHeight = this.applyResponsiveUploadImageLayout(element, { targetWidth: fullWidth });
@@ -9395,7 +9395,7 @@ export class ContentEditor {
         if (n > 0) {
             this.showNotification('Стиль текста применён ко всем текстовым блокам', 'success');
         } else {
-            this.showNotification('Настройки сохранены — такой текст получат новые блоки', 'success');
+            this.showNotification('Настройки сохранены - такой текст получат новые блоки', 'success');
         }
         this.closeCanvasSettingsModal();
     }

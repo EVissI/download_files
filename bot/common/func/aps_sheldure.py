@@ -10,7 +10,7 @@ from bot.db.models import MessageForNew
 async def schedule_gift_job_from_db():
     """
     Читает расписание рассылки из базы и добавляет/обновляет задачу 'gift_notification'.
-    Если в БД нет настроек — задача не создаётся.
+    Если в БД нет настроек - задача не создаётся.
     """
     try:
         async with async_session_maker() as session:

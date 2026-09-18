@@ -129,7 +129,7 @@ html[data-theme="light"] .lbg-shotbox .lbg-shot--light{display:block}
   .lbg-burger{display:inline-flex}
   .lbg-header__login{display:none}
   .lbg-header__inner{position:relative}
-  /* nav уходит из потока, поэтому его margin-left:auto больше не работает —
+  /* nav уходит из потока, поэтому его margin-left:auto больше не работает -
      кнопки прижимаем вправо явно */
   .lbg-header__actions{margin-left:auto}
   .lbg-nav{
@@ -152,7 +152,7 @@ html[data-theme="light"] .lbg-shotbox .lbg-shot--light{display:block}
   .lbg .lbg-nav__cta:hover{background:var(--lbg-accent-2);color:#fff}
 }
 
-/* Десктоп: базовые размеры макета на широких экранах читаются мелко —
+/* Десктоп: базовые размеры макета на широких экранах читаются мелко -
    поднимаем типографику и воздух примерно на 15%. Ниже 1024px всё как было. */
 @media (min-width:1024px){
   .lbg-header__inner{padding:16px 20px;gap:20px}
@@ -200,4 +200,42 @@ html[data-theme="light"] .lbg-shotbox .lbg-shot--light{display:block}
   .lbg-footer b{font-size:1.15rem}
   .lbg-footer__note{font-size:1rem}
   .lbg-footer__links{font-size:1rem;gap:24px}
+}
+
+/* FAQ: блок-ссылка на лендинге и сама страница вопросов */
+.lbg-faq-link{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:24px;background:var(--lbg-card);border:1px solid var(--lbg-border);border-radius:16px;padding:28px 32px;transition:border-color .15s ease,transform .15s ease}
+.lbg-faq-link:hover{border-color:var(--lbg-accent-2);transform:translateY(-2px)}
+.lbg-faq-link__icon{display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;flex:0 0 auto;border-radius:14px;background:var(--lbg-sunken);border:1px solid var(--lbg-border);color:var(--lbg-accent-2)}
+.lbg-faq-link__icon svg{width:30px;height:30px}
+.lbg-faq-link__body{min-width:0}
+.lbg-faq-link__title{display:block;font-size:clamp(1.3rem,2.2vw,1.75rem);line-height:1.2;letter-spacing:-.02em;font-weight:700;color:var(--lbg-text)}
+.lbg-faq-link__text{display:block;margin-top:10px;font-size:1rem;line-height:1.6;color:var(--lbg-soft);text-wrap:pretty}
+.lbg .lbg-faq-link__go{flex:0 0 auto;white-space:nowrap;padding:12px 22px;border-radius:10px;background:var(--lbg-accent);color:#fff;font-weight:600;font-size:.95rem}
+.lbg-faq-link:hover .lbg-faq-link__go{background:var(--lbg-accent-2)}
+
+.lbg-faq-head{padding-bottom:0}
+.lbg-faq-head h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.08;letter-spacing:-.03em;font-weight:800}
+.lbg .lbg-back{display:inline-block;margin-bottom:18px;font-size:.9rem;font-weight:600;color:var(--lbg-soft)}
+.lbg .lbg-back:hover{color:var(--lbg-text)}
+
+.lbg-faq{display:flex;flex-direction:column;gap:14px}
+.lbg-faq__item{position:relative;background:var(--lbg-card);border:1px solid var(--lbg-border);border-radius:14px;padding:4px 24px;transition:border-color .15s ease}
+.lbg-faq__item[open]{border-color:var(--lbg-accent-2)}
+.lbg-faq__q{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:20px 0;cursor:pointer;list-style:none;font-size:clamp(1.05rem,1.8vw,1.2rem);line-height:1.35;font-weight:600;color:var(--lbg-text)}
+.lbg-faq__q::-webkit-details-marker{display:none}
+.lbg-faq__sign{position:relative;flex:0 0 auto;width:22px;height:22px;margin-top:2px}
+.lbg-faq__sign::before,.lbg-faq__sign::after{content:"";position:absolute;left:50%;top:50%;width:14px;height:2px;border-radius:2px;background:var(--lbg-accent-2);transform:translate(-50%,-50%);transition:transform .18s ease}
+.lbg-faq__sign::after{transform:translate(-50%,-50%) rotate(90deg)}
+.lbg-faq__item[open] .lbg-faq__sign::after{transform:translate(-50%,-50%) rotate(0)}
+.lbg-faq__a{padding:0 0 22px;margin:0;font-size:1rem;line-height:1.65;color:var(--lbg-soft);max-width:70ch;text-wrap:pretty}
+.lbg-faq__cta{margin-top:40px}
+
+@media (max-width:700px){
+  .lbg-faq-link{grid-template-columns:auto 1fr;gap:16px 18px;padding:22px;align-items:start}
+  .lbg-faq-link__go{grid-column:1 / -1;text-align:center}
+  .lbg-faq-link__icon{width:46px;height:46px;border-radius:12px}
+  .lbg-faq-link__icon svg{width:26px;height:26px}
+  .lbg-faq__item{padding:2px 18px}
+  .lbg-faq__q{padding:18px 0;gap:12px}
+  .lbg-faq__a{padding-bottom:18px}
 }

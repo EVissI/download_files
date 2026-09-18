@@ -691,7 +691,7 @@ async def ma_folder_navigate_link(body: MaFolderNavigateLinkBody):
 
 @match_analysis_api_router.post("/api/match_analysis/folders/link_resolve")
 async def ma_folder_link_resolve(body: MaFolderLinkResolveBody):
-    # Read-only доступ по токену — как у content folders (не только admin).
+    # Read-only доступ по токену - как у content folders (не только admin).
     user_id = await _resolve_ma_user_id(body.init_data, body.fab_token)
     token = str(body.folder_token or "").strip()
     if not token:

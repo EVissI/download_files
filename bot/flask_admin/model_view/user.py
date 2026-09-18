@@ -176,7 +176,7 @@ class UserPromocodeInline(ModelView):
         "promocode.code": "Промокод",
         "promo_benefit_display": "На что",
         "created_at_display": "Дата активации",
-        "promo_date_range": "Период действия (с — по)",
+        "promo_date_range": "Период действия (с - по)",
         "remaining_balance_display": "Остаток",
         "is_active_display": "Статус",
     }

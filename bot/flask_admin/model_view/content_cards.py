@@ -31,9 +31,9 @@ def _escape_ilike_pattern(s: str) -> str:
 
 def _run_telegram_sync(action):
     """
-    Flask/Starlette WSGI в отдельном потоке: нельзя использовать глобальный bot из config —
+    Flask/Starlette WSGI в отдельном потоке: нельзя использовать глобальный bot из config -
     его aiohttp-сессия привязана к другому (уже закрытому) event loop.
-    На каждый вызов — свой Bot, asyncio.run() и явное закрытие сессии.
+    На каждый вызов - свой Bot, asyncio.run() и явное закрытие сессии.
     action: async (Bot) -> None
     """
 
@@ -170,8 +170,8 @@ class _ContentCardModelViewBase(ModelView):
         "labels": StringField(
             _("Метки"),
             description=_(
-                "Массив PostgreSQL TEXT[]. «Подстрока в метке» — вхождение в любую метку; "
-                "«Точная метка» — элемент массива целиком."
+                "Массив PostgreSQL TEXT[]. «Подстрока в метке» - вхождение в любую метку; "
+                "«Точная метка» - элемент массива целиком."
             ),
             validators=[validators.Optional()],
         ),
@@ -189,8 +189,8 @@ class _ContentCardModelViewBase(ModelView):
 
     description_columns = {
         "labels": _(
-            "Массив меток в PostgreSQL. «Подстрока в метке» — вхождение в любую метку; "
-            "«Точная метка» — элемент массива равен введённой строке."
+            "Массив меток в PostgreSQL. «Подстрока в метке» - вхождение в любую метку; "
+            "«Точная метка» - элемент массива равен введённой строке."
         ),
     }
 

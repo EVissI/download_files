@@ -43,10 +43,10 @@ def _is_admin_checked() -> bool:
 
 class WebUserInterface(SQLAInterface):
     """
-    «Активен до» в списке — вычисляемое свойство expires_at_display, а не
+    «Активен до» в списке - вычисляемое свойство expires_at_display, а не
     колонка: FAB подставлял его в ORDER BY как есть и падал с 500. Сортируем
     по настоящей expires_at. Бессрочные (NULL) считаем самыми дальними:
-    по возрастанию они в конце, по убыванию — в начале.
+    по возрастанию они в конце, по убыванию - в начале.
     """
 
     SORT_ALIASES = {"expires_at_display": "expires_at"}
@@ -92,7 +92,7 @@ class WebUserModelView(ModelView):
     add_columns = ["login", "password", "is_admin", "unlimited", "expires_at", "max_sessions"]
     edit_columns = ["login", "password", "is_admin", "unlimited", "expires_at", "max_sessions"]
     search_columns = ["login"]
-    # Статус и пароль вычисляются в Python — сортировать их в БД нечем.
+    # Статус и пароль вычисляются в Python - сортировать их в БД нечем.
     order_columns = ["id", "login", "is_admin", "expires_at_display", "max_sessions"]
     exclude_columns = ["password_hash", "password_encrypted", "uploads", "support_thread"]
 

@@ -34,7 +34,7 @@ async def send_analyze_followup(
     message_dao: "MessagesTextsDAO | None" = None,
 ) -> None:
     """
-    PDF / анализ ошибок / заказ эксперта — одним сообщением с кнопками.
+    PDF / анализ ошибок / заказ эксперта - одним сообщением с кнопками.
     """
     request_id = None
     if include_pro:

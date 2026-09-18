@@ -577,7 +577,7 @@ async def match_analysis_cabinet_page(request: Request):
 
 @match_analysis_api_router.get("/match-analysis-view")
 async def match_analysis_view_page(request: Request, id: int | None = None):
-    """Просмотр сохранённого анализа — тот же UI, что hint-viewer, в режиме match_analysis."""
+    """Просмотр сохранённого анализа - тот же UI, что hint-viewer, в режиме match_analysis."""
     from bot.common.service.hint_viewer_web_service import resolve_web_session
     from bot.common.service.webapp_settings_service import (
         get_hint_viewer_screenshot_font_scale_percent,
@@ -798,7 +798,7 @@ def _read_ebml_vint(data: bytes, offset: int) -> tuple[int, int] | None:
 def _probe_webm_duration_sec(data: bytes) -> float | None:
     """Достаёт Duration из WebM/EBML Info (если есть)."""
     if not data or b"webm" not in data[:64].lower() and b"matroska" not in data[:64].lower():
-        # всё равно ищем маркер Duration — часть рекордеров пишет без явного DocType в начале буфера
+        # всё равно ищем маркер Duration - часть рекордеров пишет без явного DocType в начале буфера
         pass
     needle = b"\x44\x89"
     start = 0
@@ -829,7 +829,7 @@ def _probe_webm_duration_sec(data: bytes) -> float | None:
             start = idx + 2
             continue
         sec = millis / 1000.0 if millis > 1000 else millis
-        # эвристика: значения > 1000 скорее всего мс; 0.5..1000 — уже секунды
+        # эвристика: значения > 1000 скорее всего мс; 0.5..1000 - уже секунды
         if millis > 1000:
             sec = millis / 1000.0
         else:
@@ -1052,7 +1052,7 @@ def _run_ffmpeg(args: list[str]) -> None:
     except FileNotFoundError as exc:
         raise HTTPException(
             status_code=500,
-            detail="ffmpeg не найден на сервере — конвертация аудио недоступна",
+            detail="ffmpeg не найден на сервере - конвертация аудио недоступна",
         ) from exc
     except subprocess.TimeoutExpired as exc:
         raise HTTPException(status_code=500, detail="Таймаут конвертации ffmpeg") from exc
@@ -1127,7 +1127,7 @@ def _import_audio_to_webm_bytes(raw: bytes, src_name: str | None = None) -> byte
     if suffix == ".mpeg":
         suffix = ".mp3"
     if suffix not in {".wav", ".mp3", ".m4a", ".ogg", ".opus", ".webm"}:
-        # По умолчанию пробуем как wav — чаще приходит без корректного имени.
+        # По умолчанию пробуем как wav - чаще приходит без корректного имени.
         suffix = ".wav"
     return _convert_audio_bytes(
         raw,
@@ -1146,7 +1146,7 @@ def _safe_audio_stem(name: str | None) -> str:
 def _content_disposition_attachment(filename: str) -> str:
     """
     Content-Disposition с ASCII filename= и UTF-8 filename*= (RFC 5987).
-    HTTP-заголовки кодируются как latin-1 — кириллица в filename= падает.
+    HTTP-заголовки кодируются как latin-1 - кириллица в filename= падает.
     """
     name = (filename or "download").replace("\\", "/").split("/")[-1].strip() or "download"
     name = name.replace('"', "").replace("\r", "").replace("\n", "")[:200]
@@ -1543,7 +1543,7 @@ async def match_analysis_audio_download_mp3(body: MatchAnalysisAudioDownloadBody
 async def match_analysis_audio_file_by_token(request: Request, token: str = Query(...)):
     """
     Скачивание по временному токену (для Telegram.WebApp.downloadFile).
-    Цельный ответ — Telegram плохо работает с chunked/streaming.
+    Цельный ответ - Telegram плохо работает с chunked/streaming.
     """
     if not token:
         raise HTTPException(status_code=400, detail="Параметр token обязателен")
@@ -1668,7 +1668,7 @@ async def match_analysis_audio_export_mp3_zip(
                 if not audio_raw:
                     skipped.append(name)
                     continue
-                # WAV заметно тяжелее MP3 — для WAV допускаем до 80 МБ.
+                # WAV заметно тяжелее MP3 - для WAV допускаем до 80 МБ.
                 max_bytes = (
                     max(MA_MEDIA_MAX_BYTES, 80 * 1024 * 1024)
                     if lower_name.endswith((".wav", ".wave"))

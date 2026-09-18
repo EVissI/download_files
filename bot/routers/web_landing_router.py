@@ -59,7 +59,7 @@ class LandingSaveItem(BaseModel):
     key: str = Field(max_length=80)
     text: str = Field(default="", max_length=4000)
     style: dict[str, Any] | None = None
-    # None — адрес не трогаем; строка (в том числе пустая) — записать или
+    # None - адрес не трогаем; строка (в том числе пустая) - записать или
     # вернуть шаблонный
     href: str | None = Field(default=None, max_length=500)
 
@@ -163,7 +163,7 @@ async def _is_landing_admin(request: Request) -> bool:
 @web_landing_api_router.get("/web", response_class=HTMLResponse)
 async def web_landing(request: Request):
     """
-    Лендинг доступен всем. Сессию не требуем, но если она есть — кнопки входа
+    Лендинг доступен всем. Сессию не требуем, но если она есть - кнопки входа
     ведут сразу в кабинет, а админу подключается режим редактирования.
     Сессия уже разобрана web_grant_user_middleware, повторно в Redis не ходим.
     """
@@ -186,7 +186,7 @@ async def web_landing(request: Request):
     }
     # Цвета зависят от темы, поэтому идут правилами в <style>, а не инлайном.
     # Markup обязателен: внутри <style> HTML-сущности не декодируются, и
-    # экранированные кавычки сломали бы селекторы. Содержимое безопасно —
+    # экранированные кавычки сломали бы селекторы. Содержимое безопасно -
     # ключи и цвета проходят валидацию в colors_css.
     color_css = Markup(colors_css(overrides))
 
@@ -208,6 +208,50 @@ async def web_landing(request: Request):
             "lp_block_add": _block_add_html if is_admin else _no_html,
             "blocks": blocks,
             "lp_color_css": color_css,
+        },
+    )
+
+
+@web_landing_api_router.get("/web/faq", response_class=HTMLResponse)
+async def web_faq(request: Request):
+    """
+    Вопросы и ответы. Отдельная страница, чтобы лендинг не рос: на нём стоит
+    только ссылка сюда. Наполняет её админ тем же режимом редактирования.
+    """
+    session = getattr(request.state, "web_session", None)
+    authorized = bool(session)
+    is_admin = bool((session or {}).get("is_admin"))
+
+    overrides = await get_overrides()
+    (
+        lp_attr,
+        lp_text,
+        lp_defaults,
+        lp_img,
+        lp_href,
+        lp_href_defaults,
+    ) = _build_helpers(overrides)
+    layouts = await get_layouts(overrides)
+    blocks = {"faq": build_blocks("faq", layouts.get("faq"))}
+
+    return templates.TemplateResponse(
+        "landing_faq.html",
+        {
+            "request": request,
+            "login_url": "/web/hints" if authorized else "/login",
+            "login_label": "В кабинет" if authorized else "Авторизоваться",
+            "cache_timestamp": get_static_asset_version(),
+            "can_edit": is_admin,
+            "lp_attr": lp_attr,
+            "lp_text": lp_text,
+            "lp_defaults": lp_defaults,
+            "lp_img": lp_img,
+            "lp_href": lp_href,
+            "lp_href_defaults": lp_href_defaults,
+            "lp_block_remove": _block_remove_html if is_admin else _no_html,
+            "lp_block_add": _block_add_html if is_admin else _no_html,
+            "blocks": blocks,
+            "lp_color_css": Markup(colors_css(overrides)),
         },
     )
 

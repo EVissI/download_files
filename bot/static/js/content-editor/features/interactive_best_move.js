@@ -85,7 +85,7 @@ export function syncInteractiveBlockTitleByType(block, tableType) {
 
 /**
  * Настройка из кабинета карточек ("Открыть подсказки").
- * Если выключена или отсутствует — блоки интерактива на странице карточки прячем.
+ * Если выключена или отсутствует - блоки интерактива на странице карточки прячем.
  */
 const INTERACTIVE_OPEN_HINTS_STORAGE_KEY = 'cards_cabinet_open_hints_v1';
 
@@ -131,7 +131,7 @@ function getInteractiveFeedbackTexts(gridEl) {
 /**
  * Сохранённый payload может хранить счётчик как dataset.ceInteractiveButtonCount или под другим ключом после JSON/API.
  * @param {HTMLElement | null} el
- * @returns {number} число или NaN — тогда clampInteractiveButtonCount подставит defaultCount
+ * @returns {number} число или NaN - тогда clampInteractiveButtonCount подставит defaultCount
  */
 export function parseCeInteractiveButtonCountRaw(el) {
     if (!el) return NaN;
@@ -222,7 +222,7 @@ export function countInteractiveCubeActionsFromCardData(cardData) {
     return ce ? ce.length : 0;
 }
 
-/** Универсальный счётчик: для hints — ходы с probs, для cube — cubeful_equities. */
+/** Универсальный счётчик: для hints - ходы с probs, для cube - cubeful_equities. */
 export function countInteractiveAvailableFromCardData(cardData, tableType) {
     return normalizeInteractiveTableType(tableType) === INTERACTIVE_TABLE_TYPE_CUBE
         ? countInteractiveCubeActionsFromCardData(cardData)
@@ -230,7 +230,7 @@ export function countInteractiveAvailableFromCardData(cardData, tableType) {
 }
 
 /**
- * Не меньше 2 кнопок, если доступно ≥2 ходов; при одном варианте (победа / один ход) — 1.
+ * Не меньше 2 кнопок, если доступно ≥2 ходов; при одном варианте (победа / один ход) - 1.
  * Значение «1» из UI не выбирается при нескольких ходах.
  */
 export function clampInteractiveButtonCount(raw, maxAvailable, defaultCount = 4) {
@@ -244,8 +244,8 @@ export function clampInteractiveButtonCount(raw, maxAvailable, defaultCount = 4)
 
 /**
  * @param {object | null | undefined} cardData
- * @param {number} [buttonCount=4] — желаемое число активных кнопок (не больше числа доступных ходов)
- * @param {'hints'|'cube'} [tableType='hints'] — по какой таблице строим интерактив
+ * @param {number} [buttonCount=4] - желаемое число активных кнопок (не больше числа доступных ходов)
+ * @param {'hints'|'cube'} [tableType='hints'] - по какой таблице строим интерактив
  * @returns {{ error: boolean, message?: string, slots: Array<{ label: string, disabled: boolean, isCorrect: boolean }> }}
  */
 export function buildInteractiveSlotsFromCardData(cardData, buttonCount = 4, tableType = INTERACTIVE_TABLE_TYPE_HINTS) {
@@ -327,7 +327,7 @@ export function buildInteractiveSlotsFromCardData(cardData, buttonCount = 4, tab
             if (j === 0) {
                 slots.push({ label: move, disabled: false, isCorrect: true });
             } else {
-                slots.push({ label: '—', disabled: true, isCorrect: false });
+                slots.push({ label: '-', disabled: true, isCorrect: false });
             }
         }
         return { error: false, slots };
@@ -387,7 +387,7 @@ export function buildInteractiveSlotsFromCardData(cardData, buttonCount = 4, tab
 /**
  * @param {HTMLElement | null} gridEl
  * @param {{ error: boolean, message?: string, slots: Array<{ label: string, disabled: boolean, isCorrect: boolean }> }} result
- * @param {{ dryRun?: boolean, recordEditor?: * }} [options] — dryRun: без записи на сервер; recordEditor: для записи (страница карточки)
+ * @param {{ dryRun?: boolean, recordEditor?: * }} [options] - dryRun: без записи на сервер; recordEditor: для записи (страница карточки)
  */
 function fillInteractiveBestMoveGridFromResult(gridEl, result, options = {}) {
     if (!gridEl) {
@@ -469,10 +469,10 @@ function fillInteractiveBestMoveGridFromResult(gridEl, result, options = {}) {
 }
 
 /**
- * Редактор и превью (без записи на сервер): как у игрока на карточке — перемешивание и клики с подсветкой.
+ * Редактор и превью (без записи на сервер): как у игрока на карточке - перемешивание и клики с подсветкой.
  *
  * @param {HTMLElement | null} gridEl
- * @param {object | null | undefined} cardData — уже смерженный эффективный cardData
+ * @param {object | null | undefined} cardData - уже смерженный эффективный cardData
  * @param {number} [buttonCount=4]
  */
 export function fillInteractiveEditorPreviewGrid(gridEl, cardData, buttonCount = 4, tableType = INTERACTIVE_TABLE_TYPE_HINTS) {
@@ -517,8 +517,8 @@ export function fillInteractiveBlock(block, result, editor) {
 }
 
 /**
- * @param {*} editor — ContentEditor
- * @param {object | null} payload — уже смерженный getPayloadForCardPreviewRender
+ * @param {*} editor - ContentEditor
+ * @param {object | null} payload - уже смерженный getPayloadForCardPreviewRender
  */
 export function setupInteractiveBestMoveAfterCardPreviewRender(editor, payload) {
     if (typeof window === 'undefined' || window.__CONTENT_CARD_VIEW_ONLY__ !== true) return;
@@ -532,7 +532,7 @@ export function setupInteractiveBestMoveAfterCardPreviewRender(editor, payload) 
     const blocks = host.querySelectorAll('.canvas-element[data-tool-id="interactive-best-move"]');
     blocks.forEach((block) => {
         if (!hintsOpenForUser) {
-            // Чекбокс «Открыть подсказки» в кабинете снят — на всех кадрах скрываем интерактив у пользователя.
+            // Чекбокс «Открыть подсказки» в кабинете снят - на всех кадрах скрываем интерактив у пользователя.
             block.style.display = 'none';
             block.setAttribute('aria-hidden', 'true');
             return;

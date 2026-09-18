@@ -64,8 +64,8 @@ async def grant_match_analyses_async(
 ) -> int:
     """
     Async-вариант выдачи анализов (для promo / schedule / TG-команд).
-    quantity=None — выдать все подходящие анализы, которых ещё нет у пользователя.
-    ready_only=True — только is_ready; False — все анализы.
+    quantity=None - выдать все подходящие анализы, которых ещё нет у пользователя.
+    ready_only=True - только is_ready; False - все анализы.
     Не коммитит по умолчанию.
     """
     if quantity is not None:

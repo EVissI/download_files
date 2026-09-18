@@ -311,7 +311,7 @@ async function ensureContentEditor() {
             return null;
         }
 
-        // Текущий пользователь WebApp/URL — не владелец сохранённого анализа.
+        // Текущий пользователь WebApp/URL - не владелец сохранённого анализа.
         let chatId = resolveHintViewerChatId(null);
         try {
             window.hintViewerChatId = chatId;
@@ -528,7 +528,7 @@ async function ensureContentEditor() {
                 currentGameNum = parseInt(availableGames[0].game_number);
                 gameRedScore = scores.Red || 0;
                 gameBlackScore = scores.Black || 0;
-                playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
+                playersInfoDiv.innerHTML = `Белые: ${redPlayer} - Черные: ${blackPlayer}`;
                 let crawfordVisibility =
                     enable_crawford_game_number &&
                     currentGameNum === enable_crawford_game_number
@@ -708,7 +708,7 @@ async function ensureContentEditor() {
                                 }
                             }
                         } else {
-                            playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}`;
+                            playersInfoDiv.innerHTML = `Белые: ${redPlayer} - Черные: ${blackPlayer}`;
                             renderMatchInfoRow();
                             let crawfordVisibility = (enable_crawford_game_number && currentGameNum === enable_crawford_game_number) ? 'visible' : 'hidden';
                             renderMatchTopBar(crawfordVisibility);
@@ -2251,7 +2251,7 @@ async function ensureContentEditor() {
 
         function nextTurn() {
             // В режиме «только аудио» (и при выключенной анимации) прыгаем
-            // сразу на следующий видимый ход — без промежуточных кадров.
+            // сразу на следующий видимый ход - без промежуточных кадров.
             if (skipAnimationEnabled || matchAnalysisAudioOnly) {
                 if (dataLoaded) {
                     goToNextVisibleMoveOrGame();
@@ -2599,7 +2599,7 @@ async function ensureContentEditor() {
             if (typeof window.webScreenshotErrorMessage === 'function') {
                 return window.webScreenshotErrorMessage(kind, cause);
             }
-            return 'Плохое соединение с интернетом — проверьте связь';
+            return 'Плохое соединение с интернетом - проверьте связь';
         }
 
         function applyHideInfoMatchHeaderKeepTopPips(matchInfo) {
@@ -3897,8 +3897,8 @@ async function ensureContentEditor() {
 
         function isBenignAudioPlayError(err) {
             const name = err && err.name ? String(err.name) : '';
-            // AbortError: play() interrupted by pause()/new play — ожидаемо при смене хода.
-            // NotAllowedError: автоплей без жеста пользователя — не показываем как сбой.
+            // AbortError: play() interrupted by pause()/new play - ожидаемо при смене хода.
+            // NotAllowedError: автоплей без жеста пользователя - не показываем как сбой.
             return name === 'AbortError' || name === 'NotAllowedError';
         }
 
@@ -4506,7 +4506,7 @@ async function ensureContentEditor() {
                 // Force refresh by adding timestamp to button content
                 const timestamp = Date.now();
                 button.setAttribute('data-refresh', timestamp);
-                // В режиме анализа матча редактор карточек скрыт — не возвращаем кнопку.
+                // В режиме анализа матча редактор карточек скрыт - не возвращаем кнопку.
                 if (matchAnalysisMode) {
                     button.style.display = 'none';
                     return;

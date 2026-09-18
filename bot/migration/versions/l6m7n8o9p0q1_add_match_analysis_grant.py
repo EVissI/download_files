@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # PostgreSQL: ADD VALUE нельзя в обычной транзакции на старых версиях —
+    # PostgreSQL: ADD VALUE нельзя в обычной транзакции на старых версиях -
     # autocommit_block безопаснее.
     with op.get_context().autocommit_block():
         op.execute(

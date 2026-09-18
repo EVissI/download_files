@@ -131,7 +131,7 @@ function getPipInputFieldLabel(input) {
 
 function formatPipInputMirrorValue(raw) {
     const t = String(raw ?? '');
-    return t !== '' ? t : '—';
+    return t !== '' ? t : '-';
 }
 
 function showPipInputMirror(input) {

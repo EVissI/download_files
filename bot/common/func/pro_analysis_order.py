@@ -38,7 +38,7 @@ def _get_i18n(lang_code: str | None = None) -> "TranslatorRunner":
 
 
 def _service_label(i18n: "TranslatorRunner", service: str) -> str:
-    # fluentogram накапливает ключ на одном runner — нельзя сохранять getters
+    # fluentogram накапливает ключ на одном runner - нельзя сохранять getters
     # и нельзя вызывать i18n.* пока уже открыт другой атрибутный путь.
     if service == "hint_viewer":
         return i18n.pro.analysis.service_hints()
@@ -46,7 +46,7 @@ def _service_label(i18n: "TranslatorRunner", service: str) -> str:
         return i18n.pro.analysis.service_match()
     if service == "short_board":
         return i18n.pro.analysis.service_short_board()
-    return service or "—"
+    return service or "-"
 
 
 async def create_pro_order(
@@ -148,7 +148,7 @@ async def _resolve_admin_ids(session: AsyncSession) -> list[int]:
 async def _resolve_local_mat(order: dict[str, Any]) -> tuple[str, bool]:
     """
     Возвращает (local_path, is_temp).
-    is_temp=True — файл нужно удалить после отправки.
+    is_temp=True - файл нужно удалить после отправки.
     """
     file_path = order.get("file_path")
     if file_path and os.path.isfile(file_path):
@@ -177,7 +177,7 @@ def _build_admin_caption(order: dict[str, Any], i18n: "TranslatorRunner") -> str
     user_id = order.get("user_id")
     username = order.get("username")
     service = order.get("service") or ""
-    username_line = f"@{username}" if username else "—"
+    username_line = f"@{username}" if username else "-"
     # Сначала резолвим service_label: иначе admin_caption + kwargs склеят ключ.
     service_label = _service_label(i18n, service)
     return i18n.pro.analysis.admin_caption(
@@ -198,7 +198,7 @@ async def fulfill_pro_order(
     Отправляет .mat админам с кнопкой «Ответить».
     Возвращает число успешных отправок.
     """
-    # Подписи админам — на русском по умолчанию
+    # Подписи админам - на русском по умолчанию
     i18n = i18n or _get_i18n("ru")
     local_path, is_temp = await _resolve_local_mat(order)
     admin_ids = await _resolve_admin_ids(session)

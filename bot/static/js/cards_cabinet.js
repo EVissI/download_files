@@ -255,7 +255,7 @@
                     var wrapEl = document.querySelector('.wrap');
                     if (wrapEl) wrapEl.classList.add('wrap--no-footer');
                 } else if (IS_MATCH_ANALYSIS) {
-                    // Для MA: выделение + assign/link; id-toggle — цикл название/номер/ID.
+                    // Для MA: выделение + assign/link; id-toggle - цикл название/номер/ID.
                 }
                 if (!FEATURES.enable_search) {
                     hideEl(document.querySelector('.search-wrap'));
@@ -1574,7 +1574,7 @@
                 }
 
                 function shortenCardBgFilename(name, maxLen) {
-                    var s = String(name || '').trim() || '—';
+                    var s = String(name || '').trim() || '-';
                     var lim = maxLen || 22;
                     if (s.length <= lim) return s;
                     var ext = s.includes('.') ? s.slice(s.lastIndexOf('.')) : '';
@@ -2032,11 +2032,11 @@
                         var isWeb = !!row.is_web || Number(row.id) < 0;
                         usernameTd.textContent = row.username
                             ? (isWeb ? String(row.username) : ('@' + row.username))
-                            : '—';
+                            : '-';
                         tr.appendChild(usernameTd);
 
                         var assignedNameTd = document.createElement('td');
-                        assignedNameTd.textContent = row.assigned_name || '—';
+                        assignedNameTd.textContent = row.assigned_name || '-';
                         tr.appendChild(assignedNameTd);
 
                         assignUsersTbody.appendChild(tr);
@@ -3115,7 +3115,7 @@
                     var correctPct =
                         totalAttempts > 0
                             ? String(Math.round((c / totalAttempts) * 100))
-                            : '—';
+                            : '-';
                     interactiveStatsModalBody.innerHTML =
                         'Верных ответов: <strong>' +
                         c +

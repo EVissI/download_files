@@ -60,9 +60,9 @@
                                 {% endif %}
                             </td>
                             <td>{{ user.id }}</td>
-                            <td>{{ user.admin_insert_name or '—' }}</td>
-                            <td>{{ user.username or '—' }}</td>
-                            <td>{{ user.player_username or '—' }}</td>
+                            <td>{{ user.admin_insert_name or '-' }}</td>
+                            <td>{{ user.username or '-' }}</td>
+                            <td>{{ user.player_username or '-' }}</td>
                             <td>
                                 {% if user.id in member_ids %}
                                 <span class="label label-success">В группе</span>

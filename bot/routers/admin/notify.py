@@ -736,7 +736,7 @@ async def process_time(message: Message, state: FSMContext, session_without_comm
         return
 
     if not (0 <= hour <= 23 and 0 <= minute <= 59):
-        await message.answer("Неверное время. Час должен быть от 0 до 23, минуты — от 0 до 59.")
+        await message.answer("Неверное время. Час должен быть от 0 до 23, минуты - от 0 до 59.")
         return
 
     user_data = await state.get_data()
@@ -894,7 +894,7 @@ async def process_broadcast_confirmation(callback: CallbackQuery, callback_data:
 async def resume_scheduled_broadcasts(tz_name: str = "Europe/Moscow", immediate_delay_seconds: int = 5):
     """
     При старте приложения восстанавливает job'ы рассылок из БД для всех Broadcast.status == SCHEDULED.
-    Если run_time в прошлом — заменяет run_date на текущее время + immediate_delay_seconds.
+    Если run_time в прошлом - заменяет run_date на текущее время + immediate_delay_seconds.
     Параметры:
       - async_session_maker: фабрика асинхронных сессий SQLAlchemy
       - scheduler: экземпляр APScheduler
@@ -914,7 +914,7 @@ async def resume_scheduled_broadcasts(tz_name: str = "Europe/Moscow", immediate_
             for b in broadcasts:
                 try:
                     job_id = f"broadcast_{b.id}"
-                    # если job уже зарегистрирована — пропустить
+                    # если job уже зарегистрирована - пропустить
                     if scheduler.get_job(job_id):
                         continue
 
@@ -927,7 +927,7 @@ async def resume_scheduled_broadcasts(tz_name: str = "Europe/Moscow", immediate_
                     if run_time.tzinfo is None:
                         run_time = tz.localize(run_time)
 
-                    # если время в прошлом — выполнить почти сразу
+                    # если время в прошлом - выполнить почти сразу
                     if run_time <= now:
                         run_date = now + timedelta(seconds=immediate_delay_seconds)
                         logger.info(f"Broadcast {b.id} run_time in past, scheduling now (+{immediate_delay_seconds}s)")

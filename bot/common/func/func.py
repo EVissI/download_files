@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 def get_user_file_name(user_id: int, original_name: str, files_dir: str) -> str:
     """
     Генерирует уникальное имя файла для пользователя в формате {user_id}_fileN.ext,
-    где N — порядковый номер файла пользователя.
+    где N - порядковый номер файла пользователя.
     """
     base, ext = os.path.splitext(original_name)
     n = 1
@@ -55,7 +55,7 @@ def preprocess_image(image_bytes: bytes) -> Image:
 def extract_eg_summary(image_bytes: bytes) -> dict:
     """
     Извлекает основные показатели анализа из скриншота GNUBG с динамическими никнеймами.
-    Ключи словаря — никнеймы игроков, значения — словарь с их показателями.
+    Ключи словаря - никнеймы игроков, значения - словарь с их показателями.
     Если параметр не удалось извлечь, он получает значение 'нет'.
     """
     image = preprocess_image(image_bytes)
@@ -194,8 +194,8 @@ def normalize_slashes(text: str | None) -> str | None:
 
 def get_analysis_data(analysis_data: dict, selected_player: str = None) -> dict:
     """
-    Если передан selected_player — возвращает словарь только по нему.
-    Если не передан — возвращает словарь по всем игрокам (ключи — имена игроков).
+    Если передан selected_player - возвращает словарь только по нему.
+    Если не передан - возвращает словарь по всем игрокам (ключи - имена игроков).
     """
     logger.info(analysis_data)
     def extract(player):
@@ -561,7 +561,7 @@ _ANALYSIS_RATING_SHORT = {
 
 def _analysis_cell(val, is_float=False) -> str:
     if val is None or val in ("No data", "Нет данных"):
-        return "—"
+        return "-"
     cleaned = re.sub(r"\s*\(.*\)", "", str(val)).strip()
     if is_float and cleaned:
         try:

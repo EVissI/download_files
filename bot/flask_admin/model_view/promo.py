@@ -15,7 +15,7 @@ from sqlalchemy.orm import joinedload
 
 
 class PromocodeServiceQuantityInline(ModelView, CompactCRUDMixin):
-    """Инлайн-вьюха для услуг — именно с CompactCRUDMixin для компактного CRUD на одной странице"""
+    """Инлайн-вьюха для услуг - именно с CompactCRUDMixin для компактного CRUD на одной странице"""
 
     datamodel = SQLAInterface(PromocodeServiceQuantity)
     list_title = "Услуги"
@@ -181,7 +181,7 @@ class PromocodeModelView(ModelView):
     def pre_add(self, item):
         self._normalize_limits(item)
         item.activate_count = 0
-        # Поля только формы — не атрибуты модели.
+        # Поля только формы - не атрибуты модели.
         for attr in ("autofill_services", "autofill_quantity"):
             if hasattr(item, attr):
                 try:
@@ -193,7 +193,7 @@ class PromocodeModelView(ModelView):
         self._normalize_limits(item)
 
     def _parse_autofill_quantity(self) -> int | None:
-        """None — автозаполнение выключено; иначе quantity (>=0)."""
+        """None - автозаполнение выключено; иначе quantity (>=0)."""
         raw_flag = request.form.get("autofill_services")
         # Checkbox: present when checked (often "y" / "on" / "true")
         if raw_flag is None:
@@ -238,7 +238,7 @@ class PromocodeModelView(ModelView):
             try:
                 n = self._autofill_all_services(item, qty)
                 flash(
-                    f"Автозаполнение: добавлено сервисов — {n}, количество — "
+                    f"Автозаполнение: добавлено сервисов - {n}, количество - "
                     f"{'∞' if qty == 0 else qty}.",
                     "info",
                 )

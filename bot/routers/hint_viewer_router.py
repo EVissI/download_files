@@ -290,7 +290,7 @@ async def build_hint_viewer_result_keyboard(
     username: str | None = None,
     mat_ref: str | None = None,
 ) -> InlineKeyboardMarkup:
-    """Кнопки WebApp режимов + статистика; для ROOT_ADMIN — «Анализ матча»."""
+    """Кнопки WebApp режимов + статистика; для ROOT_ADMIN - «Анализ матча»."""
     mini_app_url_all = f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=0"
     mini_app_url_both_errors = (
         f"{settings.MINI_APP_URL}/hint-viewer?game_id={game_id}&error=1"
@@ -612,7 +612,7 @@ async def handle_sequential_hint_file(
                     f"Failed to send batch zip confirmation for user {user_info.id}: {e}"
                 )
         else:
-            # Обычный .mat файл — сначала сохраняем state, потом подтверждение
+            # Обычный .mat файл - сначала сохраняем state, потом подтверждение
             file_paths.append(temp_path)
             await state.update_data(file_paths=file_paths)
             try:
@@ -997,7 +997,7 @@ async def get_hint_viewer_web(request: Request, game_id: str = None):
 
     game_id = require_public_id(game_id, name="game")
 
-    # Стабильный bust для /static (не time.time — иначе кэш браузера бесполезен)
+    # Стабильный bust для /static (не time.time - иначе кэш браузера бесполезен)
     from bot.common.utils.static_assets import get_static_asset_version
 
     cache_timestamp = get_static_asset_version()
@@ -1085,8 +1085,8 @@ async def _load_optional_screenshot_audio(form_data) -> tuple[bytes, str] | None
 
 async def _send_screenshot_audio_to_chat(chat_id: int, audio_bytes: bytes, audio_name: str) -> None:
     """
-    Шлёт аудио как голосовое сообщение (voice). Для mp3/m4a — как audio-плеер.
-    Если Telegram отклоняет формат — fallback в документ.
+    Шлёт аудио как голосовое сообщение (voice). Для mp3/m4a - как audio-плеер.
+    Если Telegram отклоняет формат - fallback в документ.
     """
     name = (audio_name or "audio.webm").strip() or "audio.webm"
     ext = os.path.splitext(name)[1].lower().lstrip(".")
@@ -1751,7 +1751,7 @@ async def check_batch_job_status(
             try:
                 await drain_batch_notifications()
 
-                # Файлы уже опубликованы — не ждём RQ, если horse убит на финише
+                # Файлы уже опубликованы - не ждём RQ, если horse убит на финише
                 if total_files and await asyncio.to_thread(
                     is_batch_effectively_done, batch_id, total_files
                 ):
@@ -1776,7 +1776,7 @@ async def check_batch_job_status(
                     ):
                         logger.warning(
                             f"Batch job {job_id} marked failed in RQ, "
-                            "but all file statuses are present — treating as completed"
+                            "but all file statuses are present - treating as completed"
                         )
                         break
                     await message.answer(
@@ -1793,7 +1793,7 @@ async def check_batch_job_status(
                 ):
                     logger.warning(
                         f"Batch job {job_id} missing in Redis, "
-                        "but all file statuses are present — treating as completed"
+                        "but all file statuses are present - treating as completed"
                     )
                     break
                 logger.warning(
@@ -1812,7 +1812,7 @@ async def check_batch_job_status(
         remove_active_job(message.from_user.id, job_id)
 
 
-# DEBUG: блок для отладки — zip с JSON игры админу при одиночном анализе (удалить когда не нужно)
+# DEBUG: блок для отладки - zip с JSON игры админу при одиночном анализе (удалить когда не нужно)
 def _debug_is_admin_uploader(user_info, user_id: int) -> bool:
     if user_id in admins:
         return True
@@ -1884,7 +1884,7 @@ async def _debug_send_admin_single_analysis_json_zip(
             document=doc,
             caption=(
                 f"[DEBUG] JSON + stdout архив одиночного анализа\n"
-                f"{red_player or '—'} vs {black_player or '—'}"
+                f"{red_player or '-'} vs {black_player or '-'}"
             ),
         )
         logger.info(

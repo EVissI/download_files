@@ -204,7 +204,7 @@ async def get_price(message: Message, state: FSMContext):
         return
     await state.update_data(price=int(message.text))
     await state.set_state(PaymentCreateStates.duration)
-    await message.answer("Введите срок действия пакета в днях (0 — бессрочно):")
+    await message.answer("Введите срок действия пакета в днях (0 - бессрочно):")
 
 
 @create_payment_router.message(F.text, StateFilter(PaymentCreateStates.duration))

@@ -127,7 +127,7 @@ class TelegramProxyModelView(ModelView):
             return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
 
         if not admins:
-            flash(_("ROOT_ADMIN_IDS пуст — некому отправить тест"), "warning")
+            flash(_("ROOT_ADMIN_IDS пуст - некому отправить тест"), "warning")
             return redirect(url_for(f"{self.endpoint}.show", pk=str(pk)))
 
         async def _send() -> int:

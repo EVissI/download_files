@@ -382,10 +382,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         /** Флаг: куб уже меняли в текущей таблице (можно только один раз) */
         let cubeValueChangedInCurrentTable = false;
-        /** Состояние до «Удвоить, принять» — для отмены при последующем «Не удваивать» */
+        /** Состояние до «Удвоить, принять» - для отмены при последующем «Не удваивать» */
         let stateBeforeDoubleTake = null;
 
-        /** Куб на максимуме (из селектора макс куба) — блокируем Удвоить/Не удваивать */
+        /** Куб на максимуме (из селектора макс куба) - блокируем Удвоить/Не удваивать */
         function isCubeAtMax() {
             const maxCubeSelect = (typeof currentGameType !== 'undefined' && currentGameType === 'матч') ?
                 document.getElementById('max-cube-select') :
@@ -1524,7 +1524,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         let imagesLoaded = 0;
         const totalImages = 21;
-        let upperPlayerColor = 'black'; // 'black' or 'white' - который игрок сверху (при 'black' нижний игрок — белые)
+        let upperPlayerColor = 'black'; // 'black' or 'white' - который игрок сверху (при 'black' нижний игрок - белые)
         window.pokazIsAdmin = false;
         let latestHintsData = null;
 
@@ -2228,7 +2228,7 @@ document.addEventListener('DOMContentLoaded', function () {
             positions.second = {};
 
             // XGID: lower (A-O) = white/Red, upper (a-o) = black. positions.first=white, positions.second=black
-            // При invert=1 маппинг тот же — hint_viewer уже передаёт инвертированные позиции
+            // При invert=1 маппинг тот же - hint_viewer уже передаёт инвертированные позиции
             const upperPositions = positions.second;
             const lowerPositions = positions.first;
 
@@ -2374,7 +2374,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }, 0);
 
-            // Set cube value (при cubePart='D' — на одно меньше чем cubeShown)
+            // Set cube value (при cubePart='D' - на одно меньше чем cubeShown)
             const cubeValueSelect = document.getElementById('cube-value-select');
             if (cubeValueSelect) {
                 cubeValueSelect.value = (cubePart === 'D' ? getPrevCubeValue(cubeValue) : cubeValue).toString();
@@ -2392,7 +2392,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 updateCubeSelectorDisplay('shown');
             }
 
-            // Set cube owner: 1 = lower (white), -1 = upper (black) — не зависит от invert
+            // Set cube owner: 1 = lower (white), -1 = upper (black) - не зависит от invert
             let cubeOwner = 'white';
             if (cubePosition === 1) {
                 cubeOwner = 'white';
@@ -2406,7 +2406,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // Set turn based on turnValue
-            // XGID turnValue: 1 = lower (white), -1 = upper (black) — не зависит от invert
+            // XGID turnValue: 1 = lower (white), -1 = upper (black) - не зависит от invert
             let turn = 'white';
             if (turnValue === 1) {
                 turn = 'white';
@@ -3013,7 +3013,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 let movePart = part;
                 let hit = false;
 
-                // Часть только "*" — хит относится к последнему ходу (предыдущая часть)
+                // Часть только "*" - хит относится к последнему ходу (предыдущая часть)
                 if (movePart === '*' && moves.length > 0) {
                     moves[moves.length - 1].hit = true;
                     continue;
@@ -3062,7 +3062,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     fr = num;
                 }
 
-                // Обрабатываем каждый сегмент пути (prev и lastToInPart — в области видимости части)
+                // Обрабатываем каждый сегмент пути (prev и lastToInPart - в области видимости части)
                 let lastToInPart = fr;
                 for (let i = 0; i < count; i++) {
                     let prev = fr;
@@ -3962,7 +3962,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // Кнопка зелёного глаза в board-open-controls — запуск анализа
+        // Кнопка зелёного глаза в board-open-controls - запуск анализа
         document.getElementById('board-open-eye-btn').addEventListener('click', () => {
             resetHintsTableCheckBtn();
             document.getElementById('show-button').click();
@@ -3983,7 +3983,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (typeof drawBoard === 'function') drawBoard();
         });
 
-        // Функция обновления кнопки: при открытой таблице подсказок — кнопка «Случайные кубики», иначе — переключатель манигейм/матч
+        // Функция обновления кнопки: при открытой таблице подсказок - кнопка «Случайные кубики», иначе - переключатель манигейм/матч
         function updateGameTypeButtonMode() {
             updateBoardOpenState();
             const hintsTableContainer = document.getElementById('hintsTableContainer');
@@ -4300,7 +4300,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (typeof window.webScreenshotErrorMessage === 'function') {
             return window.webScreenshotErrorMessage(kind, cause);
         }
-        return 'Плохое соединение с интернетом — проверьте связь';
+        return 'Плохое соединение с интернетом - проверьте связь';
     }
 
     // Функции для работы со скриншотами (в глобальной области видимости)

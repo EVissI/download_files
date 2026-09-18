@@ -491,11 +491,11 @@ async def _prepare_analyze_file(
     history_service: str | None = WEB_SERVICE_ANALYZE,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """
-    history_service=None — не заводить запись истории. Так вызывает «Всё о
+    history_service=None - не заводить запись истории. Так вызывает «Всё о
     матче»: у него уже есть своя запись, и вторая появилась бы во вкладке
     «Анализ» дублем.
     """
-    # Копирование и разбор файла — синхронные и на пачке ощутимо долгие.
+    # Копирование и разбор файла - синхронные и на пачке ощутимо долгие.
     # В обработчике запроса это вешало весь event loop, поэтому уводим в поток.
     stored = await asyncio.to_thread(_persist_source, src_path, filename, game_id)
     red_player, black_player = await asyncio.to_thread(_read_players, stored)
@@ -541,7 +541,7 @@ async def _push_analyze_work(item: dict[str, Any]) -> None:
 
 
 async def _push_analyze_bundle(items: list[dict[str, Any]]) -> None:
-    """Вся пачка — одна задача очереди, внутри файлы идут последовательно."""
+    """Вся пачка - одна задача очереди, внутри файлы идут последовательно."""
     if not items:
         return
     await _push_analyze_work({"bundle": True, "items": items})
@@ -614,7 +614,7 @@ async def cleanup_dead_analyze_tasks() -> None:
             stale: dict[str, set[str]] = {}
             for row in rows:
                 row.status = HintViewerWebUploadStatus.ERROR.value
-                row.error_message = "Задача не завершилась — перезапустите разбор"
+                row.error_message = "Задача не завершилась - перезапустите разбор"
                 row.finished_at = datetime.now(timezone.utc)
                 if row.session_id and row.job_id:
                     stale.setdefault(row.session_id, set()).add(row.job_id)
@@ -1107,7 +1107,7 @@ async def _load_analyze_for_user(user_id: int, game_id: str):
 
     async with async_session_maker() as db:
         # В «Анализе» id стадии лежит в game_id, а у «Всё о матче» там стадия
-        # ошибок, и анализ хранится отдельно — в analyze_game_id. Ищем по обоим,
+        # ошибок, и анализ хранится отдельно - в analyze_game_id. Ищем по обоим,
         # иначе таблица, PDF и отправка в плеер отвечают «Анализ не найден».
         result = await db.execute(
             select(HintViewerWebUpload).where(
@@ -1479,7 +1479,7 @@ async def web_analyze_player_reset(
 ):
     """
     Обнуляет статистику одного игрока. Область та же, что и у просмотра:
-    обычный пользователь чистит только свои матчи, админ — выбранного
+    обычный пользователь чистит только свои матчи, админ - выбранного
     пользователя, а если в списке «Все пользователи», то у всех сразу.
     """
     _token, session = await _require_session(request)

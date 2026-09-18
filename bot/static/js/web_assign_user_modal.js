@@ -66,7 +66,7 @@
             idTd.textContent = String(row.id);
             tr.appendChild(idTd);
             var loginTd = document.createElement('td');
-            loginTd.textContent = row.username || '—';
+            loginTd.textContent = row.username || '-';
             tr.appendChild(loginTd);
             tbody.appendChild(tr);
         });

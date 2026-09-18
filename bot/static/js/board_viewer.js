@@ -320,7 +320,7 @@ async function ensureContentEditor() {
                 if (matchTypeEl) matchTypeEl.textContent = matchText;
                 if (matchScoreEl) matchScoreEl.textContent = `Счет: ${gameRedScore} - ${gameBlackScore}`;
                 const playersInfoDiv = document.getElementById('players-info');
-                playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                playersInfoDiv.innerHTML = `Белые: ${redPlayer} - Черные: ${blackPlayer}<br>`;
                 updateGameSelect();
                 document.getElementById('gameSelect').value = currentGameNum - 1;
                 const gameSelectEl = document.getElementById('gameSelect');
@@ -903,7 +903,7 @@ async function ensureContentEditor() {
                         blackPlayer = game.second_player;
                         gameRedScore = game.first_score;
                         gameBlackScore = game.second_score;
-                        playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                        playersInfoDiv.innerHTML = `Белые: ${redPlayer} - Черные: ${blackPlayer}<br>`;
                     } else {
                         return;
                     }
@@ -948,7 +948,7 @@ async function ensureContentEditor() {
                     blackPlayer = game.second_player;
                     gameRedScore = game.first_score;
                     gameBlackScore = game.second_score;
-                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} - Черные: ${blackPlayer}<br>`;
                 } else {
                     return;
                 }
@@ -1039,7 +1039,7 @@ async function ensureContentEditor() {
                                     blackPlayer = game.second_player;
                                     gameRedScore = game.first_score;
                                     gameBlackScore = game.second_score;
-                                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} - Черные: ${blackPlayer}<br>`;
                                 }
                             }
                             return;
@@ -1123,7 +1123,7 @@ async function ensureContentEditor() {
                     blackPlayer = game.second_player;
                     gameRedScore = game.first_score;
                     gameBlackScore = game.second_score;
-                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} – Черные: ${blackPlayer}<br>`;
+                    playersInfoDiv.innerHTML = `Белые: ${redPlayer} - Черные: ${blackPlayer}<br>`;
                 }
                 return;
             }
@@ -1437,7 +1437,7 @@ async function ensureContentEditor() {
             if (typeof window.webScreenshotErrorMessage === 'function') {
                 return window.webScreenshotErrorMessage(kind, cause);
             }
-            return 'Плохое соединение с интернетом — проверьте связь';
+            return 'Плохое соединение с интернетом - проверьте связь';
         }
 
         function captureBoardViewerScreenshot() {

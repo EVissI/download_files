@@ -8,7 +8,7 @@ from sqlalchemy.orm import joinedload
 
 
 class AnalizePaymentServiceQuantityInline(ModelView, CompactCRUDMixin):
-    """Инлайн-вьюха для услуг в платежах — компактный CRUD на одной странице"""
+    """Инлайн-вьюха для услуг в платежах - компактный CRUD на одной странице"""
 
     datamodel = SQLAInterface(AnalizePaymentServiceQuantity)
 

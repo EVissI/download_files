@@ -2,7 +2,7 @@
  * Интерактив «Подсчёт пипсов»: таймер, поля ввода, проверка по снимку доски.
  */
 
-/* Статический import без ?t= в WebView кешируется отдельно — пробрасываем query из этого модуля. */
+/* Статический import без ?t= в WebView кешируется отдельно - пробрасываем query из этого модуля. */
 const _featureCacheQs = (() => {
     try {
         return new URL(import.meta.url).search || '';
@@ -122,7 +122,7 @@ function getPipInputFieldLabel(input) {
 
 function formatPipInputMirrorValue(raw) {
     const t = String(raw ?? '');
-    return t !== '' ? t : '—';
+    return t !== '' ? t : '-';
 }
 
 function showPipInputMirror(input) {
@@ -393,14 +393,14 @@ function setInputsDisabled(block, disabled) {
     setInputsInteractionState(block, disabled ? PIP_ACTION_STOPPED : PIP_ACTION_RUNNING);
 }
 
-/** Доска в карточках пипсов всегда видна — гейт по «Пуск» отключён. */
+/** Доска в карточках пипсов всегда видна - гейт по «Пуск» отключён. */
 export function applyPipCountBoardGateForBlock(_block, _pipState) {}
 
 export function applyPipCountBoardGateForPreviewHost(_hostRoot, _pipState) {}
 
 export function syncPipCountBoardGatesInScope(_rootEl) {}
 
-/** После показа/скрытия результата — пересчитать стек (absolute в редакторе, flex в превью). */
+/** После показа/скрытия результата - пересчитать стек (absolute в редакторе, flex в превью). */
 export function syncPipInteractiveLayoutAfterChange(block) {
     if (typeof window === 'undefined' || !block) return;
     const editor = window.contentEditor;

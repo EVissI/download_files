@@ -168,7 +168,7 @@ async def clear_rq_cache(message: Message):
             title = QUEUE_TITLES.get(qname, qname)
             lines.append(
                 f"{title}: реестр {stats['before']} → {stats['after']}, "
-                f"ожидание={live.get('waiting', '—')}, активно={live.get('active', '—')}"
+                f"ожидание={live.get('waiting', '-')}, активно={live.get('active', '-')}"
             )
 
         await message.answer("\n".join(lines))

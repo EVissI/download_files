@@ -18,7 +18,7 @@ def upsert_scheduler_job(
 ) -> None:
     """
     Создаёт или обновляет job в SQLAlchemyJobStore.
-    Сначала удаляет запись с тем же id — иначе возможен duplicate key при рестарте.
+    Сначала удаляет запись с тем же id - иначе возможен duplicate key при рестарте.
     """
     for jobstore in scheduler._jobstores.values():
         try:

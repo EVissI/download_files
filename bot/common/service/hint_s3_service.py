@@ -78,7 +78,7 @@ class HintS3Storage:
 
     @classmethod
     def is_landing_media_key(cls, key: str) -> bool:
-        """Ключ картинки лендинга — только свой префикс и без переходов вверх."""
+        """Ключ картинки лендинга - только свой префикс и без переходов вверх."""
         raw = (key or "").strip()
         if not raw or ".." in raw:
             return False
@@ -116,7 +116,7 @@ class HintS3Storage:
     def content_card_media_key(user_id: int, filename: str) -> str:
         """
         Медиа карточек контента (изображения, аудио).
-        filename — только имя файла, например ``{uuid}.png`` (без каталогов).
+        filename - только имя файла, например ``{uuid}.png`` (без каталогов).
         """
         fn = filename.replace("\\", "/").split("/")[-1].strip()
         if not fn or ".." in fn or "/" in fn:

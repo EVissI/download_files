@@ -83,7 +83,7 @@ class MessageForNewModelView(ModelView):
         ),
     }
 
-    # Главная магия: после сохранения — синхронизация + обновление планировщика
+    # Главная магия: после сохранения - синхронизация + обновление планировщика
     def post_update(self, item):
         self._sync_schedule_fields(item)
         self._update_gift_scheduler(item)

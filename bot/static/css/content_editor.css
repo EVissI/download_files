@@ -23,7 +23,7 @@
 }
 
 /*
- * Резерв: оверлей страничной доски над модалкой редактора отключён (доска — только предпросмотр / карточка).
+ * Резерв: оверлей страничной доски над модалкой редактора отключён (доска - только предпросмотр / карточка).
  * Класс снимается в syncLiveHintBoardCanvasOverlay / closeModal.
  */
 #boardCanvas.content-editor-live-board-overlay {
@@ -187,7 +187,7 @@
     color: #ffffff;
 }
 
-/* Инструмент «Доска»: активное состояние — только подсветка кнопки, без изменений канваса */
+/* Инструмент «Доска»: активное состояние - только подсветка кнопки, без изменений канваса */
 .tool-item-icon.toggle-button.toggle-active {
     background: linear-gradient(135deg, #15803d 0%, #166534 100%);
     border-color: #22c55e;
@@ -1632,7 +1632,7 @@ button.content-card-admin-info-file-link:hover {
     background: #4a4228;
 }
 
-/* Отдельное окно пресетов — поверх модалки меток */
+/* Отдельное окно пресетов - поверх модалки меток */
 .label-presets-modal {
     position: fixed;
     inset: 0;
@@ -2013,7 +2013,7 @@ button.content-card-admin-info-file-link:hover {
     box-sizing: border-box;
 }
 
-/* Доска в предпросмотре — в потоке, как остальной контент (без наслоения поверх кадра). */
+/* Доска в предпросмотре - в потоке, как остальной контент (без наслоения поверх кадра). */
 .card-preview-board-overlay {
     position: sticky;
     top: 0;
@@ -2187,7 +2187,7 @@ button.content-card-admin-info-file-link:hover {
     user-select: none;
 }
 
-/* Предпросмотр: колонка flex вместо absolute top — стек едет при сворачивании таблицы */
+/* Предпросмотр: колонка flex вместо absolute top - стек едет при сворачивании таблицы */
 .card-preview-surface-inner.card-preview-surface-inner--flex-stack {
     display: flex;
     flex-direction: column;
@@ -2364,7 +2364,7 @@ button.content-card-admin-info-file-link:hover {
 }
 
 /* Предпросмотр: без белой заливки редактора; без рамок и теней; inline blockStyle перебивает фон.
-   Интерактив «лучший ход» (.ce-interactive-best-move) исключаем — иначе теряются фон/бордер из .ce-interactive-best-move */
+   Интерактив «лучший ход» (.ce-interactive-best-move) исключаем - иначе теряются фон/бордер из .ce-interactive-best-move */
 .card-preview-surface-inner .canvas-element.card-preview-canvas-clone:not(.table-element):not(.ce-interactive-best-move):not(.ce-interactive-pip-count):not(.ce-interactive-pip-double):not(.ce-interactive-pip-combo):not(.ce-interactive-pip-diff),
 .card-preview-surface-inner .canvas-element.card-preview-canvas-clone.text-element,
 .card-preview-surface-inner .canvas-element.card-preview-canvas-clone.link-element {
@@ -2414,7 +2414,7 @@ button.content-card-admin-info-file-link:hover {
 
 /*
  * Предпросмотр / карточка: те же дефолты, что у блока ссылки в редакторе (.link-text / a),
- * без !important — иначе перебивается inline color из сохранённого textStyle и текст
+ * без !important - иначе перебивается inline color из сохранённого textStyle и текст
  * выглядит «белым», хотя в редакторе был другой цвет.
  */
 .card-preview-surface-inner .link-text {
@@ -2889,7 +2889,7 @@ button.content-card-admin-info-file-link:hover {
 
 /*
  * Таблица подсказок: как .hints-table + table в hint_viewer.html
- * (!important — перебить сохранённый tableHtml и стили WebView)
+ * (!important - перебить сохранённый tableHtml и стили WebView)
  */
 .canvas-element.table-element {
     background-color: #2d2d2d !important;
@@ -4333,7 +4333,7 @@ button.content-card-admin-info-file-link:hover {
     box-sizing: border-box;
 }
 
-/* Просмотр карточки в Telegram WebApp: модалка монтируется в #contentCardViewRoot — absolute заполняет fullscreen-корень (fixed на body иногда не попадает в видимую область WebApp). */
+/* Просмотр карточки в Telegram WebApp: модалка монтируется в #contentCardViewRoot - absolute заполняет fullscreen-корень (fixed на body иногда не попадает в видимую область WebApp). */
 #contentCardViewRoot > .ce-interactive-feedback-modal {
     position: absolute;
 }

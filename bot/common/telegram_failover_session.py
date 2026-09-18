@@ -81,7 +81,7 @@ async def run_telegram_proxy_db_sync_loop(
 class FailoverAiohttpSession(AiohttpSession):
     """
     Текущий прокси обновляется polling'ом из БД.
-    При ошибках подключения — переключение на другой прокси, пока запрос не пройдёт.
+    При ошибках подключения - переключение на другой прокси, пока запрос не пройдёт.
     """
 
     def __init__(self, *args, **kwargs) -> None:
@@ -293,7 +293,7 @@ class FailoverAiohttpSession(AiohttpSession):
                 return result
             except TelegramRetryAfter as exc:
                 retry_after = int(getattr(exc, "retry_after", 1) or 1)
-                # Короткие лимиты — один повтор. Часовые (24114с и т.п.) не блокируем.
+                # Короткие лимиты - один повтор. Часовые (24114с и т.п.) не блокируем.
                 if not flood_retried and retry_after <= 5:
                     flood_retried = True
                     logger.warning(
@@ -323,7 +323,7 @@ class FailoverAiohttpSession(AiohttpSession):
                     raise
 
                 async with self._state_lock:
-                    # Polling уже сменил прокси (в т.ч. сорвав long poll) — просто ретрай.
+                    # Polling уже сменил прокси (в т.ч. сорвав long poll) - просто ретрай.
                     if (
                         self._proxy_generation != generation
                         or self._active_proxy_id != proxy_id
@@ -332,7 +332,7 @@ class FailoverAiohttpSession(AiohttpSession):
 
                 last_error = self._as_network_error(method, exc)
                 logger.warning(
-                    "Telegram proxy connection error: id={} {} — switching to another",
+                    "Telegram proxy connection error: id={} {} - switching to another",
                     proxy_id,
                     mask_proxy_url(proxy_url),
                 )
@@ -355,7 +355,7 @@ class FailoverAiohttpSession(AiohttpSession):
                         or deactivated
                     ):
                         logger.error(
-                            "Telegram proxy id={} reached {} failures — excluded from this cycle",
+                            "Telegram proxy id={} reached {} failures - excluded from this cycle",
                             proxy_id,
                             CONSECUTIVE_FAILURES_TO_DEACTIVATE,
                         )

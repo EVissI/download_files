@@ -110,7 +110,7 @@ const state = {
     pendingDeleteId: null,
 };
 
-/** Крупный payload не кладём в data-атрибуты — только id → объект. */
+/** Крупный payload не кладём в data-атрибуты - только id → объект. */
 const insertPayloadById = new Map();
 
 function bindOnce() {
@@ -446,7 +446,7 @@ async function runDeleteTemplate(editor, templateId) {
     }
 }
 
-/** @param {object} editor — экземпляр ContentEditor */
+/** @param {object} editor - экземпляр ContentEditor */
 export function openFrameTemplatesRootModal(editor) {
     bindOnce();
     state.editor = editor;

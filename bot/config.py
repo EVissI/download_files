@@ -40,7 +40,7 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = "dev-secret-key-change-in-production"
     # Ключ AES-GCM для копии пароля веб-пользователя (просмотр в FAB).
-    # Если пусто — берётся SECRET_KEY. Смена ключа делает старые копии нечитаемыми.
+    # Если пусто - берётся SECRET_KEY. Смена ключа делает старые копии нечитаемыми.
     WEB_USER_PASSWORD_KEY: str = ""
 
     POSTGRES_USER: str
@@ -56,10 +56,10 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REMOTE_REDIS_HOST: str = "localhost"
     WORKERS_COUNT: int = 1
-    # Версия статики для ?t= (если пусто — max mtime bot/static при старте процесса)
+    # Версия статики для ?t= (если пусто - max mtime bot/static при старте процесса)
     STATIC_ASSET_VERSION: str = ""
 
-    # SMTP для email-уведомлений (адрес получателя — в FAB → «Настройки WebApp»)
+    # SMTP для email-уведомлений (адрес получателя - в FAB → «Настройки WebApp»)
     SMTP_HOST: str | None = None
     SMTP_PORT: int = 587
     SMTP_USER: str | None = None

@@ -20,7 +20,7 @@ T = TypeVar("T")
 
 FLOOD_KEY_PREFIX = "tg_flood:"
 BUSY_NOTICE_PREFIX = "tg_busy_notice:"
-# Короткие лимиты ждём и повторяем; длинные (часы) — только пропускаем.
+# Короткие лимиты ждём и повторяем; длинные (часы) - только пропускаем.
 MAX_WAIT_RETRY = 5
 BUSY_NOTICE_TTL = 20
 SEND_GAP = 0.4

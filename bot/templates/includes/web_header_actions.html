@@ -25,7 +25,7 @@
         </svg>
     </button>
     {# Логин веб-аккаунта: сессию разбирает web_grant_user_middleware, в
-       Telegram Mini App её нет — тогда блок просто не рендерится. #}
+       Telegram Mini App её нет - тогда блок просто не рендерится. #}
     {% set web_login = (request.state.web_session or {}).get('login') if request else '' %}
     {% if web_login %}
     <span class="header-user" title="Вы вошли как {{ web_login }}">

@@ -85,7 +85,7 @@ class User(Base):
         active_promocodes = [
             p.promocode.code for p in self.used_promocodes if p.is_active
         ]
-        return ", ".join(active_promocodes) if active_promocodes else "—"
+        return ", ".join(active_promocodes) if active_promocodes else "-"
 
     @property
     @renders("active_payments")
@@ -94,7 +94,7 @@ class User(Base):
         active_payments = [
             p.analize_payment.name for p in self.analize_payments_assoc if p.is_active
         ]
-        return ", ".join(active_payments) if active_payments else "—"
+        return ", ".join(active_payments) if active_payments else "-"
 
     @property
     @renders("total_balance")
@@ -117,7 +117,7 @@ class User(Base):
                 service_totals[service.service_type.value] += service.remaining_quantity
 
         if not service_totals:
-            return "—"
+            return "-"
 
         return ", ".join(
             f"{service}: {count}" for service, count in service_totals.items()
@@ -279,7 +279,7 @@ class Promocode(Base):
     @renders("services_summary")
     def services_summary(self):
         if not self.services:
-            return "—"
+            return "-"
         return ", ".join(str(s) for s in self.services)
 
 
@@ -369,14 +369,14 @@ class UserPromocode(Base):
     def promo_date_range(self) -> str:
         """Период действия промо: с даты активации по дату окончания (или ∞)"""
         if not self.created_at:
-            return "—"
+            return "-"
         start = self._aware(self.created_at)
         start_str = start.strftime("%d.%m.%Y") if isinstance(start, datetime) else str(start)
         end = self._aware(self.expires_at)
         if end is None:
-            return f"{start_str} — ∞"
+            return f"{start_str} - ∞"
         end_str = end.astimezone(timezone(timedelta(hours=3))).strftime("%d.%m.%Y")
-        return f"{start_str} — {end_str}"
+        return f"{start_str} - {end_str}"
 
     @staticmethod
     def _card_pool_label(pool) -> str:
@@ -397,7 +397,7 @@ class UserPromocode(Base):
             return f"{self._card_pool_label(promo.card_pool)}: выдано {qty}"
         if promo:
             return promo.services_summary
-        return "—"
+        return "-"
 
     @property
     @renders("remaining_balance_display")
@@ -410,7 +410,7 @@ class UserPromocode(Base):
                 f"выдано {self.issued_cards_count or 0}"
             )
         if not self.remaining_services:
-            return "—"
+            return "-"
         parts = []
         for s in self.remaining_services:
             qty = "∞" if s.remaining_quantity is None else str(s.remaining_quantity)
@@ -422,7 +422,7 @@ class UserPromocode(Base):
     def created_at_display(self) -> str:
         """Дата активации в читаемом формате"""
         if not self.created_at:
-            return "—"
+            return "-"
         d = self.created_at
         return d.strftime("%d.%m.%Y %H:%M") if isinstance(d, datetime) else str(d)
 
@@ -527,7 +527,7 @@ class AnalizePayment(Base):
     def services_summary(self) -> str:
         """Красивое сводное отображение услуг в списке и деталях"""
         if not self.services:
-            return "—"
+            return "-"
         return ", ".join(str(service) for service in self.services)
 
 
@@ -615,7 +615,7 @@ class MessageForNew(Base):
     def dispatch_day_display(self) -> str:
         """Человекочитаемые дни недели"""
         if not self.dispatch_day:
-            return "—"
+            return "-"
         days_map = {
             "mon": "Понедельник",
             "tue": "Вторник",
@@ -633,7 +633,7 @@ class MessageForNew(Base):
     def text_preview(self) -> str:
         """Короткий предпросмотр текста в списке"""
         if not self.text:
-            return "—"
+            return "-"
         preview = self.text.strip().replace("\n", " ")
         return (preview[:120] + "…") if len(preview) > 120 else preview
 
@@ -712,7 +712,7 @@ class ContentFrameTemplate(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     payload_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
-    # created_at / updated_at — из Base (как у TextStylePreset)
+    # created_at / updated_at - из Base (как у TextStylePreset)
 
 
 class WebAppSetting(Base):
@@ -786,7 +786,7 @@ class TelegramProxy(Base):
     @renders("expires_at_display")
     def expires_at_display(self) -> str:
         if self.expires_at is None:
-            return "—"
+            return "-"
         return self.expires_at.astimezone(timezone(timedelta(hours=3))).strftime(
             "%d.%m.%Y %H:%M"
         )
@@ -862,19 +862,19 @@ class ContentCardIssueSchedule(Base):
             if not key:
                 continue
             values.append(day_map.get(key, key))
-        return ", ".join(values) if values else "—"
+        return ", ".join(values) if values else "-"
 
     @property
     @renders("target_user_display")
     def target_user_display(self) -> str:
         if not self.target_user:
             return str(self.target_user_id)
-        username = f"@{self.target_user.username}" if self.target_user.username else "—"
+        username = f"@{self.target_user.username}" if self.target_user.username else "-"
         title = (
             self.target_user.admin_insert_name
             or self.target_user.first_name
             or self.target_user.last_name
-            or "—"
+            or "-"
         )
         return f"{self.target_user_id} | {title} | {username}"
 
@@ -893,9 +893,9 @@ class ContentCardIssueSchedule(Base):
 class ContentCard(Base):
     """
     Сохранённая карточка редактора контента (hint viewer и т.п.).
-    Привязка к пользователям — только через таблицу user_content_cards (many-to-many).
+    Привязка к пользователям - только через таблицу user_content_cards (many-to-many).
 
-    frames — JSONB со структурой кадров, например:
+    frames - JSONB со структурой кадров, например:
       {"version": 1,
        "sharedContext": {"board": {...}, "cardData": {...}},
        "frames": [
@@ -907,11 +907,11 @@ class ContentCard(Base):
            {"toolId": "board-illustration", "boardImageS3Key": "..."}
          ], ...}}
       ]}
-      sharedContext — опционально: общие для всех кадров снимок доски и данные таблиц (hint viewer);
+      sharedContext - опционально: общие для всех кадров снимок доски и данные таблиц (hint viewer);
       подставляются в редактор пустого кадра на /content-card-view без дублирования в каждом payload.
       Медиа в S3; отображение GET /api/content_cards/media?key= (доступ по ключу из JSON карточки, в т.ч. для других пользователей после шаринга).
-      labels — нативный PostgreSQL-массив строк (TEXT[]).
-      board_xgid — строка позиции GNU/XGID из снимка доски (если в карточке есть доска с полем xgid).
+      labels - нативный PostgreSQL-массив строк (TEXT[]).
+      board_xgid - строка позиции GNU/XGID из снимка доски (если в карточке есть доска с полем xgid).
     """
 
     __tablename__ = "content_cards"
@@ -1272,7 +1272,7 @@ class ContentCardFolderSchedule(Base):
             if not key:
                 continue
             values.append(day_map.get(key, key))
-        return ", ".join(values) if values else "—"
+        return ", ".join(values) if values else "-"
 
 
 class UserContentCard(Base):
@@ -1346,7 +1346,7 @@ class UserContentCardInteractiveStat(Base):
 class MatchAnalysis(Base):
     """
     Сохранённый анализ матча (hint viewer) для кабинета «Анализ матча».
-    analysis — полный JSON: game_info + games[].moves (с optional audioS3Key на ходе).
+    analysis - полный JSON: game_info + games[].moves (с optional audioS3Key на ходе).
     Аудиофайлы лежат в S3 (match_analysis/media/...), в JSON только ключи.
     """
 
@@ -1768,7 +1768,7 @@ class WebUser(Base):
         from bot.common.utils.password import decrypt_password
 
         if not self.password_encrypted:
-            return "Нет расшифруемой копии — задайте пароль заново"
+            return "Нет расшифруемой копии - задайте пароль заново"
         plain = decrypt_password(self.password_encrypted)
         if plain is None:
             return "Не удалось расшифровать (проверьте WEB_USER_PASSWORD_KEY)"
@@ -1787,7 +1787,7 @@ class WebUploadService(str, enum.Enum):
     BOARD = "board"
     # «Всё о матче»: одна запись на матч, внутри неё последовательно проходят
     # анализ и разбор ошибок. В историю «Анализа» и «Ошибок» такие записи
-    # не попадают — они отфильтрованы по service.
+    # не попадают - они отфильтрованы по service.
     MATCH = "match"
 
 
@@ -1810,7 +1810,7 @@ class HintViewerWebUpload(Base):
     session_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     game_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     # Только для service="match": id стадии анализа. В game_id лежит id разбора
-    # ошибок — он идёт первым, его считает внешний воркер, и он же обновляет
+    # ошибок - он идёт первым, его считает внешний воркер, и он же обновляет
     # статус записи по job_id. Анализ делается на сервере уже после ответа
     # воркера, поэтому ему нужно отдельное поле.
     analyze_game_id: Mapped[str | None] = mapped_column(
@@ -2306,7 +2306,7 @@ class LandingText(Base):
     по умолчанию лежат в самом шаблоне, в БД попадает только то, что админ
     поменял в режиме редактирования. Отсутствие строки = текст из шаблона.
 
-    style_json — ограниченный набор, чтобы правки не ломали вёрстку:
+    style_json - ограниченный набор, чтобы правки не ломали вёрстку:
       {"size": 1.15,            # множитель к базовому размеру (em), 0.8…1.4
        "bold": true,
        "color": {"dark": "#eeeeee", "light": "#1c1d21"},

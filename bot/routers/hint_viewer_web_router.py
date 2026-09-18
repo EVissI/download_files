@@ -166,7 +166,7 @@ def _read_players(path: str) -> tuple[str, str]:
 
 
 # Эти действия одинаково применимы к разобранному матчу независимо от того,
-# пришёл он из «Ошибок» или из «Всё о матче» — там та же стадия разбора.
+# пришёл он из «Ошибок» или из «Всё о матче» - там та же стадия разбора.
 HINT_ACTION_SERVICES = (WEB_SERVICE_HINTS, WEB_SERVICE_MATCH)
 
 
@@ -282,7 +282,7 @@ async def _enqueue_single(
     history_service: str | None = WEB_SERVICE_HINTS,
 ) -> dict[str, Any]:
     """
-    history_service=None — не создавать запись истории. Так ставит задачу
+    history_service=None - не создавать запись истории. Так ставит задачу
     сервис «Всё о матче»: у него уже есть своя запись, к которой вторая
     стадия просто дописывает hints_game_id.
     """
@@ -632,7 +632,7 @@ def _enrich_batch_job(stored: dict[str, Any]) -> dict[str, Any]:
     return item
 
 
-# Канонический путь входа — /login. Старый /web/hints/login оставлен рабочим:
+# Канонический путь входа - /login. Старый /web/hints/login оставлен рабочим:
 # на него ведут закладки и ссылки в письмах.
 @hint_viewer_web_api_router.get("/login", response_class=HTMLResponse)
 @hint_viewer_web_api_router.get(
@@ -1273,7 +1273,7 @@ async def web_hints_send_to_user(request: Request, body: SendHintToUserBody):
             created = True
         await db.commit()
 
-    # В сообщении получателю имя файла ни о чём не говорит — пишем, кто играл.
+    # В сообщении получателю имя файла ни о чём не говорит - пишем, кто играл.
     # Для «Всё о матче» рядом с игроком показываем его PR за этот матч; если
     # анализ ещё не доехал, обходимся именами.
     pr_by_player: dict[str, float] = {}

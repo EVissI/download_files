@@ -218,7 +218,7 @@ auto-batch-summary_pr = pr for <b>{ $player }</b> - average <b>{ $average_pr }</
     ({ $pr_list })
 keyboard-user-reply-hint_viewer = 👁️ Mistakes
 
-# Pokaz page (position editor) — en
+# Pokaz page (position editor) - en
 pokaz-page-title = Position Editor
 pokaz-page-hide-pips = Hide pips
 pokaz-page-hide-point-dropdowns = Hide point dropdowns

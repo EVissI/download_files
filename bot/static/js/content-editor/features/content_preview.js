@@ -1,4 +1,4 @@
-/* Статический import('./interactive_best_move.js') без query — в WebView кешируется отдельно от
+/* Статический import('./interactive_best_move.js') без query - в WebView кешируется отдельно от
    content_preview.js?t=… и от content_editor.js. Тот же ?t=, что у этого модуля (пробрасывается из HTML). */
 const _interactiveBestMoveCacheQs = (() => {
     try {
@@ -322,7 +322,7 @@ function mergeLiveCanvasBackgroundIntoPreviewPayload(editor, payload, ref, allRe
         editor.cardPreviewModal && editor.cardPreviewModal.style.display === 'flex';
     const editorModalOpen = editor.modal && editor.modal.style.display === 'flex';
     /* Раньше требовали только открытую модалку редактора; превью часто рендерится при уже
-       скрытом #contentEditorModal — merge не выполнялся, а при выполнении «живой» null затирал узор из JSON. */
+       скрытом #contentEditorModal - merge не выполнялся, а при выполнении «живой» null затирал узор из JSON. */
     if (!previewModalOpen && !editorModalOpen) {
         logPreviewBg('mergeLiveCanvasBackground:skip', {
             reason: 'no preview or editor shell',
@@ -790,9 +790,9 @@ export function formatBoardMatchBannerTextImpl(_editor, snapshot) {
     if (!Number.isFinite(ml) || ml <= 0) {
         return 'Манигейм';
     }
-    const r = s.gameRedScore != null && s.gameRedScore !== '' ? s.gameRedScore : '—';
-    const b = s.gameBlackScore != null && s.gameBlackScore !== '' ? s.gameBlackScore : '—';
-    return `Матч до ${ml} · Счёт: ${r} — ${b}`;
+    const r = s.gameRedScore != null && s.gameRedScore !== '' ? s.gameRedScore : '-';
+    const b = s.gameBlackScore != null && s.gameBlackScore !== '' ? s.gameBlackScore : '-';
+    return `Матч до ${ml} · Счёт: ${r} - ${b}`;
 }
 
 export function setupCardPreviewTableCollapseImpl(editor, tableEl) {
@@ -921,7 +921,7 @@ export function setupCardPreviewBoardCollapseImpl(editor, overlay) {
 }
 
 /**
- * @param {HTMLElement | null} [hostRoot] — если передан, отрисовка в этот узел (мини-превью); иначе #cardPreviewFrameHost.
+ * @param {HTMLElement | null} [hostRoot] - если передан, отрисовка в этот узел (мини-превью); иначе #cardPreviewFrameHost.
  */
 export function renderCardPreviewSurfaceImpl(editor, payload, hostRoot = null) {
     const host = hostRoot || document.getElementById('cardPreviewFrameHost');
@@ -986,7 +986,7 @@ export function renderCardPreviewSurfaceImpl(editor, payload, hostRoot = null) {
         el.style.left = '';
     });
     editor.refreshPreviewTableElementsFromCardData(inner, effectivePayload);
-    /* Раньше на странице content_card_view этот шаг пропускали — интерактив собирался только в setupInteractiveBestMoveAfterCardPreviewRender и мог расходиться с обычным превью (hint_viewer и т.д.). Всегда используем ту же разметку кнопок, что и в превью; на карточке затем setupInteractiveBestMoveAfterCardPreviewRender перезаполняет сетку с записью ответа на сервер. */
+    /* Раньше на странице content_card_view этот шаг пропускали - интерактив собирался только в setupInteractiveBestMoveAfterCardPreviewRender и мог расходиться с обычным превью (hint_viewer и т.д.). Всегда используем ту же разметку кнопок, что и в превью; на карточке затем setupInteractiveBestMoveAfterCardPreviewRender перезаполняет сетку с записью ответа на сервер. */
     editor.refreshInteractivePreviewBlocksFromCardData(inner, effectivePayload);
     inner
         .querySelectorAll('.canvas-element.table-element.card-preview-canvas-clone')
@@ -1058,7 +1058,7 @@ export function updateCardPreviewInnerMinHeightImpl(_editor, inner) {
 }
 
 /**
- * @param {HTMLElement | null} [hostRoot] — узел с превью; по умолчанию основной хост модалки предпросмотра.
+ * @param {HTMLElement | null} [hostRoot] - узел с превью; по умолчанию основной хост модалки предпросмотра.
  */
 export function refreshCardPreviewScaleImpl(editor, hostRoot = null) {
     const host = hostRoot || document.getElementById('cardPreviewFrameHost');

@@ -53,7 +53,7 @@ if TYPE_CHECKING:
     from locales.stub import TranslatorRunner
 
 auto_analyze_router = Router()
-# gnubg не любит параллельные процессы — сериализуем анализ, не флудим «подождите» всем.
+# gnubg не любит параллельные процессы - сериализуем анализ, не флудим «подождите» всем.
 _gnubg_semaphore = asyncio.Semaphore(1)
 
 

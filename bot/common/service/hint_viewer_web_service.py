@@ -121,10 +121,10 @@ def web_match_open_links(
     black_player: str | None = None,
 ) -> list[dict[str, str]]:
     """
-    Кнопки просмотра ошибок для матча — те же режимы, что в «Ошибках».
+    Кнопки просмотра ошибок для матча - те же режимы, что в «Ошибках».
 
     Имена в записи матча перезаписывает стадия анализа, а gnubg отдаёт игроков
-    в обратном порядке относительно просмотрщика: его «red» (error=2) — это
+    в обратном порядке относительно просмотрщика: его «red» (error=2) - это
     второй игрок из .mat. Поэтому режим по порядку имён здесь не угадать, и
     кнопка игрока передаёт его имя: просмотрщик сам сопоставит его со своими
     red/black. error остаётся запасным вариантом для старых ссылок.
@@ -132,8 +132,8 @@ def web_match_open_links(
     links = web_hint_open_links(hints_game_id, red_player, black_player)
     if len(links) != 4:
         return links
-    # запасной error тоже с учётом порядка gnubg: первый игрок записи — это
-    # «black» просмотрщика (error=3), второй — «red» (error=2)
+    # запасной error тоже с учётом порядка gnubg: первый игрок записи - это
+    # «black» просмотрщика (error=3), второй - «red» (error=2)
     for link, name, mode in (
         (links[2], red_player, "3"),
         (links[3], black_player, "2"),
@@ -153,7 +153,7 @@ def match_players_title(
     pr_by_player: dict[str, float] | None = None,
 ) -> str:
     """
-    «Иванов Иван - Петров Пётр», а с PR за матч — «Иванов Иван (5.2) - …».
+    «Иванов Иван - Петров Пётр», а с PR за матч - «Иванов Иван (5.2) - …».
 
     Пустая строка, если имён нет: вызывающий тогда подставляет имя файла.
     """
@@ -351,7 +351,7 @@ def web_cabinet_page_vars(service: str) -> dict[str, Any]:
             "api_base": "/web/match",
             "page_title": "Всё о матче",
             "intro_text": (
-                "Загрузите матч или пачку — файл пройдёт сначала анализ, "
+                "Загрузите матч или пачку - файл пройдёт сначала анализ, "
                 "затем разбор ошибок. В истории соберётся всё сразу: таблица, "
                 "PDF, просмотр ошибок и отправка в плеер."
             ),
@@ -454,7 +454,7 @@ async def get_session(token: str | None) -> dict[str, Any] | None:
         return None
     await _ensure_session_indexed(token, data)
     data["is_admin"] = bool(snapshot.get("is_admin"))
-    # логин показывается в шапке кабинета; в payload сессии его нет — берём из снимка
+    # логин показывается в шапке кабинета; в payload сессии его нет - берём из снимка
     data["login"] = snapshot.get("login") or ""
     if "web_uid" not in data:
         data["web_uid"] = -int(data["user_id"])
@@ -784,7 +784,7 @@ def sync_web_history_status(
     red_player: str | None = None,
     black_player: str | None = None,
 ) -> None:
-    """Синхронная запись статуса истории — для RQ-воркера."""
+    """Синхронная запись статуса истории - для RQ-воркера."""
     if not job_id or status not in {"queued", "processing", "done", "error"}:
         return
     if finished is None:
@@ -833,7 +833,7 @@ def _history_item(row) -> dict[str, Any]:
     is_match = service == WEB_SERVICE_MATCH
     analyze_game_id = getattr(row, "analyze_game_id", None)
 
-    # У матча game_id — стадия ошибок (её считает внешний воркер), анализ
+    # У матча game_id - стадия ошибок (её считает внешний воркер), анализ
     # лежит в analyze_game_id. Кнопки показываем, только когда готово всё:
     # ошибки посчитаны и анализ на сервере уже сделан.
     match_ready = bool(is_match and row.status == "done" and analyze_game_id)
@@ -854,7 +854,7 @@ def _history_item(row) -> dict[str, Any]:
     return {
         "analyze_game_id": analyze_game_id,
         "stage": (
-            # пока нет id анализа — работает воркер; появился — считаем анализ
+            # пока нет id анализа - работает воркер; появился - считаем анализ
             ("done" if match_ready else "analyze" if analyze_game_id
              or row.status == "done" else "hints")
             if is_match else None
@@ -937,7 +937,7 @@ def _history_batch_item(rows: list[Any]) -> dict[str, Any]:
 
 def _apply_batch_players(items: list[dict[str, Any]], prs_by_game: dict) -> None:
     """
-    Свёрнутому пакету дописывает players — кто играл в пакете и с каким
+    Свёрнутому пакету дописывает players - кто играл в пакете и с каким
     средним PR. Порядок как в раскрытой сводке: от меньшего PR к большему.
     """
     for item in items:
@@ -1016,7 +1016,7 @@ async def list_history_for_user(
     statuses: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     """
-    statuses — оставить в выдаче только записи с этими статусами. Нужен
+    statuses - оставить в выдаче только записи с этими статусами. Нужен
     «Всё о матче»: пока матч не готов целиком, он живёт в текущих задачах
     и в историю не попадает.
     """

@@ -4,7 +4,7 @@
 
 let _feedbackModalBound = false;
 
-/** На странице карточки монтируем внутрь #contentCardViewRoot — иначе в Telegram WebView fixed на body может не попасть в видимую область. */
+/** На странице карточки монтируем внутрь #contentCardViewRoot - иначе в Telegram WebView fixed на body может не попасть в видимую область. */
 function getInteractiveFeedbackMountEl() {
     if (typeof document === 'undefined') return null;
     if (typeof window !== 'undefined' && window.__CONTENT_CARD_VIEW_ONLY__ === true) {

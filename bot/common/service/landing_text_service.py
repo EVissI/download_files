@@ -28,10 +28,10 @@ KEY_MAX_LEN = 80  # ширина landing_texts.key
 KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_.-]{0,79}$")
 MAX_TEXT_LEN = 2000
 MAX_KEYS_PER_SAVE = 200
-# Картинки лежат в тех же строках, что и тексты, но под своим префиксом —
+# Картинки лежат в тех же строках, что и тексты, но под своим префиксом -
 # чтобы не путались с ключами текстовых узлов.
 IMAGE_KEY_PREFIX = "img-"
-# Адреса ссылок — там же, своим префиксом.
+# Адреса ссылок - там же, своим префиксом.
 HREF_KEY_PREFIX = "href-"
 MAX_HREF_LEN = 500
 # Что разрешено в href: свои страницы, обычные сайты и мессенджеры.
@@ -41,7 +41,7 @@ _HREF_RE = re.compile(
     r"""|mailto:[^\s<>"']+|tel:[+0-9][0-9 ()-]*|tg://[^\s<>"']+)$"""
 )
 
-# Границы стилей. Намеренно узкие: размер — множитель к тому, что задано в CSS,
+# Границы стилей. Намеренно узкие: размер - множитель к тому, что задано в CSS,
 # поэтому адаптивные clamp() продолжают работать и вёрстка не разъезжается.
 SIZE_MIN, SIZE_MAX = 0.8, 1.4
 STROKE_MAX_PX = 3
@@ -57,7 +57,7 @@ def valid_key(key: Any) -> bool:
 
 
 def clean_href(raw: Any) -> str:
-    """Адрес ссылки. Пустая строка — значит вернуть тот, что в шаблоне."""
+    """Адрес ссылки. Пустая строка - значит вернуть тот, что в шаблоне."""
     if raw is None:
         return ""
     value = "".join(str(raw).split())[:MAX_HREF_LEN]
@@ -67,7 +67,7 @@ def clean_href(raw: Any) -> str:
 
 
 def clean_text(raw: Any) -> str:
-    """Из contenteditable может прилететь разметка — оставляем только текст."""
+    """Из contenteditable может прилететь разметка - оставляем только текст."""
     if raw is None:
         return ""
     text = str(raw)
@@ -83,7 +83,7 @@ def clean_text(raw: Any) -> str:
 def _clean_color_map(raw: Any) -> dict[str, str] | None:
     """
     Приводит цвет к виду {"dark": "#…", "light": "#…"}.
-    Голая строка — формат прежних записей; применяем её к обеим темам, чтобы
+    Голая строка - формат прежних записей; применяем её к обеим темам, чтобы
     внешний вид уже сохранённых правок не изменился.
     """
     if isinstance(raw, str) and _COLOR_RE.match(raw.strip()):
@@ -138,7 +138,7 @@ def clean_style(raw: Any) -> dict[str, Any] | None:
 
 def style_to_css(style: dict[str, Any] | None) -> str:
     """
-    Инлайновый style: размер (в em — относительно значения из CSS), жирность
+    Инлайновый style: размер (в em - относительно значения из CSS), жирность
     и обводка. Цвета здесь намеренно нет: он зависит от темы и живёт в
     отдельных правилах, см. colors_css.
     """
@@ -165,7 +165,7 @@ def colors_css(overrides: dict[str, dict[str, Any]] | None) -> str:
 
     Специфичность `.lbg [data-lp="…"]` (два класса) намеренно выше базовых
     `.lbg a` и `.lbg .lbg-btn--primary`, иначе цвет ссылок и кнопок не
-    применился бы. Светлая тема — отдельным, более точным селектором.
+    применился бы. Светлая тема - отдельным, более точным селектором.
     """
     rules: list[str] = []
     for key, entry in (overrides or {}).items():
@@ -197,7 +197,7 @@ async def _load_from_db() -> dict[str, dict[str, Any]]:
 
 
 async def get_overrides() -> dict[str, dict[str, Any]]:
-    """Все правки страницы. Обычно — один GET в Redis."""
+    """Все правки страницы. Обычно - один GET в Redis."""
     try:
         cached = await redis_client.get(CACHE_KEY)
         if cached is not None:
@@ -317,9 +317,9 @@ async def get_layouts(
     overrides: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, list[str] | None]:
     """
-    Раскладка каждой секции: None — состав по умолчанию.
+    Раскладка каждой секции: None - состав по умолчанию.
 
-    Правки можно передать уже прочитанными — страница читает их один раз и
+    Правки можно передать уже прочитанными - страница читает их один раз и
     не ходит в Redis повторно.
     """
     from bot.common.service.landing_blocks import SECTIONS, clean_layout, layout_key

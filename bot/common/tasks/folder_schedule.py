@@ -44,7 +44,7 @@ def validate_issue_time_msk(value: str) -> None:
 
 
 def normalize_labels(raw_labels: list[str] | None) -> list[str]:
-    """Пустой список — без фильтра по меткам (все карточки)."""
+    """Пустой список - без фильтра по меткам (все карточки)."""
     out: list[str] = []
     seen: set[str] = set()
     for item in raw_labels or []:

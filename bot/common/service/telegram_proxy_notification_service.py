@@ -65,8 +65,8 @@ def _build_all_proxies_down_email() -> tuple[str, str, str]:
 
 def sync_telegram_proxy_availability_notification() -> None:
     """
-    Если прокси снова доступны — сбрасывает флаг уведомления.
-    Если все прокси недоступны — один раз отправляет email админу.
+    Если прокси снова доступны - сбрасывает флаг уведомления.
+    Если все прокси недоступны - один раз отправляет email админу.
     """
     usable = fetch_usable_proxies_sync()
     redis = _sync_redis()
@@ -104,7 +104,7 @@ def sync_telegram_proxy_availability_notification() -> None:
         body_text=body_text,
     ):
         logger.error(
-            "All Telegram proxies are down — notification email sent to {}",
+            "All Telegram proxies are down - notification email sent to {}",
             admin_email,
         )
     else:

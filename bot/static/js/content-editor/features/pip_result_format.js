@@ -32,7 +32,7 @@ export const DEFAULT_PIP_DIFF_RESULT_TEMPLATE = `Время: {time}
 {no_board}{diff_row}`;
 
 export const PIP_RESULT_TEMPLATE_PLACEHOLDER_HINT =
-    'Переменные: {time}, {no_board}, {upper_row}, {lower_row}, {upper_user}, {upper_correct}, {upper_mark}, {lower_user}, {lower_correct}, {lower_mark}, {diff_row}, {diff_user}, {diff_correct}, {diff_mark}, {choice_user}, {choice_correct}, {choice_mark}. Цвет: выделите текст и нажмите «Цвет» или тег <span style="color:#RRGGBB">...</span>. Пустое поле — шаблон по умолчанию.';
+    'Переменные: {time}, {no_board}, {upper_row}, {lower_row}, {upper_user}, {upper_correct}, {upper_mark}, {lower_user}, {lower_correct}, {lower_mark}, {diff_row}, {diff_user}, {diff_correct}, {diff_mark}, {choice_user}, {choice_correct}, {choice_mark}. Цвет: выделите текст и нажмите «Цвет» или тег <span style="color:#RRGGBB">...</span>. Пустое поле - шаблон по умолчанию.';
 
 const DEFAULT_TEMPLATE_BY_KIND = {
     [PIP_RESULT_TEMPLATE_KIND_COUNT]: DEFAULT_PIP_COUNT_RESULT_TEMPLATE,
@@ -46,7 +46,7 @@ function mark(ok) {
 }
 
 function formatUserValue(v) {
-    return v != null ? String(v) : '—';
+    return v != null ? String(v) : '-';
 }
 
 function escapeHtml(text) {
@@ -239,8 +239,8 @@ function buildPipDiffVars(ref, userDiff) {
 
 function buildCubeVars(chosenLabel, correctLabel, doubleCorrect) {
     return {
-        choice_user: chosenLabel != null ? String(chosenLabel) : '—',
-        choice_correct: correctLabel != null ? String(correctLabel) : '—',
+        choice_user: chosenLabel != null ? String(chosenLabel) : '-',
+        choice_correct: correctLabel != null ? String(correctLabel) : '-',
         choice_mark: mark(!!doubleCorrect),
     };
 }

@@ -50,11 +50,11 @@ class UsersWithPipCountCardsView(BaseView):
             for item in self.appbuilder.session.execute(stmt).all():
                 user_id = int(item.user_id)
                 username = str(item.username).strip() if item.username else ""
-                tg_username = f"@{username}" if username else "—"
+                tg_username = f"@{username}" if username else "-"
                 admin_name = (
                     str(item.admin_insert_name).strip()
                     if item.admin_insert_name
-                    else "—"
+                    else "-"
                 )
                 try:
                     show_url = url_for("UserModelView.show", pk=str(user_id))

@@ -38,9 +38,9 @@ async def start_card_bg(message: Message, state: FSMContext):
     await state.set_state(CardBgStates.waiting_input)
     await message.answer(
         "Фон кадров карточек.\n\n"
-        "• Пришлите фото — поставлю картинку-фон всем кадрам.\n"
-        "• Отправьте <code>0</code> — обнулю фон (без картинки, белый цвет).\n"
-        "• /cancel — отмена."
+        "• Пришлите фото - поставлю картинку-фон всем кадрам.\n"
+        "• Отправьте <code>0</code> - обнулю фон (без картинки, белый цвет).\n"
+        "• /cancel - отмена."
     )
 
 
@@ -59,7 +59,7 @@ async def process_card_bg_text(message: Message, state: FSMContext, session_with
     text = (message.text or "").strip()
     if text != "0":
         return await message.answer(
-            "Нужно фото или <code>0</code> для обнуления фона. /cancel — отмена."
+            "Нужно фото или <code>0</code> для обнуления фона. /cancel - отмена."
         )
 
     await state.clear()
@@ -157,5 +157,5 @@ async def process_card_bg_photo(message: Message, state: FSMContext, session_wit
 @card_background_router.message(StateFilter(CardBgStates.waiting_input))
 async def process_card_bg_other(message: Message):
     await message.answer(
-        "Нужно фото или <code>0</code> для обнуления фона. /cancel — отмена."
+        "Нужно фото или <code>0</code> для обнуления фона. /cancel - отмена."
     )

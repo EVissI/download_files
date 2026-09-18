@@ -458,7 +458,7 @@ class UserDAO(BaseDAO[User]):
                 if remaining_to_deduct <= 0:
                     break
                 if service.remaining_quantity is None:
-                    # Безлимит — списываем всё оставшееся
+                    # Безлимит - списываем всё оставшееся
                     deducted += remaining_to_deduct
                     remaining_to_deduct = 0
                     break
@@ -1292,7 +1292,7 @@ class UserContentCardDAO(BaseDAO[UserContentCard]):
     model = UserContentCard
 
     async def get_all_with_content_card(self) -> list[UserContentCard]:
-        """Все связи пользователь–карточка с подгруженным ContentCard."""
+        """Все связи пользователь-карточка с подгруженным ContentCard."""
         try:
             query = select(self.model).options(selectinload(self.model.content_card))
             result = await self._session.execute(query)
@@ -1684,13 +1684,13 @@ class ContentCardFolderDAO(BaseDAO[ContentCardFolder]):
     async def _is_descendant(self, ancestor_id: int, candidate_id: int) -> bool:
         """
         Возвращает True, если candidate_id является потомком ancestor_id.
-        BFS по parent_id вверх (ancestor_id — вершина, проверяем путь от candidate).
+        BFS по parent_id вверх (ancestor_id - вершина, проверяем путь от candidate).
         """
         visited: set[int] = set()
         current_id: int | None = candidate_id
         while current_id is not None:
             if current_id in visited:
-                break  # Цикл в уже существующем дереве — прерываем
+                break  # Цикл в уже существующем дереве - прерываем
             visited.add(current_id)
             if current_id == ancestor_id:
                 return True
@@ -1760,7 +1760,7 @@ class ContentCardFolderDAO(BaseDAO[ContentCardFolder]):
     async def add_card_to_folder(
         self, folder_id: int, content_card_id: int, sort_order: int = 0
     ) -> ContentCardFolderItem | None:
-        """Добавить карточку в папку. Если уже есть — вернуть None (нет ошибки)."""
+        """Добавить карточку в папку. Если уже есть - вернуть None (нет ошибки)."""
         existing = await self._session.execute(
             select(ContentCardFolderItem).where(
                 ContentCardFolderItem.folder_id == folder_id,
@@ -2120,7 +2120,7 @@ class MessageForNewDAO(BaseDAO[MessageForNew]):
     ) -> MessageForNew | None:
         """
         Создаёт или обновляет запись MessageForNew по (dispatch_day, lang_code).
-        Если запись с такими значениями есть — обновляет поля dispatch_time и text.
+        Если запись с такими значениями есть - обновляет поля dispatch_time и text.
         Возвращает созданный/обновлённый объект или None при ошибке.
         """
         try:
@@ -2155,7 +2155,7 @@ class MessageForNewDAO(BaseDAO[MessageForNew]):
     async def get_by_lang_code(self, lang_code: str) -> Optional[MessageForNew]:
         """
         Возвращает запись MessageForNew по lang_code или None, если не найдена.
-        Если на вход приходит не 'ru' или 'en' — используется 'en'.
+        Если на вход приходит не 'ru' или 'en' - используется 'en'.
         """
         try:
             lang = (lang_code or "").lower()
@@ -2353,7 +2353,7 @@ class MatchAnalysisDAO(BaseDAO[MatchAnalysis]):
     model = MatchAnalysis
 
     async def list_all_ordered(self) -> list[MatchAnalysis]:
-        """Все сохранённые анализы, новые сверху (без тяжёлого analysis в выборке — грузим целиком)."""
+        """Все сохранённые анализы, новые сверху (без тяжёлого analysis в выборке - грузим целиком)."""
         try:
             query = select(self.model).order_by(self.model.id.desc())
             result = await self._session.execute(query)
@@ -3130,7 +3130,7 @@ class WebAnalyzePlayerStatDAO(BaseDAO[WebAnalyzePlayerStat]):
         player_name_norm: str,
         web_user_id: int | None,
     ) -> int:
-        """Удаляет статистику игрока. web_user_id=None — по всем владельцам."""
+        """Удаляет статистику игрока. web_user_id=None - по всем владельцам."""
         if not player_name_norm:
             return 0
         filters = self._owner_filter(web_user_id)
