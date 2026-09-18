@@ -33,6 +33,20 @@ MAX_KEYS_PER_SAVE = 200
 IMAGE_KEY_PREFIX = "img-"
 # Адреса ссылок - там же, своим префиксом.
 HREF_KEY_PREFIX = "href-"
+# Фон блока или страницы: bg-<цель>, цвета лежат в style_json["bg"].
+# Цель страницы - page-<имя страницы>, остальные - id блока или панели.
+BG_KEY_PREFIX = "bg-"
+PAGE_BG_PREFIX = "page-"
+# Пресеты стилей редактора. Это инструмент, а не содержимое страницы,
+# поэтому «Сброс» их не трогает.
+PRESETS_KEY = "presets"
+# Тёмная тема на лендинге - по умолчанию (атрибута нет), светлая - явная.
+# Без этой привязки цвет, заданный только для тёмной темы, протекал бы и в
+# светлую.
+DARK_SCOPE = 'html:not([data-theme="light"]) '
+LIGHT_SCOPE = 'html[data-theme="light"] '
+MAX_PRESETS = 30
+MAX_PRESET_NAME = 40
 MAX_HREF_LEN = 500
 # Что разрешено в href: свои страницы, обычные сайты и мессенджеры.
 # javascript:, data: и прочее сюда не проходит.
@@ -165,7 +179,7 @@ def colors_css(overrides: dict[str, dict[str, Any]] | None) -> str:
 
     Специфичность `.lbg [data-lp="…"]` (два класса) намеренно выше базовых
     `.lbg a` и `.lbg .lbg-btn--primary`, иначе цвет ссылок и кнопок не
-    применился бы. Светлая тема - отдельным, более точным селектором.
+    применился бы. Каждый цвет привязан к своей теме (DARK_SCOPE/LIGHT_SCOPE).
     """
     rules: list[str] = []
     for key, entry in (overrides or {}).items():
@@ -177,12 +191,69 @@ def colors_css(overrides: dict[str, dict[str, Any]] | None) -> str:
         dark = color.get("dark")
         light = color.get("light")
         if dark:
-            rules.append('.lbg [data-lp="%s"]{color:%s}' % (key, dark))
+            rules.append(DARK_SCOPE + '.lbg [data-lp="%s"]{color:%s}' % (key, dark))
         if light:
-            rules.append(
-                'html[data-theme="light"] .lbg [data-lp="%s"]{color:%s}' % (key, light)
-            )
+            rules.append(LIGHT_SCOPE + '.lbg [data-lp="%s"]{color:%s}' % (key, light))
     return "".join(rules)
+
+
+def valid_bg_target(target: Any) -> bool:
+    return (
+        valid_key(target)
+        and len(BG_KEY_PREFIX) + len(target) <= KEY_MAX_LEN
+    )
+
+
+def clean_bg(raw: Any) -> dict[str, str] | None:
+    """Фон в тех же рамках, что цвет текста: #rgb/#rrggbb, по темам."""
+    return _clean_color_map(raw)
+
+
+def _bg_selector(target: str) -> str:
+    if target.startswith(PAGE_BG_PREFIX):
+        page = target[len(PAGE_BG_PREFIX):]
+        return 'body.lbg[data-lp-page="%s"]' % page
+    return '.lbg [data-lp-bg="%s"]' % target
+
+
+def backgrounds_css(overrides: dict[str, dict[str, Any]] | None) -> str:
+    """
+    Правила фона для блоков и страниц. `.lbg [data-lp-bg]` (два уровня)
+    перебивает базовые `.lbg-card`, `.lbg-panel` и прочие одиночные классы.
+    """
+    rules: list[str] = []
+    for key, entry in (overrides or {}).items():
+        if not key.startswith(BG_KEY_PREFIX):
+            continue
+        target = key[len(BG_KEY_PREFIX):]
+        if not valid_bg_target(target):
+            continue
+        bg = ((entry or {}).get("style") or {}).get("bg")
+        if not isinstance(bg, dict):
+            continue
+        selector = _bg_selector(target)
+        if bg.get("dark"):
+            rules.append(DARK_SCOPE + "%s{background:%s}" % (selector, bg["dark"]))
+        if bg.get("light"):
+            rules.append(LIGHT_SCOPE + "%s{background:%s}" % (selector, bg["light"]))
+    return "".join(rules)
+
+
+def page_css(overrides: dict[str, dict[str, Any]] | None) -> str:
+    """Все оформительские правила страницы одним куском для <style>."""
+    return colors_css(overrides) + backgrounds_css(overrides)
+
+
+def bg_of(overrides: dict[str, dict[str, Any]] | None, target: str) -> dict | None:
+    entry = (overrides or {}).get(f"{BG_KEY_PREFIX}{target}") or {}
+    bg = (entry.get("style") or {}).get("bg")
+    return bg if isinstance(bg, dict) and bg else None
+
+
+def presets_of(overrides: dict[str, dict[str, Any]] | None) -> list[dict[str, Any]]:
+    entry = (overrides or {}).get(PRESETS_KEY) or {}
+    items = (entry.get("style") or {}).get("items")
+    return items if isinstance(items, list) else []
 
 
 async def _load_from_db() -> dict[str, dict[str, Any]]:
@@ -361,7 +432,8 @@ async def drop_block_keys(section: str, block_id: str) -> None:
             LandingText.__table__.delete().where(
                 (LandingText.page == PAGE)
                 & (
-                    LandingText.key.like(f"{prefix}%")
+                    (LandingText.key == f"{BG_KEY_PREFIX}{block_id}")
+                    | LandingText.key.like(f"{prefix}%")
                     | LandingText.key.like(f"{HREF_KEY_PREFIX}{prefix}%")
                     | LandingText.key.like(f"{IMAGE_KEY_PREFIX}{prefix}%")
                 )
@@ -371,10 +443,96 @@ async def drop_block_keys(section: str, block_id: str) -> None:
     await invalidate_cache()
 
 
+async def save_backgrounds(
+    items: list[dict[str, Any]], user_id: int | None
+) -> int:
+    """Фоны блоков и страниц. Пустой фон - вернуть оформление по умолчанию."""
+    if not isinstance(items, list):
+        return 0
+    saved = 0
+    async with async_session_maker() as session:
+        for item in items[:MAX_KEYS_PER_SAVE]:
+            if not isinstance(item, dict):
+                continue
+            target = str(item.get("target") or "").strip()
+            if not valid_bg_target(target):
+                continue
+            key = f"{BG_KEY_PREFIX}{target}"
+            bg = clean_bg(item.get("bg"))
+            if bg:
+                await _upsert(session, key, None, {"bg": bg}, user_id)
+            else:
+                await _delete_key(session, key)
+            saved += 1
+        await session.commit()
+    await invalidate_cache()
+    return saved
+
+
+def clean_presets(raw: Any) -> list[dict[str, Any]]:
+    """Пресет = имя + разрешённый стиль текста; всё прочее отбрасываем."""
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in (raw if isinstance(raw, list) else [])[:MAX_PRESETS]:
+        if not isinstance(item, dict):
+            continue
+        name = clean_text(item.get("name"))[:MAX_PRESET_NAME]
+        style = clean_style(item.get("style"))
+        preset_id = str(item.get("id") or "").strip()
+        if not name or not style or not KEY_RE.match(preset_id) or preset_id in seen:
+            continue
+        seen.add(preset_id)
+        out.append({"id": preset_id, "name": name, "style": style})
+    return out
+
+
+async def save_presets(items: Any, user_id: int | None) -> list[dict[str, Any]]:
+    presets = clean_presets(items)
+    async with async_session_maker() as session:
+        if presets:
+            await _upsert(session, PRESETS_KEY, None, {"items": presets}, user_id)
+        else:
+            await _delete_key(session, PRESETS_KEY)
+        await session.commit()
+    await invalidate_cache()
+    return presets
+
+
+async def get_page_order(
+    overrides: dict[str, dict[str, Any]] | None = None,
+) -> list[str]:
+    """Порядок переставляемых секций лендинга."""
+    from bot.common.service.landing_blocks import (
+        PAGE_LAYOUT_KEY,
+        clean_page_order,
+    )
+
+    if overrides is None:
+        overrides = await get_overrides()
+    entry = overrides.get(PAGE_LAYOUT_KEY) or {}
+    return clean_page_order((entry.get("style") or {}).get("blocks"))
+
+
+async def save_page_order(order: list[str], user_id: int | None) -> list[str]:
+    from bot.common.service.landing_blocks import (
+        PAGE_LAYOUT_KEY,
+        clean_page_order,
+    )
+
+    cleaned = clean_page_order(order)
+    async with async_session_maker() as session:
+        await _upsert(session, PAGE_LAYOUT_KEY, None, {"blocks": cleaned}, user_id)
+        await session.commit()
+    await invalidate_cache()
+    return cleaned
+
+
 async def reset_all() -> int:
     async with async_session_maker() as session:
         result = await session.execute(
-            LandingText.__table__.delete().where(LandingText.page == PAGE)
+            LandingText.__table__.delete().where(
+                (LandingText.page == PAGE) & (LandingText.key != PRESETS_KEY)
+            )
         )
         await session.commit()
     await invalidate_cache()

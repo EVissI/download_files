@@ -25,7 +25,6 @@ from pydantic import BaseModel, Field
 
 from bot.common.service.hint_viewer_web_service import resolve_web_session
 from bot.common.service.landing_text_service import (
-    colors_css,
     get_overrides,
     save_image,
     valid_image_key,
@@ -35,6 +34,7 @@ from bot.common.service.landing_text_service import (
 )
 from bot.common.service.landing_blocks import (
     MAX_BLOCKS_PER_SECTION,
+    PAGE_SECTIONS,
     SECTIONS,
     build_blocks,
     new_block_id,
@@ -42,9 +42,17 @@ from bot.common.service.landing_blocks import (
 from bot.common.service.landing_text_service import (
     HREF_KEY_PREFIX,
     IMAGE_KEY_PREFIX,
+    PAGE_BG_PREFIX,
+    bg_of,
     drop_block_keys,
     get_layouts,
+    get_page_order,
+    page_css,
+    presets_of,
+    save_backgrounds,
     save_layout,
+    save_page_order,
+    save_presets,
 )
 from bot.common.utils.static_assets import get_static_asset_version
 
@@ -68,10 +76,27 @@ class LandingBlockBody(BaseModel):
     section: str = Field(max_length=20)
     action: str = Field(max_length=10)
     block_id: str = Field(default="", max_length=40)
+    # для action=move: полный новый порядок id блоков секции
+    order: list[str] = Field(default_factory=list, max_length=60)
+
+
+class LandingBgItem(BaseModel):
+    target: str = Field(max_length=75)
+    # None или пустой - вернуть фон по умолчанию
+    bg: dict[str, Any] | None = None
 
 
 class LandingSaveBody(BaseModel):
     items: list[LandingSaveItem] = Field(default_factory=list)
+    backgrounds: list[LandingBgItem] = Field(default_factory=list)
+
+
+class LandingOrderBody(BaseModel):
+    order: list[str] = Field(default_factory=list, max_length=20)
+
+
+class LandingPresetsBody(BaseModel):
+    items: list[dict[str, Any]] = Field(default_factory=list, max_length=60)
 
 
 def _build_helpers(overrides: dict[str, dict[str, Any]]):
@@ -139,11 +164,67 @@ def _no_html(*_args: Any) -> Markup:
 
 
 def _block_remove_html(block: dict[str, Any]) -> Markup:
+    """
+    Панель блока в режиме правки: перетащить, сдвинуть, убрать. Стрелки
+    нужны не только для клавиатуры - перетаскивание на телефонах не работает.
+    """
+    block_id = escape(block.get("id") or "")
     return Markup(
-        '<button type="button" class="lbg-block-del" data-lp-block-del="%s"'
+        '<span class="lbg-block-tools" data-lp-tools="%(id)s">'
+        '<button type="button" class="lbg-block-drag" data-lp-block-drag="%(id)s"'
+        ' title="Перетащить" aria-label="Перетащить блок">⠿</button>'
+        '<button type="button" data-lp-block-up="%(id)s"'
+        ' title="Сдвинуть раньше" aria-label="Сдвинуть раньше">↑</button>'
+        '<button type="button" data-lp-block-down="%(id)s"'
+        ' title="Сдвинуть позже" aria-label="Сдвинуть позже">↓</button>'
+        '<button type="button" class="lbg-block-del" data-lp-block-del="%(id)s"'
         ' title="Убрать блок" aria-label="Убрать блок">×</button>'
-        % escape(block.get("id") or "")
+        "</span>" % {"id": block_id}
     )
+
+
+def _section_tools_html(name: str) -> Markup:
+    """Стрелки для перестановки целой секции лендинга."""
+    return Markup(
+        '<span class="lbg-section-tools" data-lp-section-tools="%(n)s">'
+        '<span class="lbg-section-tools__label">Секция</span>'
+        '<button type="button" data-lp-section-up="%(n)s"'
+        ' title="Поднять секцию" aria-label="Поднять секцию">↑</button>'
+        '<button type="button" data-lp-section-down="%(n)s"'
+        ' title="Опустить секцию" aria-label="Опустить секцию">↓</button>'
+        "</span>" % {"n": escape(name)}
+    )
+
+
+def _bg_helpers(overrides: dict[str, dict[str, Any]]):
+    """
+    lp_bg(target)  - атрибуты цели фона: data-lp-bg и текущие цвета для
+                     редактора;
+    lp_page(name)  - то же для <body>: страница целиком.
+    """
+
+    def _attrs(target: str) -> str:
+        bg = bg_of(overrides, target)
+        if not bg:
+            return ""
+        return f' data-lp-bg-style="{escape(json.dumps(bg, ensure_ascii=False))}"'
+
+    def lp_bg(target: str) -> Markup:
+        return Markup(f'data-lp-bg="{escape(target)}"' + _attrs(target))
+
+    def lp_page(name: str) -> Markup:
+        target = f"{PAGE_BG_PREFIX}{name}"
+        return Markup(
+            f'data-lp-page="{escape(name)}" data-lp-page-bg="{escape(target)}"'
+            + _attrs(target)
+        )
+
+    return lp_bg, lp_page
+
+
+def _presets_json(overrides: dict[str, dict[str, Any]]) -> Markup:
+    raw = json.dumps(presets_of(overrides), ensure_ascii=False).replace("</", "<\\/")
+    return Markup(raw)
 
 
 def _block_add_html(section: str) -> Markup:
@@ -184,11 +265,13 @@ async def web_landing(request: Request):
     blocks = {
         section: build_blocks(section, layouts.get(section)) for section in SECTIONS
     }
+    page_sections = await get_page_order(overrides)
+    lp_bg, lp_page = _bg_helpers(overrides)
     # Цвета зависят от темы, поэтому идут правилами в <style>, а не инлайном.
     # Markup обязателен: внутри <style> HTML-сущности не декодируются, и
     # экранированные кавычки сломали бы селекторы. Содержимое безопасно -
-    # ключи и цвета проходят валидацию в colors_css.
-    color_css = Markup(colors_css(overrides))
+    # ключи и цвета проходят валидацию в page_css.
+    color_css = Markup(page_css(overrides))
 
     return templates.TemplateResponse(
         "landing.html",
@@ -206,6 +289,11 @@ async def web_landing(request: Request):
             "lp_href_defaults": lp_href_defaults,
             "lp_block_remove": _block_remove_html if is_admin else _no_html,
             "lp_block_add": _block_add_html if is_admin else _no_html,
+            "lp_section_tools": _section_tools_html if is_admin else _no_html,
+            "lp_bg": lp_bg,
+            "lp_page": lp_page,
+            "lp_presets": lambda: _presets_json(overrides),
+            "page_sections": page_sections,
             "blocks": blocks,
             "lp_color_css": color_css,
         },
@@ -233,6 +321,7 @@ async def web_faq(request: Request):
     ) = _build_helpers(overrides)
     layouts = await get_layouts(overrides)
     blocks = {"faq": build_blocks("faq", layouts.get("faq"))}
+    lp_bg, lp_page = _bg_helpers(overrides)
 
     return templates.TemplateResponse(
         "landing_faq.html",
@@ -250,8 +339,12 @@ async def web_faq(request: Request):
             "lp_href_defaults": lp_href_defaults,
             "lp_block_remove": _block_remove_html if is_admin else _no_html,
             "lp_block_add": _block_add_html if is_admin else _no_html,
+            "lp_section_tools": _no_html,
+            "lp_bg": lp_bg,
+            "lp_page": lp_page,
+            "lp_presets": lambda: _presets_json(overrides),
             "blocks": blocks,
-            "lp_color_css": Markup(colors_css(overrides)),
+            "lp_color_css": Markup(page_css(overrides)),
         },
     )
 
@@ -263,12 +356,15 @@ async def web_landing_save(request: Request, body: LandingSaveBody):
 
     session = getattr(request.state, "web_session", None) or {}
     user_id = session.get("user_id")
-    saved = await save_items(
-        [item.model_dump() for item in body.items],
-        int(user_id) if user_id else None,
+    uid = int(user_id) if user_id else None
+    saved = await save_items([item.model_dump() for item in body.items], uid)
+    saved_bg = await save_backgrounds(
+        [item.model_dump() for item in body.backgrounds], uid
     )
-    logger.info("landing texts saved: {} ключей, web_user={}", saved, user_id)
-    return JSONResponse({"status": "ok", "saved": saved})
+    logger.info(
+        "landing saved: {} ключей, {} фонов, web_user={}", saved, saved_bg, user_id
+    )
+    return JSONResponse({"status": "ok", "saved": saved, "backgrounds": saved_bg})
 
 
 @web_landing_api_router.post("/web/landing/api/reset")
@@ -313,6 +409,16 @@ async def web_landing_blocks(request: Request, body: LandingBlockBody):
         if block_id not in current:
             raise HTTPException(status_code=404, detail="Блок не найден")
         current = [item for item in current if item != block_id]
+    elif action == "move":
+        # принимаем только перестановку текущего состава: добавлять и убирать
+        # блоки через move нельзя, иначе раскладку легко испортить
+        order = [str(item or "").strip() for item in body.order]
+        if len(order) != len(current) or set(order) != set(current):
+            raise HTTPException(
+                status_code=409,
+                detail="Состав секции изменился, обновите страницу",
+            )
+        current = order
     else:
         raise HTTPException(status_code=400, detail="Неизвестное действие")
 
@@ -322,6 +428,32 @@ async def web_landing_blocks(request: Request, body: LandingBlockBody):
         await drop_block_keys(section, block_id)
     logger.info("landing block {}: {} / {}", action, section, block_id)
     return JSONResponse({"ok": True, "block_id": block_id, "blocks": current})
+
+
+@web_landing_api_router.post("/web/landing/api/sections")
+async def web_landing_sections(request: Request, body: LandingOrderBody):
+    """Новый порядок переставляемых секций лендинга."""
+    if not await _is_landing_admin(request):
+        raise HTTPException(status_code=403, detail="forbidden")
+    order = [str(item or "").strip() for item in body.order]
+    if sorted(order) != sorted(PAGE_SECTIONS):
+        raise HTTPException(status_code=400, detail="Некорректный порядок секций")
+    session = getattr(request.state, "web_session", None) or {}
+    user_id = session.get("user_id")
+    saved = await save_page_order(order, int(user_id) if user_id else None)
+    logger.info("landing sections order: {}", saved)
+    return JSONResponse({"ok": True, "order": saved})
+
+
+@web_landing_api_router.post("/web/landing/api/presets")
+async def web_landing_presets(request: Request, body: LandingPresetsBody):
+    """Сохраняет весь список пресетов стилей целиком."""
+    if not await _is_landing_admin(request):
+        raise HTTPException(status_code=403, detail="forbidden")
+    session = getattr(request.state, "web_session", None) or {}
+    user_id = session.get("user_id")
+    presets = await save_presets(body.items, int(user_id) if user_id else None)
+    return JSONResponse({"ok": True, "items": presets})
 
 
 # Картинки лендинга: меняются админом в режиме редактирования, лежат в S3

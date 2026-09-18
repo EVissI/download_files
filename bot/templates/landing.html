@@ -27,7 +27,7 @@
 <link rel="stylesheet" href="/static/css/web_landing_edit.css?t={{ cache_timestamp }}">
 {% endif %}
 </head>
-<body class="lbg">
+<body class="lbg" {{ lp_page('landing') }}>
 
 <header class="lbg-header">
   <div class="lbg-header__inner">
@@ -59,7 +59,7 @@
   </div>
 </header>
 
-<section class="lbg-hero" id="top">
+<section class="lbg-hero" id="top" {{ lp_bg('hero') }}>
   <div class="lbg-hero__inner">
     <p class="lbg-eyebrow" {{ lp_attr('top-p-1') }}>{{ lp_text('top-p-1', 'Платформа сервисов для коротких нард') }}</p>
     <h1 {{ lp_attr('top-h1-2') }}>{{ lp_text('top-h1-2', 'Веб-сервисы для коротких нард') }}</h1>
@@ -71,12 +71,16 @@
   </div>
 </section>
 
-<section class="lbg-section" id="services">
+{# Порядок этих секций админ меняет в режиме правки (layout-page). #}
+{% for sec in page_sections %}
+{% if sec == 'services' %}
+<section class="lbg-section" id="services" data-lp-page-section="services">
+  {{ lp_section_tools('services') }}
   <h2 {{ lp_attr('services-h2-1') }}>{{ lp_text('services-h2-1', 'Сервисы') }}</h2>
   <p class="lbg-section__lead" {{ lp_attr('services-p-2') }}>{{ lp_text('services-p-2', 'Загружаете протокол игры - получаете разбор. Каждый сервис работает отдельно, но данные передаются между ними одной кнопкой.') }}</p>
   <div class="lbg-grid" data-lp-section="services">
     {% for block in blocks.services %}
-    <article class="lbg-card" data-lp-block="{{ block.id }}">
+    <article class="lbg-card" data-lp-block="{{ block.id }}" {{ lp_bg(block.id) }}>
       {{ lp_block_remove(block) }}
       <p class="lbg-card__num" {{ lp_attr(block.num.key) }}>{{ lp_text(block.num.key, block.num.default) }}</p>
       <h3 {{ lp_attr(block.title.key) }}>{{ lp_text(block.title.key, block.title.default) }}</h3>
@@ -87,13 +91,14 @@
     {{ lp_block_add('services') }}
   </div>
 </section>
-
-<section class="lbg-section" id="steps">
+{% elif sec == 'steps' %}
+<section class="lbg-section" id="steps" data-lp-page-section="steps">
+  {{ lp_section_tools('steps') }}
   <h2 {{ lp_attr('steps-h2-1') }}>{{ lp_text('steps-h2-1', 'По шагам') }}</h2>
   <p class="lbg-section__lead" {{ lp_attr('steps-p-2') }}>{{ lp_text('steps-p-2', 'Один сценарий - от сыгранного матча до проработанной позиции. Сначала по шагам, сервис за сервисом, а в конце то же самое одной загрузкой.') }}</p>
   <div class="lbg-steps" data-lp-section="steps">
     {% for block in blocks.steps %}
-    <div class="lbg-step" data-lp-block="{{ block.id }}">
+    <div class="lbg-step" data-lp-block="{{ block.id }}" {{ lp_bg(block.id) }}>
       {{ lp_block_remove(block) }}
       <div>
         <p class="lbg-step__label" {{ lp_attr(block.label.key) }}>{{ lp_text(block.label.key, block.label.default) }}</p>
@@ -120,9 +125,10 @@
     {{ lp_block_add('steps') }}
   </div>
 </section>
-
-<section class="lbg-section" id="guides">
-  <div class="lbg-panel">
+{% elif sec == 'guides' %}
+<section class="lbg-section" id="guides" data-lp-page-section="guides">
+  {{ lp_section_tools('guides') }}
+  <div class="lbg-panel" {{ lp_bg('guides-panel') }}>
     <div>
       <h2 {{ lp_attr('guides-h2-1') }}>{{ lp_text('guides-h2-1', 'Руководства пользователя') }}</h2>
       <p {{ lp_attr('guides-p-2') }}>{{ lp_text('guides-p-2', 'К каждому сервису есть подробное руководство: что он умеет, как загрузить протокол и как читать результат анализа. Рекомендую прочитать перед первым запуском.') }}</p>
@@ -133,9 +139,10 @@
     </div>
   </div>
 </section>
-
-<section class="lbg-section" id="faq">
-  <a class="lbg-faq-link" href="/web/faq">
+{% elif sec == 'faq' %}
+<section class="lbg-section" id="faq" data-lp-page-section="faq">
+  {{ lp_section_tools('faq') }}
+  <a class="lbg-faq-link" href="/web/faq" {{ lp_bg('faq-link') }}>
     <span class="lbg-faq-link__icon" aria-hidden="true">
       <svg viewBox="0 0 24 24"><path d="M9.1 9a3 3 0 1 1 4.2 2.8c-.8.4-1.3 1.1-1.3 2v.4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path><circle cx="12" cy="17.4" r="1.15" fill="currentColor"></circle></svg>
     </span>
@@ -146,13 +153,14 @@
     <span class="lbg-faq-link__go" {{ lp_attr('faq-link-a-3') }}>{{ lp_text('faq-link-a-3', 'Открыть') }}</span>
   </a>
 </section>
-
-<section class="lbg-section" id="play">
+{% elif sec == 'play' %}
+<section class="lbg-section" id="play" data-lp-page-section="play">
+  {{ lp_section_tools('play') }}
   <h2 {{ lp_attr('play-h2-1') }}>{{ lp_text('play-h2-1', 'Где играть') }}</h2>
   <p class="lbg-section__lead" {{ lp_attr('play-p-2') }}>{{ lp_text('play-p-2', 'Протоколы для сервисов берутся с площадок, где вы играете.') }}</p>
   <div class="lbg-grid" data-lp-section="play">
     {% for block in blocks.play %}
-    <article class="lbg-card" data-lp-block="{{ block.id }}">
+    <article class="lbg-card" data-lp-block="{{ block.id }}" {{ lp_bg(block.id) }}>
       {{ lp_block_remove(block) }}
       <h3 {{ lp_attr(block.title.key) }}>{{ lp_text(block.title.key, block.title.default) }}</h3>
       <p {{ lp_attr(block.text.key) }}>{{ lp_text(block.text.key, block.text.default) }}</p>
@@ -162,9 +170,11 @@
     {{ lp_block_add('play') }}
   </div>
 </section>
+{% endif %}
+{% endfor %}
 
 <section class="lbg-section lbg-section--last">
-  <div class="lbg-cta">
+  <div class="lbg-cta" {{ lp_bg('cta-panel') }}>
     <h2 {{ lp_attr('play-h2-9') }}>{{ lp_text('play-h2-9', 'Остались вопросы?') }}</h2>
     <p {{ lp_attr('play-p-10') }}>{{ lp_text('play-p-10', 'Напишите мне о сервисах, подписке, вариантах оплаты или индивидуальном обучении - отвечу и помогу начать.') }}</p>
     <div class="lbg-btns">
@@ -258,6 +268,7 @@
 {% if can_edit %}
 <script id="lp-defaults" type="application/json">{{ lp_defaults() }}</script>
 <script id="lp-href-defaults" type="application/json">{{ lp_href_defaults() }}</script>
+<script id="lp-presets" type="application/json">{{ lp_presets() }}</script>
 <script src="/static/js/web_landing_edit.js?t={{ cache_timestamp }}"></script>
 {% endif %}
 </body>

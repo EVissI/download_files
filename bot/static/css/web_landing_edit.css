@@ -95,23 +95,6 @@
     color: var(--lbg-soft);
 }
 
-.lbg-ed__color {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--lbg-soft);
-}
-
-.lbg-ed__color input[type="color"] {
-    width: 34px;
-    height: 34px;
-    padding: 0;
-    border: 1px solid var(--lbg-border);
-    border-radius: 8px;
-    background: none;
-    cursor: pointer;
-}
-
 .lbg-ed__actions {
     display: flex;
     align-items: center;
@@ -197,10 +180,11 @@
     font-size: .85rem;
 }
 
-/* Кнопки состава секций. Видны только в режиме правки - вне его в разметке
+/* Кнопки состава и порядка. Видны только в режиме правки - вне его в разметке
    они есть (их отдаёт сервер админу), но не показываются. */
 .lbg-block-add,
-.lbg-block-del {
+.lbg-block-tools,
+.lbg-section-tools {
     display: none;
 }
 
@@ -224,36 +208,344 @@
     color: var(--lbg-text);
 }
 
-.lp-editing [data-lp-block] {
+.lp-editing [data-lp-block],
+.lp-editing [data-lp-page-section] {
     position: relative;
 }
 
-.lp-editing .lbg-block-del {
+/* Панель блока: ⠿ ↑ ↓ × в правом верхнем углу */
+.lp-editing .lbg-block-tools {
     position: absolute;
     top: 8px;
     right: 8px;
-    z-index: 3;
+    z-index: 4;
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border: 1px solid var(--lbg-border);
+    border-radius: 10px;
+    background: var(--lbg-header);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .25);
+}
+
+.lbg-block-tools button,
+.lbg-section-tools button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 28px;
     height: 28px;
     padding: 0;
-    border: 1px solid var(--lbg-border);
-    border-radius: 50%;
-    background: var(--lbg-header);
+    border: 0;
+    border-radius: 7px;
+    background: none;
     color: var(--lbg-soft);
-    font-size: 1.1rem;
+    font: inherit;
+    font-size: 1rem;
     line-height: 1;
     cursor: pointer;
 }
 
-.lp-editing .lbg-block-del:hover {
-    border-color: #c62828;
+.lbg-block-tools button:hover,
+.lbg-section-tools button:hover {
+    background: var(--lbg-ghost-hover);
+    color: var(--lbg-text);
+}
+
+.lbg-block-tools .lbg-block-drag {
+    cursor: grab;
+    font-size: 1.05rem;
+    letter-spacing: -1px;
+}
+
+.lbg-block-tools .lbg-block-del:hover {
     color: #c62828;
 }
 
-.lp-editing .lbg-block-del:disabled {
+.lbg-block-tools button:disabled {
     opacity: .5;
     cursor: default;
+}
+
+/* у вопроса FAQ панель стоит в строке заголовка, место под неё оставляем */
+.lp-editing .lbg-faq__q {
+    padding-right: 136px;
+}
+
+.lp-editing .lbg-faq__item .lbg-block-tools {
+    top: 14px;
+}
+
+/* Перетаскивание и перестановка */
+.lp-editing [data-lp-block].is-lp-dragging {
+    opacity: .45;
+    outline: 2px dashed var(--lbg-accent-2);
+    outline-offset: 4px;
+}
+
+.lp-editing [data-lp-section].is-lp-saving {
+    opacity: .85;
+}
+
+@keyframes lp-moved {
+    from { box-shadow: 0 0 0 3px var(--lbg-accent-2); }
+    to { box-shadow: 0 0 0 3px transparent; }
+}
+
+.lp-editing .is-lp-moved {
+    animation: lp-moved .9s ease;
+}
+
+/* Стрелки целой секции - слева сверху */
+.lp-editing .lbg-section-tools {
+    position: absolute;
+    top: 14px;
+    left: 0;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 3px 3px 10px;
+    border: 1px dashed var(--lbg-accent-2);
+    border-radius: 10px;
+    background: var(--lbg-header);
+}
+
+.lbg-section-tools__label {
+    margin-right: 4px;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--lbg-accent-2);
+}
+
+.lp-editing [data-lp-page-section] {
+    padding-top: 64px;
+}
+
+/* Цель фона, выбранная кликом по пустому месту блока */
+.lp-editing .is-lp-bg-active {
+    outline: 2px solid var(--lbg-accent-2);
+    outline-offset: 3px;
+}
+
+/* Кнопка «Цвета и фон» в панели */
+.lbg-ed__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    min-width: 0;
+}
+
+.lbg-ed .lbg-ed__colors {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lbg-ed__swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: conic-gradient(#e53935, #fdd835, #43a047, #1e88e5, #8e24aa, #e53935);
+}
+
+/* Мини-окна: цвета и пресеты. Висят над панелью, позицию снизу задаёт JS. */
+.lbg-ed-pop {
+    position: fixed;
+    right: 20px;
+    bottom: 110px;
+    z-index: 61;
+    width: min(360px, calc(100vw - 24px));
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+    padding: 14px 16px 16px;
+    border: 1px solid var(--lbg-border);
+    border-radius: 14px;
+    background: var(--lbg-header);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .35);
+    color: var(--lbg-text);
+    font-size: .88rem;
+}
+
+.lbg-ed-pop[hidden] {
+    display: none;
+}
+
+.lbg-ed-pop__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: .95rem;
+}
+
+.lbg-ed-pop button {
+    min-height: 32px;
+    padding: 5px 10px;
+    border: 1px solid var(--lbg-border);
+    border-radius: 8px;
+    background: var(--lbg-ghost-bg);
+    color: var(--lbg-ghost-fg);
+    font: inherit;
+    cursor: pointer;
+}
+
+.lbg-ed-pop button:hover {
+    background: var(--lbg-ghost-hover);
+}
+
+.lbg-ed-pop button.is-on {
+    background: var(--lbg-accent);
+    border-color: var(--lbg-accent);
+    color: #fff;
+}
+
+.lbg-ed-pop button:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+.lbg-ed-pop .lbg-ed-pop__close {
+    width: 32px;
+    padding: 0;
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.lbg-ed-pop__group {
+    padding: 12px 0 2px;
+    border-top: 1px solid var(--lbg-border-subtle);
+}
+
+.lbg-ed-pop__group:first-of-type {
+    border-top: 0;
+}
+
+.lbg-ed-pop__group[hidden] {
+    display: none;
+}
+
+.lbg-ed-pop__title {
+    margin-bottom: 8px;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--lbg-soft);
+}
+
+.lbg-ed-pop__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+}
+
+.lbg-ed-pop__color {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--lbg-soft);
+    cursor: pointer;
+}
+
+.lbg-ed-pop__color input[type="color"] {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid var(--lbg-border);
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+}
+
+.lbg-ed-pop .lbg-ed-pop__reset {
+    margin-left: auto;
+    font-size: .8rem;
+}
+
+.lbg-ed-pop__widths {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.lbg-ed-pop__widths button {
+    width: 32px;
+    padding: 0;
+}
+
+/* Пресеты */
+.lbg-ed-presets__list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 6px 0 12px;
+}
+
+.lbg-ed-presets__item {
+    display: flex;
+    gap: 6px;
+}
+
+.lbg-ed-pop .lbg-ed-presets__apply {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+    text-align: left;
+}
+
+.lbg-ed-presets__sample {
+    flex: 0 0 auto;
+    min-width: 40px;
+    color: var(--lbg-text);
+    line-height: 1;
+}
+
+.lbg-ed-presets__name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lbg-ed-pop .lbg-ed-presets__del {
+    width: 36px;
+    padding: 0;
+    font-size: 1.1rem;
+}
+
+.lbg-ed-pop .lbg-ed-presets__del:hover {
+    color: #c62828;
+}
+
+.lbg-ed-pop .lbg-ed-presets__save {
+    width: 100%;
+}
+
+.lbg-ed-presets__empty {
+    margin: 4px 0;
+    color: var(--lbg-muted);
+    line-height: 1.5;
+}
+
+@media (max-width: 820px) {
+    .lbg-ed-pop {
+        left: 12px;
+        right: 12px;
+        width: auto;
+    }
+
+    .lp-editing .lbg-faq__q {
+        padding-right: 0;
+        padding-top: 48px;
+    }
+
+    .lp-editing [data-lp-page-section] {
+        padding-top: 60px;
+    }
 }

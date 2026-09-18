@@ -56,6 +56,7 @@ from bot.common.service.webapp_settings_service import (
 )
 from bot.common.utils.static_assets import get_static_asset_version
 from bot.common.utils.http_security import (
+    HttpRateLimitMiddleware,
     SecurityHeadersMiddleware,
     client_ip,
     rate_limit_exceeded,
@@ -224,6 +225,7 @@ app.add_middleware(
 )
 app.add_middleware(GZipMiddleware, minimum_size=500)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(HttpRateLimitMiddleware)
 
 
 _fab_session_app = Flask("fab_session_probe")

@@ -8,7 +8,7 @@ from urllib.parse import unquote
 
 from fastapi import HTTPException, Request
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 _SENSITIVE_NAME_RE = re.compile(
     r"(?:"
@@ -37,6 +37,60 @@ _SAFE_PUBLIC_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,80}$")
 _SAFE_GAME_NUM_RE = re.compile(r"^[0-9]{1,8}$")
 
 _PROBE_LOG_TTL_SEC = 300
+_RATE_LIMIT_LOG_TTL_SEC = 300
+_RATE_LIMIT_WINDOW_SEC = 60
+
+# Корзины: запрос попадает только в одну. Лимиты на окно 60 с.
+# poll отдельно, чтобы виджет поддержки и /api/jobs не съедали лимит действий.
+_HTTP_RATE_LIMITS = {
+    "auth": 20,
+    "heavy": 30,
+    "poll": 120,
+    "api": 180,
+    "page": 60,
+}
+
+_RATE_LIMIT_SKIP_PREFIXES = ("/static", "/admin")
+_RATE_LIMIT_SKIP_EXACT = frozenset({"/favicon.ico"})
+_AUTH_RATE_LIMIT_PATHS = frozenset({"/login", "/web/hints/login"})
+
+_POLL_PATH_SUFFIXES = (
+    "/api/jobs",
+    "/api/history",
+    "/api/unread",
+    "/api/inbox",
+    "/api/thread",
+    "/export_job_status",
+)
+
+_HEAVY_PATH_MARKERS = (
+    "/api/upload",
+    "/media/upload",
+    "/gallery/upload",
+    "/audio/upload",
+    "/import_mp3_zip",
+    "/export_mp3_zip",
+    "/download_mp3",
+    "/download_screenshots",
+    "/upload_screenshots",
+    "/save_screenshot",
+    "/send_screenshot",
+    "/upload-image",
+    "/order-analysis",
+    "/send-to-",
+    "/send_to_admin",
+    "/send_to_support",
+    "/hint_mat_file",
+    "/hint_mat_download",
+    "/bulk_canvas_bg",
+    "/match_analysis/media",
+    "/support/api/files/",
+    "/api/pdf",
+    "/api/excel",
+    "/landing/image",
+    "/pokaz/hints",
+    "/pokaz/api/hints",
+)
 
 
 def _is_proxy_peer(host: str) -> bool:
@@ -108,14 +162,98 @@ async def rate_limit_blocked(key: str, limit: int) -> bool:
 async def rate_limit_hit(key: str, window_sec: int) -> int:
     from bot.db.redis import redis_client
 
-    count = await redis_client.incr(key)
-    if int(count) == 1:
+    count = int(await redis_client.incr(key))
+    if count == 1:
         await redis_client.expire(key, window_sec)
-    return int(count)
+    else:
+        ttl = await redis_client.ttl(key)
+        if ttl is None or int(ttl) < 0:
+            await redis_client.expire(key, window_sec)
+    return count
 
 
 async def rate_limit_exceeded(key: str, limit: int, window_sec: int) -> bool:
     return await rate_limit_hit(key, window_sec) > limit
+
+
+def _norm_request_path(path: str) -> str:
+    raw = (path or "/").replace("\\", "/")
+    if len(raw) > 1:
+        raw = raw.rstrip("/")
+    return raw or "/"
+
+
+def http_rate_limit_bucket(path: str, method: str) -> str | None:
+    """Корзина лимита или None, если запрос не считаем (статика, админка, CORS)."""
+    method = (method or "GET").upper()
+    if method == "OPTIONS":
+        return None
+    normalized = _norm_request_path(path)
+    if normalized in _RATE_LIMIT_SKIP_EXACT:
+        return None
+    if normalized.startswith(_RATE_LIMIT_SKIP_PREFIXES):
+        return None
+    if method == "POST" and normalized in _AUTH_RATE_LIMIT_PATHS:
+        return "auth"
+    if any(marker in normalized for marker in _HEAVY_PATH_MARKERS):
+        return "heavy"
+    if normalized.endswith(_POLL_PATH_SUFFIXES):
+        return "poll"
+    if method in ("GET", "HEAD") and (
+        "/web/support/api/threads/" in normalized
+        and "/messages" not in normalized
+    ):
+        return "poll"
+    if "/api/" in normalized or normalized.startswith("/api"):
+        return "api"
+    if method in ("GET", "HEAD"):
+        return "page"
+    return "api"
+
+
+def _rate_limit_identity(request: Request) -> str:
+    session = getattr(request.state, "web_session", None) or {}
+    try:
+        user_id = int(session.get("user_id") or 0)
+    except (TypeError, ValueError):
+        user_id = 0
+    if user_id > 0:
+        return f"web:{user_id}"
+    return f"ip:{client_ip(request)}"
+
+
+class HttpRateLimitMiddleware(BaseHTTPMiddleware):
+    """Глобальные HTTP-лимиты FastAPI. Redis недоступен → пропускаем запрос."""
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path or ""
+        bucket = http_rate_limit_bucket(path, request.method)
+        if not bucket:
+            return await call_next(request)
+        identity = _rate_limit_identity(request)
+        key = f"rate_limit:http:{bucket}:{identity}"
+        limit = _HTTP_RATE_LIMITS[bucket]
+        try:
+            exceeded = await rate_limit_exceeded(
+                key, limit, _RATE_LIMIT_WINDOW_SEC
+            )
+            retry_after = 1
+            if exceeded:
+                from bot.db.redis import redis_client
+
+                ttl = await redis_client.ttl(key)
+                retry_after = max(int(ttl or 0), 1)
+        except Exception:
+            await _log_rate_limit_fail_open(identity, path)
+            return await call_next(request)
+        if not exceeded:
+            return await call_next(request)
+        await _log_rate_limit_blocked(request, bucket, identity, path)
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many requests"},
+            headers={"Retry-After": str(retry_after)},
+        )
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -154,3 +292,46 @@ async def _log_probe_throttled(request: Request, path: str) -> None:
             logger.warning("Blocked secret-file probe from {} path={}", ip, path)
     except Exception:
         logger.warning("Blocked secret-file probe from {} path={}", ip, path)
+
+
+async def _log_rate_limit_blocked(
+    request: Request, bucket: str, identity: str, path: str
+) -> None:
+    from loguru import logger
+
+    ip = client_ip(request)
+    key = f"sec_ratelimit_log:{identity}:{bucket}"
+    try:
+        from bot.db.redis import redis_client
+
+        first = await redis_client.set_nx(key, "1", expire=_RATE_LIMIT_LOG_TTL_SEC)
+        if first:
+            logger.warning(
+                "HTTP rate limit {} from {} ip={} path={}",
+                bucket,
+                identity,
+                ip,
+                path,
+            )
+    except Exception:
+        logger.warning(
+            "HTTP rate limit {} from {} ip={} path={}",
+            bucket,
+            identity,
+            ip,
+            path,
+        )
+
+
+async def _log_rate_limit_fail_open(identity: str, path: str) -> None:
+    from loguru import logger
+
+    key = f"sec_ratelimit_fail:{identity}"
+    try:
+        from bot.db.redis import redis_client
+
+        first = await redis_client.set_nx(key, "1", expire=_RATE_LIMIT_LOG_TTL_SEC)
+        if first:
+            logger.warning("HTTP rate limit skipped (redis?) id={} path={}", identity, path)
+    except Exception:
+        logger.warning("HTTP rate limit skipped (redis?) id={} path={}", identity, path)

@@ -22,6 +22,23 @@ MAX_BLOCKS_PER_SECTION = 40
 LAYOUT_KEY_PREFIX = "layout-"
 
 
+# Секции лендинга, которые админ может переставлять. Первый экран и финальный
+# призыв написать остаются на своих местах.
+PAGE_SECTIONS = ("services", "steps", "guides", "faq", "play")
+PAGE_LAYOUT_KEY = "layout-page"
+
+
+def clean_page_order(raw: Any) -> list[str]:
+    """Любой мусор превращаем в корректную перестановку PAGE_SECTIONS."""
+    out: list[str] = []
+    for item in raw if isinstance(raw, list) else []:
+        name = str(item or "").strip()
+        if name in PAGE_SECTIONS and name not in out:
+            out.append(name)
+    out.extend(name for name in PAGE_SECTIONS if name not in out)
+    return out
+
+
 def new_block_id() -> str:
     return "c" + secrets.token_hex(4)
 

@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="/static/css/web_landing_edit.css?t={{ cache_timestamp }}">
 {% endif %}
 </head>
-<body class="lbg">
+<body class="lbg" {{ lp_page('faq') }}>
 
 <header class="lbg-header">
   <div class="lbg-header__inner">
@@ -63,9 +63,9 @@
 <section class="lbg-section lbg-section--last">
   <div class="lbg-faq" data-lp-section="faq">
     {% for block in blocks.faq %}
-    <details class="lbg-faq__item" data-lp-block="{{ block.id }}">
-      {{ lp_block_remove(block) }}
+    <details class="lbg-faq__item" data-lp-block="{{ block.id }}" {{ lp_bg(block.id) }}>
       <summary class="lbg-faq__q">
+        {{ lp_block_remove(block) }}
         <span {{ lp_attr(block.question.key) }}>{{ lp_text(block.question.key, block.question.default) }}</span>
         <span class="lbg-faq__sign" aria-hidden="true"></span>
       </summary>
@@ -75,7 +75,7 @@
     {{ lp_block_add('faq') }}
   </div>
 
-  <div class="lbg-cta lbg-faq__cta">
+  <div class="lbg-cta lbg-faq__cta" {{ lp_bg('faq-cta') }}>
     <h2 {{ lp_attr('faq-h2-3') }}>{{ lp_text('faq-h2-3', 'Не нашли ответ?') }}</h2>
     <p {{ lp_attr('faq-p-4') }}>{{ lp_text('faq-p-4', 'Напишите мне в Telegram - помогу с доступом, протоколами и разбором.') }}</p>
     <div class="lbg-btns">
@@ -127,6 +127,7 @@
 {% if can_edit %}
 <script id="lp-defaults" type="application/json">{{ lp_defaults() }}</script>
 <script id="lp-href-defaults" type="application/json">{{ lp_href_defaults() }}</script>
+<script id="lp-presets" type="application/json">{{ lp_presets() }}</script>
 <script src="/static/js/web_landing_edit.js?t={{ cache_timestamp }}"></script>
 {% endif %}
 </body>
