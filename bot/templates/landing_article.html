@@ -1,0 +1,58 @@
+{% extends "landing_base.html" %}
+{# Страница статьи. Всё пишется в режиме редактирования: заголовок, подводка,
+   обложка и сам текст - абзацы, подзаголовки и картинки в любом порядке. #}
+{% import "includes/landing_rich.html" as rich with context %}
+{% import "includes/landing_article_card.html" as cards_ui %}
+{% set page_name = 'article' %}
+{% block title %}{{ lp_text(keys.title, default_title) }} - LearnBG{% endblock %}
+{% block description %}{{ lp_text(keys.lead, default_lead) }}{% endblock %}
+{% block content %}
+<article class="lbg-article{% if not more %} lbg-article--last{% endif %}" id="top">
+  {% if can_edit %}
+  <div class="lbg-article__admin">
+    <span class="lbg-badge{% if article.published %} lbg-badge--live{% endif %}">
+      {{- 'Опубликована' if article.published else 'Черновик - видите только вы' -}}
+    </span>
+    <button type="button" class="lbg-btn lbg-btn--sm {{ 'lbg-btn--ghost' if article.published else 'lbg-btn--primary' }}"
+            data-lp-article="publish" data-lp-article-id="{{ article.id }}"
+            data-lp-publish="{{ '0' if article.published else '1' }}">
+      {{- 'Снять с публикации' if article.published else 'Опубликовать' -}}
+    </button>
+    <button type="button" class="lbg-btn lbg-btn--sm lbg-btn--ghost lbg-article__delete"
+            data-lp-article="delete" data-lp-article-id="{{ article.id }}"
+            data-lp-article-title="{{ article.title }}">Удалить статью</button>
+  </div>
+  {% endif %}
+
+  <p class="lbg-article__meta">
+    <a href="/web/articles">Статьи</a>
+    {%- if article.date %}<span>{{ article.date }}</span>{% endif %}
+  </p>
+  <h1 class="lbg-article__title" {{ lp_attr(keys.title) }}>{{ lp_text(keys.title, default_title) }}</h1>
+  <p class="lbg-article__lead" {{ lp_attr(keys.lead) }}>{{ lp_text(keys.lead, default_lead) }}</p>
+
+  {% set cover = lp_img(keys.cover, '') %}
+  {% if cover or can_edit %}
+  <figure class="lbg-figure lbg-article__cover{% if not cover %} is-empty{% endif %}" data-lp-img="{{ keys.cover }}">
+    {%- if cover %}
+    <img src="{{ cover }}" alt="">
+    {%- else %}
+    {{ rich.placeholder('Обложка статьи') }}
+    {%- endif %}
+  </figure>
+  {% endif %}
+
+  {{ rich.body(keys.owner, lp_body(keys.owner, default=default_body), 'lbg-article__body', 'h2') }}
+</article>
+
+{% if more %}
+<section class="lbg-section lbg-section--last lbg-more">
+  <h2>Ещё статьи</h2>
+  <div class="lbg-feed lbg-feed--more">
+    {% for item in more %}
+    {{ cards_ui.card(item) }}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

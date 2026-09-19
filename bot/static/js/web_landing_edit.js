@@ -9,11 +9,15 @@
  *   - пресеты стиля текста: сохранить стиль выделенного и применить в один клик;
  *   - блоки секций: добавить, убрать, перетащить за ручку или сдвинуть
  *     стрелками; целые секции лендинга - стрелками;
- *   - замена картинок.
+ *   - замена картинок;
+ *   - текст из частей (ответы FAQ, статьи): Enter начинает новый абзац,
+ *     абзац можно сделать подзаголовком, в любое место текста вставляется
+ *     картинка - сначала заглушкой, файл загружается кликом по ней;
+ *   - статьи: создать, опубликовать, удалить.
  *
- * Тексты, стили и фоны копятся и уходят кнопкой «Сохранить». Структура
- * (состав и порядок блоков и секций), картинки и пресеты сохраняются сразу:
- * это отдельные операции, копить их вместе с текстом незачем.
+ * Тексты, стили, фоны и состав текстов из частей копятся и уходят кнопкой
+ * «Сохранить». Структура страницы (блоки и секции), картинки, пресеты и
+ * статьи сохраняются сразу: это отдельные операции.
  */
 (function () {
     var toggle = document.getElementById('lbg-edit-toggle');
@@ -23,13 +27,14 @@
     var SIZE_MAX = 1.4;
     var SIZE_STEP = 0.05;
 
-    var nodes = [].slice.call(document.querySelectorAll('[data-lp]'));
+    var nodes = [];             // все текстовые узлы, включая вставленные абзацы
 
     var editing = false;
     var active = null;          // выделенный текстовый узел
     var activeBg = null;        // выделенная цель фона без текста (пустое место блока)
     var dirty = {};             // key -> true (тексты и стили)
     var bgDirty = {};           // target -> true
+    var bodyDirty = {};         // владелец текста из частей -> true
     var state = {};             // key -> {text, style, href?}
     var bgState = {};           // target -> {dark?, light?}
     var panel = null;
@@ -60,7 +65,7 @@
     var hrefDefaults = readJson('lp-href-defaults', {});
     var presets = readJson('lp-presets', []);
 
-    nodes.forEach(function (el) {
+    function registerNode(el) {
         var key = el.getAttribute('data-lp');
         var text = el.textContent.trim();
         state[key] = { text: text, style: readAttrJson(el, 'data-lp-style') };
@@ -71,7 +76,10 @@
             state[key].href = href;
             if (!(key in hrefDefaults)) hrefDefaults[key] = href;
         }
-    });
+        nodes.push(el);
+    }
+
+    [].forEach.call(document.querySelectorAll('[data-lp]'), registerNode);
 
     // --- цели фона ------------------------------------------------------------
 
@@ -237,6 +245,15 @@
             '    <span class="lbg-ed__swatch" aria-hidden="true"></span>Цвета и фон',
             '  </button>',
             '</div>',
+            '<div class="lbg-ed__body" id="lbg-ed-body">',
+            '  <button type="button" data-act="part-p" title="Обычный абзац">Абзац</button>',
+            '  <button type="button" data-act="part-h" title="Сделать подзаголовком">Подзаголовок</button>',
+            '  <button type="button" data-act="part-img" title="Вставить картинку туда, где стоит курсор">+ Картинка</button>',
+            '  <button type="button" data-act="part-up" title="Поднять абзац">↑</button>',
+            '  <button type="button" data-act="part-down" title="Опустить абзац">↓</button>',
+            '  <button type="button" class="lbg-ed__danger" data-act="part-del" title="Удалить абзац">Удалить</button>',
+            '  <span class="lbg-ed__tip">Enter - новый абзац</span>',
+            '</div>',
             '<label class="lbg-ed__href" id="lbg-ed-href-box" title="Куда ведёт ссылка">',
             '  <span>Ссылка</span>',
             '  <input type="text" id="lbg-ed-href" data-act="href" spellcheck="false"',
@@ -251,10 +268,20 @@
         document.body.appendChild(panel);
         panel.addEventListener('click', onPanelClick);
         panel.addEventListener('input', onPanelInput);
+        // кнопка не забирает фокус: курсор в тексте остаётся на месте, и
+        // «+ Картинка» вставляет её ровно туда, где он стоял
+        panel.addEventListener('mousedown', function (e) {
+            if (e.target.closest('button')) e.preventDefault();
+        });
+    }
+
+    function changeCount() {
+        return Object.keys(dirty).length + Object.keys(bgDirty).length
+            + Object.keys(bodyDirty).length;
     }
 
     function refreshCounter() {
-        var n = Object.keys(dirty).length + Object.keys(bgDirty).length;
+        var n = changeCount();
         var el = document.getElementById('lbg-ed-counter');
         if (el) el.textContent = n ? 'изменено: ' + n : '';
         var save = panel && panel.querySelector('.lbg-ed__save');
@@ -268,6 +295,14 @@
         tools.style.display = active ? 'flex' : 'none';
         hint.style.display = active ? 'none' : 'block';
         refreshHrefBox();
+        var bodyRow = document.getElementById('lbg-ed-body');
+        var inBody = isTextPart(active);
+        bodyRow.style.display = inBody ? 'flex' : 'none';
+        if (inBody) {
+            var type = active.getAttribute('data-lp-type');
+            bodyRow.querySelector('[data-act="part-p"]').classList.toggle('is-on', type === 'p');
+            bodyRow.querySelector('[data-act="part-h"]').classList.toggle('is-on', type === 'h');
+        }
         if (active) {
             var st = state[keyOf(active)].style;
             document.getElementById('lbg-ed-size').textContent =
@@ -292,11 +327,12 @@
         if (!btn || btn.tagName === 'INPUT') return;
         var act = btn.getAttribute('data-act');
 
-        if (act === 'save') return save();
+        if (act === 'save') return save().catch(function () {});  // ошибку уже показали
         if (act === 'cancel') return cancel();
         if (act === 'colors') return togglePop();
         if (!active) return;
         if (act === 'presets') return togglePresets();
+        if (act.indexOf('part-') === 0) return onPartAct(act);
 
         var k = keyOf(active);
         var st = state[k].style;
@@ -706,20 +742,393 @@
     function onNodePaste(e) {
         // вставляем только текст, иначе в узел попадёт чужая разметка
         e.preventDefault();
-        var text = (e.clipboardData || window.clipboardData).getData('text');
-        document.execCommand('insertText', false, (text || '').replace(/\s+/g, ' '));
+        var text = (e.clipboardData || window.clipboardData).getData('text') || '';
+        if (isTextPart(this)) {
+            // в тексте из частей каждая строка вставленного - свой абзац
+            var lines = text.split(/\r?\n/).map(function (line) {
+                return line.replace(/\s+/g, ' ').trim();
+            }).filter(Boolean);
+            if (lines.length > 1) return pasteParagraphs(this, lines);
+        }
+        document.execCommand('insertText', false, text.replace(/\s+/g, ' '));
     }
 
     function onNodeKeydown(e) {
-        // Enter не должен плодить <div> внутри заголовка
-        if (e.key === 'Enter') e.preventDefault();
         if (e.key === 'Escape') {
             this.blur();
             select(null);
+            return;
+        }
+        if (isTextPart(this)) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                splitPart(this);
+            } else if (e.key === 'Backspace') {
+                joinWithPrevious(this, e);
+            }
+            return;
+        }
+        // Enter не должен плодить <div> внутри заголовка
+        if (e.key === 'Enter') e.preventDefault();
+    }
+
+    function bindNode(el, on) {
+        if (on) {
+            el.setAttribute('contenteditable', 'plaintext-only');
+            el.addEventListener('click', onNodeClick);
+            el.addEventListener('input', onNodeInput);
+            el.addEventListener('paste', onNodePaste);
+            el.addEventListener('keydown', onNodeKeydown);
+        } else {
+            el.removeAttribute('contenteditable');
+            el.removeEventListener('click', onNodeClick);
+            el.removeEventListener('input', onNodeInput);
+            el.removeEventListener('paste', onNodePaste);
+            el.removeEventListener('keydown', onNodeKeydown);
         }
     }
 
-    var EDITOR_UI = '.lbg-ed, .lbg-ed-pop, .lbg-block-tools, .lbg-section-tools, [data-lp-block-add]';
+    // --- текст из частей: абзацы, подзаголовки, картинки ----------------------
+
+    // Та же заглушка, что макрос placeholder в includes/landing_rich.html.
+    var PLACEHOLDER_HTML = '<span class="lbg-figure__ph">'
+        + '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"></rect><circle cx="9" cy="10" r="1.7" fill="currentColor"></circle><path d="M4 17l5-4.5 3.5 3 3-2.5L20 17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>'
+        + '<span>Место для картинки</span></span>';
+
+    function bodyOf(el) {
+        return el ? el.closest('[data-lp-body]') : null;
+    }
+
+    function ownerOf(body) {
+        return body.getAttribute('data-lp-body');
+    }
+
+    function isPart(el) {
+        return !!el && el.nodeType === 1 && el.hasAttribute('data-lp-part');
+    }
+
+    function isTextPart(el) {
+        return isPart(el) && el.getAttribute('data-lp-type') !== 'img';
+    }
+
+    function partsOf(body) {
+        return [].filter.call(body.children, isPart).map(function (el) {
+            return { id: el.getAttribute('data-lp-part'), t: el.getAttribute('data-lp-type') };
+        });
+    }
+
+    function siblingPart(el, dir) {
+        var node = dir < 0 ? el.previousElementSibling : el.nextElementSibling;
+        while (node && !isPart(node)) {
+            node = dir < 0 ? node.previousElementSibling : node.nextElementSibling;
+        }
+        return node;
+    }
+
+    function newPartId() {
+        var id = '';
+        while (!/^[0-9a-f]{6}$/.test(id) || document.querySelector('[data-lp-part="' + id + '"]')) {
+            id = Math.random().toString(16).slice(2, 8);
+        }
+        return id;
+    }
+
+    function markBodyDirty(body) {
+        if (!body) return;
+        bodyDirty[ownerOf(body)] = true;
+        refreshCounter();
+    }
+
+    function headingTag(body) {
+        return body.getAttribute('data-lp-h') || 'h3';
+    }
+
+    function setText(el, text) {
+        el.textContent = text;
+        state[keyOf(el)].text = text.trim();
+        markDirty(el);
+    }
+
+    function makeTextPart(body, type, text) {
+        var el = document.createElement(type === 'h' ? headingTag(body) : 'p');
+        var id = newPartId();
+        var key = ownerOf(body) + '-' + id;
+        el.className = 'lbg-rich__' + type;
+        el.setAttribute('data-lp-part', id);
+        el.setAttribute('data-lp-type', type);
+        el.setAttribute('data-lp', key);
+        el.textContent = text || '';
+        defaults[key] = '';
+        registerNode(el);
+        if (editing) bindNode(el, true);
+        if (text) dirty[key] = true;
+        return el;
+    }
+
+    function makeFigure(body) {
+        var fig = document.createElement('figure');
+        var id = newPartId();
+        fig.className = 'lbg-figure is-empty';
+        fig.setAttribute('data-lp-part', id);
+        fig.setAttribute('data-lp-type', 'img');
+        fig.setAttribute('data-lp-img', ownerOf(body) + '-' + id);
+        fig.innerHTML = PLACEHOLDER_HTML;
+        initImageSlot(fig);
+        return fig;
+    }
+
+    // Позиция курсора в узле - смещение в символах от начала его текста.
+    function offsetIn(el, node, offset) {
+        var range = document.createRange();
+        range.selectNodeContents(el);
+        range.setEnd(node, offset);
+        return range.toString().length;
+    }
+
+    function caretOf(el) {
+        var sel = window.getSelection();
+        if (!sel || !sel.rangeCount) return null;
+        var range = sel.getRangeAt(0);
+        if (!el.contains(range.startContainer) || !el.contains(range.endContainer)) return null;
+        return {
+            start: offsetIn(el, range.startContainer, range.startOffset),
+            end: offsetIn(el, range.endContainer, range.endOffset)
+        };
+    }
+
+    function placeCaret(el, offset) {
+        el.focus();
+        var range = document.createRange();
+        var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+        var left = offset;
+        var node;
+        var placed = false;
+        while ((node = walker.nextNode())) {
+            if (left <= node.length) {
+                range.setStart(node, left);
+                placed = true;
+                break;
+            }
+            left -= node.length;
+        }
+        if (!placed) {
+            range.selectNodeContents(el);
+            range.collapse(offset <= 0);
+        }
+        range.collapse(true);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
+
+    // Последнее положение курсора в выделенном абзаце: кнопки панели фокус
+    // не забирают, но если курсор всё же потерялся - картинка встанет по нему.
+    var lastCaret = null;
+
+    document.addEventListener('selectionchange', function () {
+        if (!editing || !isTextPart(active)) return;
+        var caret = caretOf(active);
+        if (caret) lastCaret = { el: active, start: caret.start, end: caret.end };
+    });
+
+    function caretFor(el) {
+        var caret = caretOf(el);
+        if (caret) return caret;
+        if (lastCaret && lastCaret.el === el) return lastCaret;
+        var end = el.textContent.length;
+        return { start: end, end: end };
+    }
+
+    // Enter: всё, что после курсора, уходит в новый абзац ниже.
+    function splitPart(el) {
+        var body = bodyOf(el);
+        var raw = el.textContent;
+        var caret = caretFor(el);
+        var before = raw.slice(0, caret.start).replace(/\s+$/, '');
+        var after = raw.slice(caret.end).replace(/^\s+/, '');
+        if (before !== raw) setText(el, before);
+        // после подзаголовка продолжаем обычным абзацем
+        var next = makeTextPart(body, 'p', after);
+        el.after(next);
+        markBodyDirty(body);
+        select(next);
+        placeCaret(next, 0);
+    }
+
+    // Backspace в начале абзаца склеивает его с предыдущим.
+    function joinWithPrevious(el, e) {
+        var caret = caretOf(el);
+        if (!caret || caret.start !== 0 || caret.end !== 0) return;
+        var prev = siblingPart(el, -1);
+        if (!prev) return;
+        if (!isTextPart(prev)) {
+            // пустой абзац сразу после картинки просто убираем
+            if (!el.textContent.trim()) {
+                e.preventDefault();
+                removePart(el);
+            }
+            return;
+        }
+        e.preventDefault();
+        var head = prev.textContent;
+        setText(prev, head + el.textContent);
+        removePart(el);
+        select(prev);
+        placeCaret(prev, head.length);
+    }
+
+    function pasteParagraphs(el, lines) {
+        var body = bodyOf(el);
+        var raw = el.textContent;
+        var caret = caretFor(el);
+        var tail = raw.slice(caret.end);
+        setText(el, raw.slice(0, caret.start) + lines[0]);
+        var last = el;
+        for (var i = 1; i < lines.length; i++) {
+            var text = i === lines.length - 1 ? lines[i] + tail : lines[i];
+            var part = makeTextPart(body, 'p', text);
+            last.after(part);
+            last = part;
+        }
+        markBodyDirty(body);
+        select(last);
+        placeCaret(last, lines[lines.length - 1].length);
+    }
+
+    // Картинка встаёт туда, где курсор: в начале абзаца - перед ним, в конце -
+    // после, в середине абзац делится на два.
+    function insertFigure(el) {
+        var body = bodyOf(el);
+        var raw = el.textContent;
+        var caret = caretFor(el);
+        var before = raw.slice(0, caret.start).trim();
+        var after = raw.slice(caret.end).trim();
+        var fig = makeFigure(body);
+        if (!after) {
+            el.after(fig);
+        } else if (!before) {
+            el.before(fig);
+        } else {
+            setText(el, before);
+            var rest = makeTextPart(body, 'p', after);
+            el.after(fig);
+            fig.after(rest);
+        }
+        markBodyDirty(body);
+        flash(fig);
+        fig.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    function setPartType(el, type) {
+        if (el.getAttribute('data-lp-type') === type) return el;
+        var body = bodyOf(el);
+        var next = document.createElement(type === 'h' ? headingTag(body) : 'p');
+        [].forEach.call(el.attributes, function (attr) {
+            next.setAttribute(attr.name, attr.value);
+        });
+        next.setAttribute('data-lp-type', type);
+        next.classList.remove('lbg-rich__p', 'lbg-rich__h');
+        next.classList.add('lbg-rich__' + type);
+        next.textContent = el.textContent;
+        bindNode(el, false);
+        el.replaceWith(next);
+        nodes[nodes.indexOf(el)] = next;
+        if (active === el) active = next;
+        if (editing) bindNode(next, true);
+        markBodyDirty(body);
+        return next;
+    }
+
+    function movePart(el, dir) {
+        var other = siblingPart(el, dir);
+        if (!other) return;
+        if (dir < 0) other.before(el);
+        else other.after(el);
+        flash(el);
+        markBodyDirty(bodyOf(el));
+    }
+
+    function removePart(el) {
+        var body = bodyOf(el);
+        if (isTextPart(el)) {
+            var texts = [].filter.call(body.children, isTextPart);
+            if (texts.length <= 1) {
+                alert('В тексте должен остаться хотя бы один абзац');
+                return false;
+            }
+            var key = keyOf(el);
+            delete dirty[key];
+            delete state[key];
+            nodes.splice(nodes.indexOf(el), 1);
+            bindNode(el, false);
+            if (active === el) select(null);
+            renderLive();
+        } else {
+            imageSlots.splice(imageSlots.indexOf(el), 1);
+        }
+        el.remove();
+        markBodyDirty(body);
+        return true;
+    }
+
+    function onPartAct(act) {
+        if (!isTextPart(active)) return;
+        var el = active;
+        if (act === 'part-p' || act === 'part-h') {
+            var next = setPartType(el, act === 'part-h' ? 'h' : 'p');
+            select(next);
+            placeCaret(next, next.textContent.length);
+        } else if (act === 'part-img') {
+            insertFigure(el);
+        } else if (act === 'part-up' || act === 'part-down') {
+            movePart(el, act === 'part-up' ? -1 : 1);
+            el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } else if (act === 'part-del') {
+            if (el.textContent.trim() && !confirm('Удалить абзац?')) return;
+            removePart(el);
+        }
+        refreshTools();
+    }
+
+    // Панель картинки внутри текста: ↑ ↓, абзац ниже и удалить. Сама
+    // картинка по клику открывает выбор файла.
+    function addFigureTools(fig) {
+        if (!isPart(fig) || fig.querySelector('.lbg-part-tools')) return;
+        var tools = document.createElement('span');
+        tools.className = 'lbg-part-tools';
+        tools.innerHTML = [
+            '<button type="button" data-part="up" title="Выше" aria-label="Выше">↑</button>',
+            '<button type="button" data-part="down" title="Ниже" aria-label="Ниже">↓</button>',
+            '<button type="button" data-part="text" title="Добавить абзац под картинкой">+ Абзац</button>',
+            '<button type="button" class="lbg-block-del" data-part="del" title="Убрать картинку" aria-label="Убрать картинку">×</button>'
+        ].join('');
+        tools.addEventListener('click', onFigureTool);
+        fig.appendChild(tools);
+    }
+
+    function onFigureTool(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var btn = e.target.closest('button');
+        if (!btn || !editing) return;
+        var fig = btn.closest('.lbg-figure');
+        var act = btn.getAttribute('data-part');
+        if (act === 'up' || act === 'down') {
+            movePart(fig, act === 'up' ? -1 : 1);
+        } else if (act === 'text') {
+            var part = makeTextPart(bodyOf(fig), 'p', '');
+            fig.after(part);
+            markBodyDirty(bodyOf(fig));
+            select(part);
+            placeCaret(part, 0);
+        } else if (act === 'del') {
+            if (!fig.classList.contains('is-empty') && !confirm('Убрать картинку из текста?')) return;
+            removePart(fig);
+        }
+    }
+
+    var EDITOR_UI = '.lbg-ed, .lbg-ed-pop, .lbg-block-tools, .lbg-section-tools, '
+        + '.lbg-part-tools, [data-lp-block-add], [data-lp-article], .lbg-article__admin';
 
     // Клик мимо текста: по пустому месту блока - выбрать его фон, вовсе мимо -
     // снять выделение. Ссылки-карточки в режиме правки никуда не ведут.
@@ -926,9 +1335,30 @@
 
     // --- картинки -------------------------------------------------------------
 
-    var imageSlots = [].slice.call(document.querySelectorAll('[data-lp-img]'));
+    var imageSlots = [];
     var filePicker = null;
     var pendingSlot = null;
+
+    function initImageSlot(el) {
+        imageSlots.push(el);
+        addFigureTools(el);
+        if (editing) el.addEventListener('click', onImageClick);
+    }
+
+    // Картинка в тексте и обложка статьи меняются на месте, без перезагрузки:
+    // иначе пропали бы ещё не сохранённые правки текста.
+    function setFigureImage(fig, url) {
+        var img = fig.querySelector('img');
+        if (!img) {
+            img = document.createElement('img');
+            img.alt = '';
+            var ph = fig.querySelector('.lbg-figure__ph');
+            if (ph) ph.replaceWith(img);
+            else fig.insertBefore(img, fig.firstChild);
+        }
+        img.src = url;
+        fig.classList.remove('is-empty');
+    }
 
     function onImageClick(e) {
         if (!editing) return;
@@ -969,7 +1399,8 @@
         }).then(function (data) {
             slot.classList.remove('is-lp-uploading');
             if (slot.tagName === 'IMG') slot.src = data.url;
-            else location.reload();  // заглушка станет обычным боксом со скриншотом
+            else if (slot.classList.contains('lbg-figure')) setFigureImage(slot, data.url);
+            else location.reload();  // заглушка шага станет боксом со скриншотом
         }).catch(function (err) {
             slot.classList.remove('is-lp-uploading');
             alert('Не удалось загрузить картинку: ' + err.message);
@@ -990,19 +1421,7 @@
         });
 
         nodes.forEach(function (el) {
-            if (on) {
-                el.setAttribute('contenteditable', 'plaintext-only');
-                el.addEventListener('click', onNodeClick);
-                el.addEventListener('input', onNodeInput);
-                el.addEventListener('paste', onNodePaste);
-                el.addEventListener('keydown', onNodeKeydown);
-            } else {
-                el.removeAttribute('contenteditable');
-                el.removeEventListener('click', onNodeClick);
-                el.removeEventListener('input', onNodeInput);
-                el.removeEventListener('paste', onNodePaste);
-                el.removeEventListener('keydown', onNodeKeydown);
-            }
+            bindNode(el, on);
         });
 
         if (on) {
@@ -1025,7 +1444,8 @@
     function save() {
         var keys = Object.keys(dirty);
         var targets = Object.keys(bgDirty);
-        if (!keys.length && !targets.length) return;
+        var owners = Object.keys(bodyDirty);
+        if (!keys.length && !targets.length && !owners.length) return Promise.resolve();
 
         var items = keys.map(function (key) {
             var st = state[key].style;
@@ -1048,13 +1468,20 @@
             return { target: target, bg: Object.keys(bg).length ? bg : null };
         });
 
+        var bodies = owners.map(function (owner) {
+            var body = document.querySelector('[data-lp-body="' + owner + '"]');
+            return { owner: owner, parts: body ? partsOf(body) : [] };
+        });
+
         var btn = panel.querySelector('.lbg-ed__save');
         btn.disabled = true;
         btn.textContent = 'Сохраняю…';
 
-        api('/web/landing/api/save', { items: items, backgrounds: backgrounds }).then(function () {
+        var payload = { items: items, backgrounds: backgrounds, bodies: bodies };
+        return api('/web/landing/api/save', payload).then(function () {
             dirty = {};
             bgDirty = {};
+            bodyDirty = {};
             btn.textContent = 'Сохранено';
             setTimeout(function () {
                 btn.textContent = 'Сохранить';
@@ -1064,13 +1491,54 @@
             btn.disabled = false;
             btn.textContent = 'Сохранить';
             alert('Не удалось сохранить: ' + err.message);
+            throw err;
         });
     }
 
     function cancel() {
-        if ((Object.keys(dirty).length || Object.keys(bgDirty).length) &&
-            !confirm('Несохранённые правки пропадут. Продолжить?')) return;
+        if (changeCount() && !confirm('Несохранённые правки пропадут. Продолжить?')) return;
         location.reload();
+    }
+
+    // --- статьи ---------------------------------------------------------------
+
+    var leaving = false;  // уходим со страницы сами - не спрашиваем про правки
+
+    function go(url) {
+        leaving = true;
+        if (url) location.href = url;
+        else location.reload();
+    }
+
+    function onArticleAction(e) {
+        var btn = e.target.closest('[data-lp-article]');
+        if (!btn) return;
+        e.preventDefault();
+        var act = btn.getAttribute('data-lp-article');
+        var payload = { action: act, id: btn.getAttribute('data-lp-article-id') || '' };
+
+        if (act === 'delete') {
+            var title = btn.getAttribute('data-lp-article-title');
+            var what = title ? 'статью «' + title + '»' : 'статью';
+            if (!confirm('Удалить ' + what + ' насовсем? Вернуть её будет нельзя.')) return;
+        } else if (act === 'publish') {
+            payload.published = btn.getAttribute('data-lp-publish') === '1';
+        }
+
+        btn.disabled = true;
+        // публикуем то, что админ видит на экране: несохранённое - сначала сохранить
+        var ready = act === 'publish' && changeCount() ? save() : Promise.resolve();
+        ready.then(function () {
+            return api('/web/landing/api/articles', payload);
+        }).then(function (data) {
+            if (act === 'create') go(data.url + '?edit=1');
+            // из ленты - просто обновить её, со страницы статьи - уйти в ленту
+            else if (act === 'delete') go(location.pathname === '/web/articles' ? '' : '/web/articles');
+            else go();
+        }).catch(function (err) {
+            btn.disabled = false;
+            if (err && err.message) alert('Не получилось: ' + err.message);
+        });
     }
 
     // --- запуск ---------------------------------------------------------------
@@ -1129,8 +1597,22 @@
     }
 
     window.addEventListener('beforeunload', function (e) {
-        if (!editing || (!Object.keys(dirty).length && !Object.keys(bgDirty).length)) return;
+        if (leaving || !editing || !changeCount()) return;
         e.preventDefault();
         e.returnValue = '';
     });
+
+    [].forEach.call(document.querySelectorAll('[data-lp-img]'), initImageSlot);
+    document.addEventListener('click', onArticleAction);
+
+    // Новая статья открывается сразу в режиме правки, курсор - в заголовке.
+    if (/[?&]edit=1(?:&|$)/.test(location.search)) {
+        history.replaceState(null, '', location.pathname + location.hash);
+        setEditing(true);
+        var title = document.querySelector('.lbg-article__title[data-lp]');
+        if (title) {
+            select(title);
+            placeCaret(title, title.textContent.length);
+        }
+    }
 })();

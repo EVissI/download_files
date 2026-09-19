@@ -5,6 +5,12 @@
     color: #fff;
 }
 
+/* Панель правки висит внизу поверх страницы - запас, чтобы конец текста
+   можно было прокрутить выше неё */
+body.lp-editing {
+    padding-bottom: 220px;
+}
+
 /* Подсветка редактируемых узлов */
 .lp-editing [data-lp] {
     outline: 1px dashed var(--lbg-border-dashed, #555);
@@ -548,4 +554,97 @@
     .lp-editing [data-lp-page-section] {
         padding-top: 60px;
     }
+}
+
+/* Текст из частей: ряд кнопок абзаца в панели */
+.lbg-ed__body {
+    display: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding-top: 10px;
+    border-top: 1px solid var(--lbg-border-subtle);
+}
+
+.lbg-ed .lbg-ed__danger:hover {
+    color: #e57373;
+}
+
+.lbg-ed__tip {
+    color: var(--lbg-muted);
+    font-size: .82rem;
+}
+
+/* Пустой абзац в режиме правки: иначе его не видно и в него не попасть */
+.lp-editing .lbg-rich [data-lp]:empty::before {
+    content: "Пишите здесь…";
+    color: var(--lbg-muted);
+    font-weight: 400;
+}
+
+.lp-editing .lbg-rich [data-lp]:empty {
+    min-height: 1.6em;
+}
+
+/* Картинка в тексте: панель ↑ ↓ + Абзац × поверх, в правом верхнем углу */
+.lbg-part-tools {
+    display: none;
+}
+
+.lp-editing .lbg-figure {
+    position: relative;
+}
+
+.lp-editing .lbg-part-tools {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 3;
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border: 1px solid var(--lbg-border);
+    border-radius: 10px;
+    background: var(--lbg-header);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .25);
+}
+
+.lbg-part-tools button {
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--lbg-soft);
+    font: inherit;
+    font-size: .85rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.lbg-part-tools button:hover {
+    background: var(--lbg-ghost-hover);
+    color: var(--lbg-text);
+}
+
+.lbg-part-tools .lbg-block-del:hover {
+    color: #c62828;
+}
+
+.lp-editing .lbg-figure img {
+    cursor: pointer;
+}
+
+/* подсказка на заглушке - только в режиме правки */
+.lp-editing .lbg-figure.is-empty .lbg-figure__ph::after {
+    content: "Нажмите, чтобы загрузить";
+    font-size: .8rem;
+    font-weight: 400;
+}
+
+.lp-editing .lbg-figure.is-empty:hover {
+    border-color: var(--lbg-accent-2);
+    color: var(--lbg-text);
 }

@@ -1,0 +1,39 @@
+{# Текст из частей - абзацы, подзаголовки и картинки в любом порядке. Так
+   устроены ответы FAQ и статьи. Импорт: {% import "includes/landing_rich.html"
+   as rich with context %}, вызов: rich.body(owner, lp_body(owner, ...), ...).
+
+   Посетителю пустые части не показываются; админ видит их всегда - пустую
+   картинку как заглушку, куда в режиме правки загружается файл. #}
+{% macro body(owner, parts, css_class='', heading='h3') -%}
+<div class="lbg-rich {{ css_class }}" data-lp-body="{{ owner }}" data-lp-h="{{ heading }}">
+  {%- for part in parts %}
+  {%- if part.t == 'img' %}
+  {%- set src = lp_img(part.key, '') %}
+  {%- if src or can_edit %}
+  <figure class="lbg-figure{% if not src %} is-empty{% endif %}" data-lp-part="{{ part.id }}" data-lp-type="img" data-lp-img="{{ part.key }}">
+    {%- if src %}
+    <img src="{{ src }}" alt="" loading="lazy">
+    {%- else %}
+    {{ placeholder() }}
+    {%- endif %}
+  </figure>
+  {%- endif %}
+  {%- else %}
+  {%- set text = lp_text(part.key, part.default) %}
+  {%- if text or can_edit %}
+  {%- set tag = heading if part.t == 'h' else 'p' %}
+  <{{ tag }} class="lbg-rich__{{ part.t }}" data-lp-part="{{ part.id }}" data-lp-type="{{ part.t }}" {{ lp_attr(part.key) }}>{{ text }}</{{ tag }}>
+  {%- endif %}
+  {%- endif %}
+  {%- endfor %}
+</div>
+{%- endmacro %}
+
+{# Заглушка картинки. Та же разметка собирается в web_landing_edit.js для
+   только что вставленных картинок - меняя здесь, поменяйте и там. #}
+{% macro placeholder(label='Место для картинки') -%}
+<span class="lbg-figure__ph">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"></rect><circle cx="9" cy="10" r="1.7" fill="currentColor"></circle><path d="M4 17l5-4.5 3.5 3 3-2.5L20 17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>
+  <span>{{ label }}</span>
+</span>
+{%- endmacro %}

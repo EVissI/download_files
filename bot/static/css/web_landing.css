@@ -39,6 +39,7 @@ body.lbg{
 .lbg-nav::-webkit-scrollbar{display:none}
 .lbg-nav a{flex:0 0 auto;white-space:nowrap;color:var(--lbg-soft);padding:8px 10px;border-radius:8px;font-weight:600;font-size:.85rem}
 .lbg-nav a:hover{background:var(--lbg-nav-hover);color:var(--lbg-text)}
+.lbg-nav a[aria-current="page"]{background:var(--lbg-nav-hover);color:var(--lbg-text)}
 .lbg-header__actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .lbg-theme{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:var(--lbg-ghost-bg);color:var(--lbg-ghost-fg);cursor:pointer}
 .lbg-theme:hover{background:var(--lbg-ghost-hover)}
@@ -213,6 +214,8 @@ html[data-theme="light"] .lbg-shotbox .lbg-shot--light{display:block}
 .lbg .lbg-faq-link__go{flex:0 0 auto;white-space:nowrap;padding:12px 22px;border-radius:10px;background:var(--lbg-accent);color:#fff;font-weight:600;font-size:.95rem}
 .lbg-faq-link:hover .lbg-faq-link__go{background:var(--lbg-accent-2)}
 
+/* секция из одной карточки-ссылки: полный отступ секции для неё велик */
+.lbg .lbg-section--link{padding-top:48px}
 .lbg-faq-head{padding-bottom:0}
 .lbg-faq-head h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.08;letter-spacing:-.03em;font-weight:800}
 
@@ -225,7 +228,7 @@ html[data-theme="light"] .lbg-shotbox .lbg-shot--light{display:block}
 .lbg-faq__sign::before,.lbg-faq__sign::after{content:"";position:absolute;left:50%;top:50%;width:14px;height:2px;border-radius:2px;background:var(--lbg-accent-2);transform:translate(-50%,-50%);transition:transform .18s ease}
 .lbg-faq__sign::after{transform:translate(-50%,-50%) rotate(90deg)}
 .lbg-faq__item[open] .lbg-faq__sign::after{transform:translate(-50%,-50%) rotate(0)}
-.lbg-faq__a{padding:0 0 22px;margin:0;font-size:1rem;line-height:1.65;color:var(--lbg-soft);max-width:70ch;text-wrap:pretty}
+.lbg-faq__a{padding:0 0 22px;font-size:1rem;line-height:1.65;color:var(--lbg-soft);max-width:70ch}
 .lbg-faq__cta{margin-top:40px}
 
 @media (max-width:700px){
@@ -236,4 +239,90 @@ html[data-theme="light"] .lbg-shotbox .lbg-shot--light{display:block}
   .lbg-faq__item{padding:2px 18px}
   .lbg-faq__q{padding:18px 0;gap:12px}
   .lbg-faq__a{padding-bottom:18px}
+}
+
+/* Текст из частей: абзацы, подзаголовки и картинки (ответы FAQ, статьи) */
+/* .lbg впереди - чтобы перебить общий .lbg p{margin:0} */
+.lbg .lbg-rich > * + *{margin-top:.9em}
+.lbg .lbg-rich p{white-space:pre-line;text-wrap:pretty}
+.lbg .lbg-rich .lbg-rich__h{margin-top:1.5em;font-weight:700;line-height:1.25;letter-spacing:-.015em;color:var(--lbg-text)}
+.lbg .lbg-rich > .lbg-rich__h:first-child{margin-top:0}
+.lbg .lbg-rich > .lbg-figure,.lbg .lbg-rich > .lbg-figure + *{margin-top:1.3em}
+.lbg .lbg-rich > .lbg-figure:first-child{margin-top:0}
+
+/* Картинка в тексте. Своя картинка - в натуральных пропорциях, пустое место
+   под неё - адаптивная заглушка 16:9 (на телефоне 4:3). */
+.lbg-figure{margin:0;border-radius:14px;overflow:hidden;background:var(--lbg-card);border:1px solid var(--lbg-border-subtle)}
+.lbg-figure img{display:block;width:100%;height:auto;max-height:80vh;object-fit:contain;cursor:zoom-in}
+.lbg-figure.is-empty{aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;padding:16px;background:var(--lbg-sunken);border:1.5px dashed var(--lbg-border);color:var(--lbg-muted)}
+.lbg-figure__ph{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:.9rem;font-weight:600;text-align:center}
+.lbg-figure__ph svg{width:44px;height:44px}
+
+/* Метки статьи */
+.lbg-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;background:rgba(224,179,65,.16);color:#e0b341;font-size:.74rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+html[data-theme="light"] .lbg-badge{background:#fdf1d6;color:#8a5a00}
+.lbg-badge--live{background:rgba(102,187,106,.16);color:var(--lbg-accent-2)}
+html[data-theme="light"] .lbg-badge--live{background:#e3f3e5;color:var(--lbg-link)}
+
+/* Лента статей */
+.lbg-feed-admin{margin-top:28px}
+.lbg-feed-section{padding-top:48px}
+.lbg-feed{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:20px}
+.lbg-feed__item{position:relative;display:flex;min-width:0}
+.lbg-feed__item > .lbg-feed__card{flex:1 1 auto}
+/* удалить статью из ленты - только у админа */
+.lbg-feed__del{position:absolute;top:10px;right:10px;z-index:2;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border:1px solid var(--lbg-border);border-radius:10px;background:var(--lbg-header);color:var(--lbg-soft);cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+.lbg-feed__del svg{width:19px;height:19px}
+.lbg-feed__del:hover{color:#e57373;border-color:#e57373}
+.lbg-feed__del:disabled{opacity:.5;cursor:default}
+.lbg .lbg-feed__card{display:flex;flex-direction:column;min-width:0;overflow:hidden;background:var(--lbg-card);border:1px solid var(--lbg-border);border-radius:16px;color:var(--lbg-text);transition:border-color .15s ease,transform .15s ease}
+.lbg .lbg-feed__card:hover{border-color:var(--lbg-accent-2);color:var(--lbg-text);transform:translateY(-2px)}
+.lbg-feed__cover{display:flex;align-items:center;justify-content:center;aspect-ratio:16/9;background:var(--lbg-sunken);overflow:hidden}
+.lbg-feed__cover img{width:100%;height:100%;object-fit:cover}
+.lbg-feed__cover.is-empty{color:var(--lbg-muted)}
+.lbg-feed__cover svg{width:48px;height:48px;opacity:.7}
+.lbg-feed__body{display:flex;flex-direction:column;gap:10px;padding:20px 22px 24px;min-width:0}
+.lbg-feed__meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;min-height:1em;font-size:.82rem;color:var(--lbg-muted)}
+.lbg-feed__title{font-size:1.2rem;line-height:1.3;font-weight:700;letter-spacing:-.01em;text-wrap:pretty}
+.lbg-feed__lead{font-size:.95rem;line-height:1.6;color:var(--lbg-soft);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.lbg-feed-empty{margin:0;padding:48px 24px;border:1px dashed var(--lbg-border);border-radius:16px;text-align:center;line-height:1.6;color:var(--lbg-muted)}
+
+/* Страница статьи: узкая колонка для чтения */
+.lbg-article{max-width:760px;margin:0 auto;padding:56px 20px 24px}
+.lbg-article--last{padding-bottom:96px}
+.lbg-article__admin{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:32px;padding:12px 14px;border:1px dashed var(--lbg-accent-2);border-radius:12px}
+.lbg-article__admin .lbg-badge{margin-right:auto}
+.lbg .lbg-article__delete:hover{color:#e57373}
+.lbg-article__meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:.9rem;color:var(--lbg-muted)}
+.lbg-article__meta a{font-weight:600}
+.lbg-article__meta span::before{content:"·";margin-right:12px}
+.lbg-article__title{margin-top:16px;font-size:clamp(2rem,4.6vw,3rem);line-height:1.12;letter-spacing:-.03em;font-weight:800;text-wrap:balance}
+.lbg .lbg-article__lead{margin-top:20px;font-size:clamp(1.1rem,1.8vw,1.3rem);line-height:1.6;color:var(--lbg-soft);text-wrap:pretty}
+.lbg-article__cover{margin-top:32px}
+.lbg-article__body{margin-top:32px;font-size:1.1rem;line-height:1.75}
+.lbg-article__body .lbg-rich__h{font-size:clamp(1.35rem,2.4vw,1.7rem)}
+.lbg-more{padding-top:32px}
+.lbg-more h2{margin-bottom:28px;font-size:clamp(1.4rem,2.4vw,1.9rem)}
+
+@media (min-width:900px){
+  /* Первая статья в ленте - во всю ширину, обложка слева */
+  .lbg-feed__item--wide{grid-column:1 / -1}
+  .lbg .lbg-feed__card--wide{flex-direction:row}
+  .lbg-feed__card--wide .lbg-feed__cover{flex:0 0 56%}
+  .lbg-feed__card--wide .lbg-feed__body{justify-content:center;padding:36px 40px}
+  .lbg-feed__card--wide .lbg-feed__title{font-size:clamp(1.5rem,2.2vw,2rem)}
+  .lbg-feed__card--wide .lbg-feed__lead{font-size:1.05rem;-webkit-line-clamp:5}
+}
+
+@media (min-width:1024px){
+  .lbg-article{padding-top:72px}
+  .lbg-article__body{font-size:1.18rem}
+  .lbg-faq__a{font-size:1.08rem}
+}
+
+@media (max-width:700px){
+  .lbg-figure.is-empty{aspect-ratio:4/3}
+  .lbg-article{padding-top:36px}
+  .lbg-article__body{font-size:1.05rem;line-height:1.7}
+  .lbg-feed__body{padding:18px 18px 20px}
 }

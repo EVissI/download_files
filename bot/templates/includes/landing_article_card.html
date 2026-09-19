@@ -1,0 +1,30 @@
+{# Карточка статьи в ленте и в блоке «Ещё статьи». Карточки не редактируются:
+   заголовок, подводка и обложка правятся на странице самой статьи. Админу в
+   ленте (admin=True) на карточке видна кнопка удаления. #}
+{% macro card(item, wide=False, admin=False) -%}
+<div class="lbg-feed__item{% if wide %} lbg-feed__item--wide{% endif %}">
+<a class="lbg-feed__card{% if wide %} lbg-feed__card--wide{% endif %}" href="{{ item.url }}">
+  <span class="lbg-feed__cover{% if not item.cover %} is-empty{% endif %}">
+    {%- if item.cover %}
+    <img src="{{ item.cover }}" alt="" loading="lazy">
+    {%- else %}
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h9l3 3v13H6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path><path d="M9 10h6M9 13.5h6M9 17h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path></svg>
+    {%- endif %}
+  </span>
+  <span class="lbg-feed__body">
+    <span class="lbg-feed__meta">
+      {%- if not item.published %}<span class="lbg-badge">Черновик</span>{% endif %}
+      {%- if item.date %}<span>{{ item.date }}</span>{% endif -%}
+    </span>
+    <span class="lbg-feed__title">{{ item.title }}</span>
+    <span class="lbg-feed__lead">{{ item.lead }}</span>
+  </span>
+</a>
+{%- if admin %}
+<button type="button" class="lbg-feed__del" data-lp-article="delete" data-lp-article-id="{{ item.id }}"
+        data-lp-article-title="{{ item.title }}" title="Удалить статью" aria-label="Удалить статью">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10.5 10.5v6M13.5 10.5v6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</button>
+{%- endif %}
+</div>
+{%- endmacro %}

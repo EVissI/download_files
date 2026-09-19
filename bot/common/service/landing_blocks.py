@@ -24,19 +24,33 @@ LAYOUT_KEY_PREFIX = "layout-"
 
 # Секции лендинга, которые админ может переставлять. Первый экран и финальный
 # призыв написать остаются на своих местах.
-PAGE_SECTIONS = ("services", "steps", "guides", "faq", "play")
+PAGE_SECTIONS = ("services", "steps", "guides", "faq", "articles", "play")
 PAGE_LAYOUT_KEY = "layout-page"
 
 
 def clean_page_order(raw: Any) -> list[str]:
-    """Любой мусор превращаем в корректную перестановку PAGE_SECTIONS."""
+    """
+    Любой мусор превращаем в корректную перестановку PAGE_SECTIONS.
+    Секция, которой нет в сохранённом порядке (появилась позже), встаёт
+    следом за своей соседкой по порядку по умолчанию, а не в самый конец.
+    """
     out: list[str] = []
     for item in raw if isinstance(raw, list) else []:
         name = str(item or "").strip()
         if name in PAGE_SECTIONS and name not in out:
             out.append(name)
-    out.extend(name for name in PAGE_SECTIONS if name not in out)
+    for index, name in enumerate(PAGE_SECTIONS):
+        if name in out:
+            continue
+        before = [prev for prev in PAGE_SECTIONS[:index] if prev in out]
+        position = out.index(before[-1]) + 1 if before else 0
+        out.insert(position, name)
     return out
+
+
+def faq_body_owner(block_id: str) -> str:
+    """Владелец частей ответа FAQ: faq-1 для штатных, faq-c… для своих."""
+    return block_id if block_id.startswith("faq-") else f"faq-{block_id}"
 
 
 def new_block_id() -> str:
@@ -262,6 +276,8 @@ def _custom_block(section: str, block_id: str) -> dict[str, Any] | None:
         out["images"] = [f"{section}-{block_id}"]
     if "href" in out:
         out["href_key"] = out["link"]["key"]
+    if section == "faq":
+        out["body"] = faq_body_owner(block_id)
     return out
 
 
@@ -277,6 +293,8 @@ def _default_block(section: str, raw: dict[str, Any]) -> dict[str, Any]:
     if "shot" in raw:
         out["shot"] = raw["shot"]
         out["images"] = list(raw.get("images") or [])
+    if section == "faq":
+        out["body"] = faq_body_owner(raw["id"])
     return out
 
 

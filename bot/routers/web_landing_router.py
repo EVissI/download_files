@@ -1,6 +1,6 @@
 """
-Публичный лендинг веб-сервисов на /web (единственная страница без авторизации)
-плюс режим редактирования текстов для админов.
+Публичные страницы веб-сервисов без авторизации: лендинг /web, вопросы
+/web/faq и статьи /web/articles, - плюс режим редактирования для админов.
 
 Тексты по умолчанию лежат в шаблоне; в БД попадает только то, что админ
 изменил. Читаются правки через кэш в Redis, поэтому обычная загрузка страницы
@@ -39,17 +39,39 @@ from bot.common.service.landing_blocks import (
     build_blocks,
     new_block_id,
 )
+from bot.common.service.landing_articles import (
+    DEFAULT_BODY,
+    DEFAULT_LEAD,
+    DEFAULT_TITLE,
+    article_card,
+    article_url,
+    cover_key,
+    create_article,
+    delete_article,
+    index_of,
+    lead_key,
+    list_cards,
+    owner_of,
+    set_published,
+    title_key,
+    valid_article_id,
+)
 from bot.common.service.landing_text_service import (
+    ARTICLES_PAGE,
     HREF_KEY_PREFIX,
     IMAGE_KEY_PREFIX,
+    LEGACY_PART_ID,
     PAGE_BG_PREFIX,
     bg_of,
+    body_parts,
     drop_block_keys,
     get_layouts,
     get_page_order,
     page_css,
+    part_key,
     presets_of,
     save_backgrounds,
+    save_bodies,
     save_layout,
     save_page_order,
     save_presets,
@@ -86,9 +108,22 @@ class LandingBgItem(BaseModel):
     bg: dict[str, Any] | None = None
 
 
+class LandingBodyItem(BaseModel):
+    owner: str = Field(max_length=75)
+    # [{id, t}] в порядке показа; проверяет clean_parts
+    parts: list[dict[str, Any]] = Field(default_factory=list, max_length=200)
+
+
 class LandingSaveBody(BaseModel):
     items: list[LandingSaveItem] = Field(default_factory=list)
     backgrounds: list[LandingBgItem] = Field(default_factory=list)
+    bodies: list[LandingBodyItem] = Field(default_factory=list)
+
+
+class LandingArticleBody(BaseModel):
+    action: str = Field(max_length=12)
+    id: str = Field(default="", max_length=20)
+    published: bool = False
 
 
 class LandingOrderBody(BaseModel):
@@ -241,18 +276,62 @@ async def _is_landing_admin(request: Request) -> bool:
     return bool((session or {}).get("is_admin"))
 
 
-@web_landing_api_router.get("/web", response_class=HTMLResponse)
-async def web_landing(request: Request):
+def _user_id(request: Request) -> int | None:
+    session = getattr(request.state, "web_session", None) or {}
+    user_id = session.get("user_id")
+    return int(user_id) if user_id else None
+
+
+def _session_flags(request: Request) -> tuple[bool, bool]:
     """
-    Лендинг доступен всем. Сессию не требуем, но если она есть - кнопки входа
-    ведут сразу в кабинет, а админу подключается режим редактирования.
-    Сессия уже разобрана web_grant_user_middleware, повторно в Redis не ходим.
+    (вошёл ли, админ ли). Сессия уже разобрана web_grant_user_middleware,
+    повторно в Redis не ходим.
     """
     session = getattr(request.state, "web_session", None)
-    authorized = bool(session)
-    is_admin = bool((session or {}).get("is_admin"))
+    return bool(session), bool((session or {}).get("is_admin"))
 
-    overrides = await get_overrides()
+
+def _body_helper(overrides: dict[str, dict[str, Any]]):
+    """
+    lp_body(owner, legacy, default) - части текста для шаблона:
+    [{id, t, key, default}]. legacy - прежний единственный абзац ответа FAQ,
+    его текст остаётся под старым ключом; default - состав, пока админ
+    ничего не менял.
+    """
+
+    def lp_body(
+        owner: str,
+        legacy: dict[str, str] | None = None,
+        default: list[dict[str, str]] | None = None,
+    ) -> list[dict[str, str]]:
+        parts = body_parts(overrides, owner) or list(
+            default or [{"id": LEGACY_PART_ID, "t": "p"}]
+        )
+        out: list[dict[str, str]] = []
+        for part in parts:
+            if part["id"] == LEGACY_PART_ID:
+                if not legacy:
+                    continue
+                key, text_default = legacy["key"], legacy["default"]
+            else:
+                key, text_default = part_key(owner, part["id"]), ""
+            out.append(
+                {"id": part["id"], "t": part["t"], "key": key, "default": text_default}
+            )
+        return out
+
+    return lp_body
+
+
+def _page_context(
+    request: Request,
+    overrides: dict[str, dict[str, Any]],
+    *,
+    authorized: bool,
+    is_admin: bool,
+    **extra: Any,
+) -> dict[str, Any]:
+    """Общее для всех публичных страниц: вход, помощники шаблона, режим правки."""
     (
         lp_attr,
         lp_text,
@@ -261,42 +340,66 @@ async def web_landing(request: Request):
         lp_href,
         lp_href_defaults,
     ) = _build_helpers(overrides)
+    lp_bg, lp_page = _bg_helpers(overrides)
+    context: dict[str, Any] = {
+        "request": request,
+        "login_url": "/web/hints" if authorized else "/login",
+        "login_label": "В кабинет" if authorized else "Авторизоваться",
+        "cache_timestamp": get_static_asset_version(),
+        "can_edit": is_admin,
+        "lp_attr": lp_attr,
+        "lp_text": lp_text,
+        "lp_defaults": lp_defaults,
+        "lp_img": lp_img,
+        "lp_href": lp_href,
+        "lp_href_defaults": lp_href_defaults,
+        "lp_block_remove": _block_remove_html if is_admin else _no_html,
+        "lp_block_add": _block_add_html if is_admin else _no_html,
+        "lp_section_tools": _no_html,
+        "lp_bg": lp_bg,
+        "lp_page": lp_page,
+        "lp_body": _body_helper(overrides),
+        "lp_presets": lambda: _presets_json(overrides),
+        # Цвета зависят от темы, поэтому идут правилами в <style>, а не
+        # инлайном. Markup обязателен: внутри <style> HTML-сущности не
+        # декодируются, и экранированные кавычки сломали бы селекторы.
+        # Содержимое безопасно - ключи и цвета проходят валидацию в page_css.
+        "lp_color_css": Markup(page_css(overrides)),
+    }
+    context.update(extra)
+    return context
+
+
+async def _published_articles() -> list[dict[str, Any]]:
+    return list_cards(await get_overrides(ARTICLES_PAGE), include_drafts=False)
+
+
+@web_landing_api_router.get("/web", response_class=HTMLResponse)
+async def web_landing(request: Request):
+    """
+    Лендинг доступен всем. Сессию не требуем, но если она есть - кнопки входа
+    ведут сразу в кабинет, а админу подключается режим редактирования.
+    """
+    authorized, is_admin = _session_flags(request)
+    overrides = await get_overrides()
     layouts = await get_layouts(overrides)
     blocks = {
         section: build_blocks(section, layouts.get(section)) for section in SECTIONS
     }
-    page_sections = await get_page_order(overrides)
-    lp_bg, lp_page = _bg_helpers(overrides)
-    # Цвета зависят от темы, поэтому идут правилами в <style>, а не инлайном.
-    # Markup обязателен: внутри <style> HTML-сущности не декодируются, и
-    # экранированные кавычки сломали бы селекторы. Содержимое безопасно -
-    # ключи и цвета проходят валидацию в page_css.
-    color_css = Markup(page_css(overrides))
-
+    articles = await _published_articles()
     return templates.TemplateResponse(
         "landing.html",
-        {
-            "request": request,
-            "login_url": "/web/hints" if authorized else "/login",
-            "login_label": "В кабинет" if authorized else "Авторизоваться",
-            "cache_timestamp": get_static_asset_version(),
-            "can_edit": is_admin,
-            "lp_attr": lp_attr,
-            "lp_text": lp_text,
-            "lp_defaults": lp_defaults,
-            "lp_img": lp_img,
-            "lp_href": lp_href,
-            "lp_href_defaults": lp_href_defaults,
-            "lp_block_remove": _block_remove_html if is_admin else _no_html,
-            "lp_block_add": _block_add_html if is_admin else _no_html,
-            "lp_section_tools": _section_tools_html if is_admin else _no_html,
-            "lp_bg": lp_bg,
-            "lp_page": lp_page,
-            "lp_presets": lambda: _presets_json(overrides),
-            "page_sections": page_sections,
-            "blocks": blocks,
-            "lp_color_css": color_css,
-        },
+        _page_context(
+            request,
+            overrides,
+            authorized=authorized,
+            is_admin=is_admin,
+            lp_section_tools=_section_tools_html if is_admin else _no_html,
+            page_sections=await get_page_order(overrides),
+            blocks=blocks,
+            # пустую ленту посетителям не показываем, админ видит блок всегда
+            show_articles=is_admin or bool(articles),
+        ),
     )
 
 
@@ -306,47 +409,117 @@ async def web_faq(request: Request):
     Вопросы и ответы. Отдельная страница, чтобы лендинг не рос: на нём стоит
     только ссылка сюда. Наполняет её админ тем же режимом редактирования.
     """
-    session = getattr(request.state, "web_session", None)
-    authorized = bool(session)
-    is_admin = bool((session or {}).get("is_admin"))
-
+    authorized, is_admin = _session_flags(request)
     overrides = await get_overrides()
-    (
-        lp_attr,
-        lp_text,
-        lp_defaults,
-        lp_img,
-        lp_href,
-        lp_href_defaults,
-    ) = _build_helpers(overrides)
     layouts = await get_layouts(overrides)
-    blocks = {"faq": build_blocks("faq", layouts.get("faq"))}
-    lp_bg, lp_page = _bg_helpers(overrides)
-
+    articles = await _published_articles()
     return templates.TemplateResponse(
         "landing_faq.html",
-        {
-            "request": request,
-            "login_url": "/web/hints" if authorized else "/login",
-            "login_label": "В кабинет" if authorized else "Авторизоваться",
-            "cache_timestamp": get_static_asset_version(),
-            "can_edit": is_admin,
-            "lp_attr": lp_attr,
-            "lp_text": lp_text,
-            "lp_defaults": lp_defaults,
-            "lp_img": lp_img,
-            "lp_href": lp_href,
-            "lp_href_defaults": lp_href_defaults,
-            "lp_block_remove": _block_remove_html if is_admin else _no_html,
-            "lp_block_add": _block_add_html if is_admin else _no_html,
-            "lp_section_tools": _no_html,
-            "lp_bg": lp_bg,
-            "lp_page": lp_page,
-            "lp_presets": lambda: _presets_json(overrides),
-            "blocks": blocks,
-            "lp_color_css": Markup(page_css(overrides)),
-        },
+        _page_context(
+            request,
+            overrides,
+            authorized=authorized,
+            is_admin=is_admin,
+            blocks={"faq": build_blocks("faq", layouts.get("faq"))},
+            show_articles=is_admin or bool(articles),
+        ),
     )
+
+
+@web_landing_api_router.get("/web/articles", response_class=HTMLResponse)
+async def web_articles(request: Request):
+    """Лента статей. Черновики видит только админ."""
+    authorized, is_admin = _session_flags(request)
+    overrides = await get_overrides()
+    articles = await get_overrides(ARTICLES_PAGE)
+    return templates.TemplateResponse(
+        "landing_articles.html",
+        _page_context(
+            request,
+            overrides,
+            authorized=authorized,
+            is_admin=is_admin,
+            cards=list_cards(articles, include_drafts=is_admin),
+            show_articles=True,
+        ),
+    )
+
+
+@web_landing_api_router.get("/web/articles/{article_id}", response_class=HTMLResponse)
+async def web_article(request: Request, article_id: str):
+    """Статья. Черновик для всех, кроме админа, - как будто её нет."""
+    authorized, is_admin = _session_flags(request)
+    if not valid_article_id(article_id):
+        raise HTTPException(status_code=404, detail="Статья не найдена")
+    articles = await get_overrides(ARTICLES_PAGE)
+    if article_id not in index_of(articles):
+        raise HTTPException(status_code=404, detail="Статья не найдена")
+    card = article_card(articles, article_id)
+    if not card["published"] and not is_admin:
+        raise HTTPException(status_code=404, detail="Статья не найдена")
+
+    more = [
+        item
+        for item in list_cards(articles, include_drafts=False)
+        if item["id"] != article_id
+    ][:3]
+    # Тексты статьи - из своей страницы-хранилища, а шапка, подвал и
+    # пресеты - общие с лендингом. Ключи не пересекаются.
+    overrides = {**(await get_overrides()), **articles}
+    return templates.TemplateResponse(
+        "landing_article.html",
+        _page_context(
+            request,
+            overrides,
+            authorized=authorized,
+            is_admin=is_admin,
+            article=card,
+            keys={
+                "owner": owner_of(article_id),
+                "title": title_key(article_id),
+                "lead": lead_key(article_id),
+                "cover": cover_key(article_id),
+            },
+            default_title=DEFAULT_TITLE,
+            default_lead=DEFAULT_LEAD,
+            default_body=DEFAULT_BODY,
+            more=more,
+            show_articles=True,
+        ),
+    )
+
+
+@web_landing_api_router.post("/web/landing/api/articles")
+async def web_landing_articles_api(request: Request, body: LandingArticleBody):
+    """Создать, опубликовать (снять с публикации) или удалить статью."""
+    if not await _is_landing_admin(request):
+        raise HTTPException(status_code=403, detail="forbidden")
+    user_id = _user_id(request)
+    action = (body.action or "").strip()
+
+    if action == "create":
+        try:
+            article_id = await create_article(user_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.info("landing article created: {}", article_id)
+        return JSONResponse(
+            {"ok": True, "id": article_id, "url": article_url(article_id)}
+        )
+
+    article_id = (body.id or "").strip()
+    if not valid_article_id(article_id):
+        raise HTTPException(status_code=400, detail="Некорректная статья")
+    if action == "publish":
+        done = await set_published(article_id, body.published, user_id)
+    elif action == "delete":
+        done = await delete_article(article_id, user_id)
+    else:
+        raise HTTPException(status_code=400, detail="Неизвестное действие")
+    if not done:
+        raise HTTPException(status_code=404, detail="Статья не найдена")
+    logger.info("landing article {}: {} ({})", action, article_id, body.published)
+    return JSONResponse({"ok": True})
 
 
 @web_landing_api_router.post("/web/landing/api/save")
@@ -361,10 +534,24 @@ async def web_landing_save(request: Request, body: LandingSaveBody):
     saved_bg = await save_backgrounds(
         [item.model_dump() for item in body.backgrounds], uid
     )
+    # состав - после текстов: так части, убранные из текста, гарантированно
+    # уходят вместе со своими только что записанными правками
+    saved_bodies = await save_bodies([item.model_dump() for item in body.bodies], uid)
     logger.info(
-        "landing saved: {} ключей, {} фонов, web_user={}", saved, saved_bg, user_id
+        "landing saved: {} ключей, {} фонов, {} текстов из частей, web_user={}",
+        saved,
+        saved_bg,
+        saved_bodies,
+        user_id,
     )
-    return JSONResponse({"status": "ok", "saved": saved, "backgrounds": saved_bg})
+    return JSONResponse(
+        {
+            "status": "ok",
+            "saved": saved,
+            "backgrounds": saved_bg,
+            "bodies": saved_bodies,
+        }
+    )
 
 
 @web_landing_api_router.post("/web/landing/api/reset")

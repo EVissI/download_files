@@ -1,64 +1,11 @@
-{# Тексты страницы редактируются админом прямо на сайте (режим редактирования).
-   lp_attr(key)  - вешает data-lp и инлайновый стиль из БД;
-   lp_text(key, default) - подставляет текст: в шаблоне лежит значение по
-   умолчанию, в БД хранятся только правки.
-   Ключи позиционные (секция-тег-номер): при перестановке блоков правки съедут,
-   после таких изменений их надо сбросить через POST /web/landing/api/reset.
-   Шапка намеренно без data-lp - она не редактируется. #}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-{% include "includes/web_favicon.html" %}
-<title>LearnBG - веб-сервисы для коротких нард</title>
-<meta name="description" content="Анализ игр, разбор ошибок, работа с позицией и счёт пипсов для коротких нард - в браузере, без установки программ.">
-<script>
-  (function () {
-    try {
-      var t = localStorage.getItem('web_theme');
-      if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
-    } catch (e) {}
-  })();
-</script>
-<link rel="stylesheet" href="/static/css/web_landing.css?t={{ cache_timestamp }}">
-{% if lp_color_css %}<style id="lp-colors">{{ lp_color_css }}</style>{% endif %}
-{% if can_edit %}
-<link rel="stylesheet" href="/static/css/web_landing_edit.css?t={{ cache_timestamp }}">
-{% endif %}
-</head>
-<body class="lbg" {{ lp_page('landing') }}>
-
-<header class="lbg-header">
-  <div class="lbg-header__inner">
-    <a class="lbg-logo" href="#top">LearnBG</a>
-    <nav class="lbg-nav" id="lbg-menu" aria-label="Разделы">
-      <a href="#services">Сервисы</a>
-      <a href="#steps">По шагам</a>
-      <a href="#guides">Руководства</a>
-      <a href="#play">Где играть</a>
-      <a href="/web/faq">Вопросы</a>
-      <a class="lbg-nav__cta" href="{{ login_url }}">{{ login_label }}</a>
-    </nav>
-    <div class="lbg-header__actions">
-      {% if can_edit %}
-      <button type="button" class="lbg-theme lbg-edit-toggle" id="lbg-edit-toggle"
-              title="Режим редактирования" aria-label="Режим редактирования" aria-pressed="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Zm10-13 3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-      </button>
-      {% endif %}
-      <button type="button" class="lbg-theme" id="lbg-theme-toggle" title="Сменить тему" aria-label="Сменить тему">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.2 3.5A8.5 8.5 0 1 0 20.5 14 7 7 0 0 1 15.2 3.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
-      </button>
-      <a class="lbg-btn lbg-btn--sm lbg-btn--primary lbg-header__login" href="{{ login_url }}">{{ login_label }}</a>
-      <button type="button" class="lbg-burger" id="lbg-burger" aria-label="Меню" aria-expanded="false" aria-controls="lbg-menu">
-        <svg class="lbg-burger__open" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
-        <svg class="lbg-burger__close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
-      </button>
-    </div>
-  </div>
-</header>
-
+{% extends "landing_base.html" %}
+{# Ключи текстов позиционные (секция-тег-номер): при перестановке блоков в
+   шаблоне правки съедут, после таких изменений их надо сбросить через
+   POST /web/landing/api/reset. #}
+{% set page_name = 'landing' %}
+{% block title %}LearnBG - веб-сервисы для коротких нард{% endblock %}
+{% block description %}Анализ игр, разбор ошибок, работа с позицией и счёт пипсов для коротких нард - в браузере, без установки программ.{% endblock %}
+{% block content %}
 <section class="lbg-hero" id="top" {{ lp_bg('hero') }}>
   <div class="lbg-hero__inner">
     <p class="lbg-eyebrow" {{ lp_attr('top-p-1') }}>{{ lp_text('top-p-1', 'Платформа сервисов для коротких нард') }}</p>
@@ -140,7 +87,7 @@
   </div>
 </section>
 {% elif sec == 'faq' %}
-<section class="lbg-section" id="faq" data-lp-page-section="faq">
+<section class="lbg-section lbg-section--link" id="faq" data-lp-page-section="faq">
   {{ lp_section_tools('faq') }}
   <a class="lbg-faq-link" href="/web/faq" {{ lp_bg('faq-link') }}>
     <span class="lbg-faq-link__icon" aria-hidden="true">
@@ -153,6 +100,24 @@
     <span class="lbg-faq-link__go" {{ lp_attr('faq-link-a-3') }}>{{ lp_text('faq-link-a-3', 'Открыть') }}</span>
   </a>
 </section>
+{% elif sec == 'articles' %}
+{# Пустую ленту посетителям не показываем: блок виден, когда есть хоть одна
+   опубликованная статья. Админ видит его всегда, чтобы мог переставить. #}
+{% if show_articles %}
+<section class="lbg-section lbg-section--link" id="articles" data-lp-page-section="articles">
+  {{ lp_section_tools('articles') }}
+  <a class="lbg-faq-link" href="/web/articles" {{ lp_bg('articles-link') }}>
+    <span class="lbg-faq-link__icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M6 4h9l3 3v13H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path><path d="M9 10h6M9 13.5h6M9 17h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+    </span>
+    <span class="lbg-faq-link__body">
+      <span class="lbg-faq-link__title" {{ lp_attr('articles-link-h2-1') }}>{{ lp_text('articles-link-h2-1', 'Статьи') }}</span>
+      <span class="lbg-faq-link__text" {{ lp_attr('articles-link-p-2') }}>{{ lp_text('articles-link-p-2', 'Разборы позиций, советы по игре и по работе с сервисами - читайте в браузере, с телефона или компьютера.') }}</span>
+    </span>
+    <span class="lbg-faq-link__go" {{ lp_attr('articles-link-a-3') }}>{{ lp_text('articles-link-a-3', 'Читать') }}</span>
+  </a>
+</section>
+{% endif %}
 {% elif sec == 'play' %}
 <section class="lbg-section" id="play" data-lp-page-section="play">
   {{ lp_section_tools('play') }}
@@ -184,93 +149,4 @@
     </div>
   </div>
 </section>
-
-<footer class="lbg-footer">
-  <div class="lbg-footer__inner">
-    <div>
-      <b {{ lp_attr('play-b-12') }}>{{ lp_text('play-b-12', 'LearnBG') }}</b>
-      <p class="lbg-footer__note" {{ lp_attr('play-p-13') }}>{{ lp_text('play-p-13', 'Сервисы, помогающие учиться играть в короткие нарды') }}</p>
-    </div>
-    <div class="lbg-footer__links">
-      <a href="mailto:learnbg24@gmail.com" {{ lp_attr('play-a-14') }}>{{ lp_text('play-a-14', 'learnbg24@gmail.com') }}</a>
-      <a href="https://t.me/Learn_bg" target="_blank" rel="noopener" {{ lp_attr('play-a-15') }}>{{ lp_text('play-a-15', 'Telegram') }}</a>
-      <a href="{{ lp_href('play-a-17', 'https://max.ru/') }}" target="_blank" rel="noopener" {{ lp_attr('play-a-17') }}>{{ lp_text('play-a-17', 'MAX') }}</a>
-    </div>
-  </div>
-</footer>
-
-<div class="lbg-lightbox" id="lbg-lightbox" role="dialog" aria-modal="true" aria-label="Подробный просмотр" hidden>
-  <img id="lbg-lightbox-img" src="" alt="">
-  <button type="button" class="lbg-lightbox__close" id="lbg-lightbox-close" aria-label="Закрыть">&times;</button>
-</div>
-
-<script>
-  (function () {
-    var burger = document.getElementById('lbg-burger');
-    var menu = document.getElementById('lbg-menu');
-    if (!burger || !menu) return;
-
-    function setOpen(open) {
-      menu.classList.toggle('is-open', open);
-      burger.setAttribute('aria-expanded', open ? 'true' : 'false');
-    }
-
-    burger.addEventListener('click', function (e) {
-      e.stopPropagation();
-      setOpen(!menu.classList.contains('is-open'));
-    });
-    menu.addEventListener('click', function (e) {
-      if (e.target.closest('a')) setOpen(false);
-    });
-    document.addEventListener('click', function (e) {
-      if (!menu.contains(e.target) && !burger.contains(e.target)) setOpen(false);
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') setOpen(false);
-    });
-    window.addEventListener('resize', function () {
-      if (window.innerWidth > 820) setOpen(false);
-    });
-  })();
-
-  document.getElementById('lbg-theme-toggle').addEventListener('click', function () {
-    var root = document.documentElement;
-    var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-    if (next === 'light') root.setAttribute('data-theme', 'light');
-    else root.removeAttribute('data-theme');
-    try { localStorage.setItem('web_theme', next); } catch (e) {}
-  });
-  (function () {
-    var box = document.getElementById('lbg-lightbox');
-    var img = document.getElementById('lbg-lightbox-img');
-
-    function open(btn) {
-      var light = document.documentElement.getAttribute('data-theme') === 'light';
-      var shot = btn.querySelector(light ? '.lbg-shot--light' : '.lbg-shot--dark');
-      img.src = shot.getAttribute('src');
-      img.alt = shot.getAttribute('alt') || '';
-      box.hidden = false;
-      document.body.style.overflow = 'hidden';
-    }
-    function close() {
-      box.hidden = true;
-      img.src = '';
-      document.body.style.overflow = '';
-    }
-
-    Array.prototype.forEach.call(document.querySelectorAll('.lbg-shotbox'), function (btn) {
-      btn.addEventListener('click', function () { open(btn); });
-    });
-    box.addEventListener('click', close);
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
-  })();
-</script>
-
-{% if can_edit %}
-<script id="lp-defaults" type="application/json">{{ lp_defaults() }}</script>
-<script id="lp-href-defaults" type="application/json">{{ lp_href_defaults() }}</script>
-<script id="lp-presets" type="application/json">{{ lp_presets() }}</script>
-<script src="/static/js/web_landing_edit.js?t={{ cache_timestamp }}"></script>
-{% endif %}
-</body>
-</html>
+{% endblock %}

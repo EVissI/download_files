@@ -1,0 +1,93 @@
+{# Общий каркас публичных страниц: лендинг, вопросы, лента и страница статьи.
+   Здесь шапка, подвал, тема и подключение режима редактирования; страница
+   задаёт page_name (от него зависят фон страницы и пункты меню) и блоки.
+
+   Тексты редактируются админом прямо на сайте:
+   lp_attr(key)  - вешает data-lp и инлайновый стиль из БД;
+   lp_text(key, default) - подставляет текст: в шаблоне лежит значение по
+   умолчанию, в БД хранятся только правки.
+   Шапка намеренно без data-lp - она не редактируется, подвал общий для всех
+   страниц: правка на одной видна на всех. #}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{% include "includes/web_favicon.html" %}
+<title>{% block title %}LearnBG{% endblock %}</title>
+<meta name="description" content="{% block description %}{% endblock %}">
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('web_theme');
+      if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="/static/css/web_landing.css?t={{ cache_timestamp }}">
+{% if lp_color_css %}<style id="lp-colors">{{ lp_color_css }}</style>{% endif %}
+{% if can_edit %}
+<link rel="stylesheet" href="/static/css/web_landing_edit.css?t={{ cache_timestamp }}">
+{% endif %}
+</head>
+<body class="lbg" {{ lp_page(page_name) }}>
+{% set home = '' if page_name == 'landing' else '/web' %}
+
+<header class="lbg-header">
+  <div class="lbg-header__inner">
+    <a class="lbg-logo" href="{{ '#top' if page_name == 'landing' else '/web' }}">LearnBG</a>
+    <nav class="lbg-nav" id="lbg-menu" aria-label="Разделы">
+      <a href="{{ home }}#services">Сервисы</a>
+      <a href="{{ home }}#steps">По шагам</a>
+      <a href="{{ home }}#guides">Руководства</a>
+      <a href="{{ home }}#play">Где играть</a>
+      <a href="/web/faq"{% if page_name == 'faq' %} aria-current="page"{% endif %}>Вопросы</a>
+      {% if show_articles %}
+      <a href="/web/articles"{% if page_name in ('articles', 'article') %} aria-current="page"{% endif %}>Статьи</a>
+      {% endif %}
+      <a class="lbg-nav__cta" href="{{ login_url }}">{{ login_label }}</a>
+    </nav>
+    <div class="lbg-header__actions">
+      {% if can_edit %}
+      <button type="button" class="lbg-theme lbg-edit-toggle" id="lbg-edit-toggle"
+              title="Режим редактирования" aria-label="Режим редактирования" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Zm10-13 3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      </button>
+      {% endif %}
+      <button type="button" class="lbg-theme" id="lbg-theme-toggle" title="Сменить тему" aria-label="Сменить тему">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.2 3.5A8.5 8.5 0 1 0 20.5 14 7 7 0 0 1 15.2 3.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+      </button>
+      <a class="lbg-btn lbg-btn--sm lbg-btn--primary lbg-header__login" href="{{ login_url }}">{{ login_label }}</a>
+      <button type="button" class="lbg-burger" id="lbg-burger" aria-label="Меню" aria-expanded="false" aria-controls="lbg-menu">
+        <svg class="lbg-burger__open" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        <svg class="lbg-burger__close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+{% block content %}{% endblock %}
+
+<footer class="lbg-footer">
+  <div class="lbg-footer__inner">
+    <div>
+      <b {{ lp_attr('play-b-12') }}>{{ lp_text('play-b-12', 'LearnBG') }}</b>
+      <p class="lbg-footer__note" {{ lp_attr('play-p-13') }}>{{ lp_text('play-p-13', 'Сервисы, помогающие учиться играть в короткие нарды') }}</p>
+    </div>
+    <div class="lbg-footer__links">
+      <a href="{{ lp_href('play-a-14', 'mailto:learnbg24@gmail.com') }}" {{ lp_attr('play-a-14') }}>{{ lp_text('play-a-14', 'learnbg24@gmail.com') }}</a>
+      <a href="{{ lp_href('play-a-15', 'https://t.me/Learn_bg') }}" target="_blank" rel="noopener" {{ lp_attr('play-a-15') }}>{{ lp_text('play-a-15', 'Telegram') }}</a>
+      <a href="{{ lp_href('play-a-17', 'https://max.ru/') }}" target="_blank" rel="noopener" {{ lp_attr('play-a-17') }}>{{ lp_text('play-a-17', 'MAX') }}</a>
+    </div>
+  </div>
+</footer>
+
+<script src="/static/js/web_landing.js?t={{ cache_timestamp }}"></script>
+{% if can_edit %}
+<script id="lp-defaults" type="application/json">{{ lp_defaults() }}</script>
+<script id="lp-href-defaults" type="application/json">{{ lp_href_defaults() }}</script>
+<script id="lp-presets" type="application/json">{{ lp_presets() }}</script>
+<script src="/static/js/web_landing_edit.js?t={{ cache_timestamp }}"></script>
+{% endif %}
+</body>
+</html>

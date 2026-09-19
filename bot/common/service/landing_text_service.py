@@ -23,6 +23,12 @@ from bot.db.redis import redis_client
 PAGE = "landing"
 CACHE_KEY = "landing:texts:v1"
 CACHE_TTL_SEC = 3600
+# Статьи лежат в той же таблице, но своей страницей (landing_texts.page) и со
+# своим кэшем: иначе каждая загрузка лендинга тянула бы тексты всех статей.
+# Куда писать, решает ключ (page_of_key) - редактору об этом знать не нужно.
+ARTICLES_PAGE = "articles"
+ARTICLE_KEY_PREFIX = "art-"
+_CACHE_KEYS = {PAGE: CACHE_KEY, ARTICLES_PAGE: "landing:texts:articles:v1"}
 
 KEY_MAX_LEN = 80  # ширина landing_texts.key
 KEY_RE = re.compile(r"^[a-z0-9][a-z0-9_.-]{0,79}$")
@@ -40,6 +46,27 @@ PAGE_BG_PREFIX = "page-"
 # Пресеты стилей редактора. Это инструмент, а не содержимое страницы,
 # поэтому «Сброс» их не трогает.
 PRESETS_KEY = "presets"
+# Текст из частей (абзацы, подзаголовки, картинки) - ответ FAQ или статья:
+# body-<владелец> со списком частей в style_json["parts"]. Тексты и картинки
+# частей - обычные ключи <владелец>-<id части>, их правит тот же редактор.
+BODY_KEY_PREFIX = "body-"
+# Служебные данные статьи (опубликована ли, дата): meta-art-<id>.
+META_KEY_PREFIX = "meta-"
+PART_TYPES = ("p", "h", "img")
+# Часть «a» - прежний единственный абзац ответа FAQ: её текст остаётся под
+# старым ключом, поэтому уже сделанные правки ответов не теряются.
+LEGACY_PART_ID = "a"
+PART_ID_RE = re.compile(r"^(?:a|[0-9a-f]{6})$")
+_NEW_PART_ID_RE = re.compile(r"^[0-9a-f]{6}$")
+BODY_OWNER_RE = re.compile(r"^(?:faq-[a-z0-9-]{1,40}|art-a[0-9a-f]{8})$")
+MAX_PARTS = 200
+_KIND_PREFIXES = (
+    IMAGE_KEY_PREFIX,
+    HREF_KEY_PREFIX,
+    BG_KEY_PREFIX,
+    BODY_KEY_PREFIX,
+    META_KEY_PREFIX,
+)
 # Тёмная тема на лендинге - по умолчанию (атрибута нет), светлая - явная.
 # Без этой привязки цвет, заданный только для тёмной темы, протекал бы и в
 # светлую.
@@ -68,6 +95,57 @@ _WS_RE = re.compile(r"[ \t ]+")
 
 def valid_key(key: Any) -> bool:
     return isinstance(key, str) and bool(KEY_RE.match(key))
+
+
+def page_of_key(key: str) -> str:
+    """Страница-хранилище ключа: всё, что относится к статьям, - в «articles»."""
+    bare = key
+    for prefix in _KIND_PREFIXES:
+        if bare.startswith(prefix):
+            bare = bare[len(prefix):]
+            break
+    return ARTICLES_PAGE if bare.startswith(ARTICLE_KEY_PREFIX) else PAGE
+
+
+def valid_body_owner(owner: Any) -> bool:
+    return (
+        isinstance(owner, str)
+        and bool(BODY_OWNER_RE.match(owner))
+        and len(BODY_KEY_PREFIX) + len(owner) <= KEY_MAX_LEN
+    )
+
+
+def part_key(owner: str, part_id: str) -> str:
+    return f"{owner}-{part_id}"
+
+
+def clean_parts(raw: Any) -> list[dict[str, str]]:
+    """Список частей [{id, t}]: только известные типы и корректные id."""
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in (raw if isinstance(raw, list) else [])[:MAX_PARTS]:
+        if not isinstance(item, dict):
+            continue
+        part_id = str(item.get("id") or "").strip()
+        part_type = str(item.get("t") or "").strip()
+        if part_type not in PART_TYPES or not PART_ID_RE.match(part_id):
+            continue
+        # прежний абзац ответа может быть только текстом
+        if part_id == LEGACY_PART_ID and part_type == "img":
+            continue
+        if part_id in seen:
+            continue
+        seen.add(part_id)
+        out.append({"id": part_id, "t": part_type})
+    return out
+
+
+def body_parts(
+    overrides: dict[str, dict[str, Any]] | None, owner: str
+) -> list[dict[str, str]]:
+    """Сохранённый состав текста; пустой список - состав по умолчанию."""
+    entry = (overrides or {}).get(f"{BODY_KEY_PREFIX}{owner}") or {}
+    return clean_parts((entry.get("style") or {}).get("parts"))
 
 
 def clean_href(raw: Any) -> str:
@@ -256,10 +334,10 @@ def presets_of(overrides: dict[str, dict[str, Any]] | None) -> list[dict[str, An
     return items if isinstance(items, list) else []
 
 
-async def _load_from_db() -> dict[str, dict[str, Any]]:
+async def _load_from_db(page: str) -> dict[str, dict[str, Any]]:
     async with async_session_maker() as session:
         rows = await session.scalars(
-            select(LandingText).where(LandingText.page == PAGE)
+            select(LandingText).where(LandingText.page == page)
         )
         return {
             row.key: {"text": row.text, "style": row.style_json}
@@ -267,19 +345,20 @@ async def _load_from_db() -> dict[str, dict[str, Any]]:
         }
 
 
-async def get_overrides() -> dict[str, dict[str, Any]]:
-    """Все правки страницы. Обычно - один GET в Redis."""
+async def get_overrides(page: str = PAGE) -> dict[str, dict[str, Any]]:
+    """Все правки страницы-хранилища. Обычно - один GET в Redis."""
+    cache_key = _CACHE_KEYS[page]
     try:
-        cached = await redis_client.get(CACHE_KEY)
+        cached = await redis_client.get(cache_key)
         if cached is not None:
             return json.loads(cached)
     except Exception:
         logger.exception("landing texts cache read failed")
 
-    data = await _load_from_db()
+    data = await _load_from_db(page)
     try:
         await redis_client.set(
-            CACHE_KEY, json.dumps(data, ensure_ascii=False), expire=CACHE_TTL_SEC
+            cache_key, json.dumps(data, ensure_ascii=False), expire=CACHE_TTL_SEC
         )
     except Exception:
         logger.exception("landing texts cache write failed")
@@ -287,10 +366,11 @@ async def get_overrides() -> dict[str, dict[str, Any]]:
 
 
 async def invalidate_cache() -> None:
-    try:
-        await redis_client.delete(CACHE_KEY)
-    except Exception:
-        logger.exception("landing texts cache drop failed")
+    for cache_key in _CACHE_KEYS.values():
+        try:
+            await redis_client.delete(cache_key)
+        except Exception:
+            logger.exception("landing texts cache drop failed")
 
 
 async def save_items(items: list[dict[str, Any]], user_id: int | None) -> int:
@@ -318,31 +398,9 @@ async def save_items(items: list[dict[str, Any]], user_id: int | None) -> int:
                 await _write_href(session, key, clean_href(item.get("href")), user_id)
 
             if not text and not style:
-                await session.execute(
-                    LandingText.__table__.delete().where(
-                        (LandingText.page == PAGE) & (LandingText.key == key)
-                    )
-                )
-                saved += 1
-                continue
-
-            stmt = insert(LandingText).values(
-                page=PAGE,
-                key=key,
-                text=text or None,
-                style_json=style,
-                updated_by=user_id,
-            )
-            await session.execute(
-                stmt.on_conflict_do_update(
-                    index_elements=[LandingText.page, LandingText.key],
-                    set_={
-                        "text": stmt.excluded.text,
-                        "style_json": stmt.excluded.style_json,
-                        "updated_by": stmt.excluded.updated_by,
-                    },
-                )
-            )
+                await _delete_key(session, key)
+            else:
+                await _upsert(session, key, text or None, style, user_id)
             saved += 1
         await session.commit()
 
@@ -353,14 +411,24 @@ async def save_items(items: list[dict[str, Any]], user_id: int | None) -> int:
 async def _delete_key(session, key: str) -> None:
     await session.execute(
         LandingText.__table__.delete().where(
-            (LandingText.page == PAGE) & (LandingText.key == key)
+            (LandingText.page == page_of_key(key)) & (LandingText.key == key)
         )
     )
 
 
+async def _read_style(session, key: str) -> dict[str, Any]:
+    """style_json ключа прямо из БД - для правок «прочитал-изменил-записал»."""
+    style = await session.scalar(
+        select(LandingText.style_json).where(
+            (LandingText.page == page_of_key(key)) & (LandingText.key == key)
+        )
+    )
+    return style if isinstance(style, dict) else {}
+
+
 async def _upsert(session, key: str, text: str | None, style, user_id) -> None:
     stmt = insert(LandingText).values(
-        page=PAGE, key=key, text=text, style_json=style, updated_by=user_id
+        page=page_of_key(key), key=key, text=text, style_json=style, updated_by=user_id
     )
     await session.execute(
         stmt.on_conflict_do_update(
@@ -436,11 +504,70 @@ async def drop_block_keys(section: str, block_id: str) -> None:
                     | LandingText.key.like(f"{prefix}%")
                     | LandingText.key.like(f"{HREF_KEY_PREFIX}{prefix}%")
                     | LandingText.key.like(f"{IMAGE_KEY_PREFIX}{prefix}%")
+                    | LandingText.key.like(f"{BODY_KEY_PREFIX}{prefix}%")
                 )
             )
         )
         await session.commit()
     await invalidate_cache()
+
+
+async def save_bodies(items: list[dict[str, Any]], user_id: int | None) -> int:
+    """
+    Состав текстов из частей. Части, которых больше нет, уносим вместе с их
+    текстами и картинками - вернуть их из интерфейса всё равно нельзя.
+    """
+    if not isinstance(items, list):
+        return 0
+    saved = 0
+    async with async_session_maker() as session:
+        for item in items[:MAX_KEYS_PER_SAVE]:
+            if not isinstance(item, dict):
+                continue
+            owner = str(item.get("owner") or "").strip()
+            if not valid_body_owner(owner):
+                continue
+            parts = clean_parts(item.get("parts"))
+            keep = {part["id"] for part in parts}
+            await _drop_parts_except(session, owner, keep)
+            body_key = f"{BODY_KEY_PREFIX}{owner}"
+            if parts:
+                await _upsert(session, body_key, None, {"parts": parts}, user_id)
+            else:
+                await _delete_key(session, body_key)
+            saved += 1
+        await session.commit()
+    await invalidate_cache()
+    return saved
+
+
+async def _drop_parts_except(session, owner: str, keep: set[str]) -> None:
+    """
+    Удаляет тексты и картинки частей владельца, кроме keep. Прочие ключи
+    владельца (заголовок статьи, вопрос FAQ) id части не похожи и не трогаются.
+    """
+    page = page_of_key(owner)
+    prefix = f"{owner}-"
+    rows = await session.scalars(
+        select(LandingText.key).where(
+            (LandingText.page == page)
+            & (
+                LandingText.key.like(f"{prefix}%")
+                | LandingText.key.like(f"{IMAGE_KEY_PREFIX}{prefix}%")
+            )
+        )
+    )
+    doomed = []
+    for key in rows.all():
+        part_id = key.split(prefix, 1)[-1]
+        if _NEW_PART_ID_RE.match(part_id) and part_id not in keep:
+            doomed.append(key)
+    if doomed:
+        await session.execute(
+            LandingText.__table__.delete().where(
+                (LandingText.page == page) & LandingText.key.in_(doomed)
+            )
+        )
 
 
 async def save_backgrounds(
@@ -550,7 +677,7 @@ async def save_image(key: str, url: str, user_id: int | None) -> None:
         return
     async with async_session_maker() as session:
         stmt = insert(LandingText).values(
-            page=PAGE,
+            page=page_of_key(f"{IMAGE_KEY_PREFIX}{key}"),
             key=f"{IMAGE_KEY_PREFIX}{key}",
             text=url,
             style_json=None,

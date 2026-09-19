@@ -1,0 +1,33 @@
+{% extends "landing_base.html" %}
+{# Лента статей. Сами статьи админ пишет на их страницах; здесь - заголовок
+   ленты и кнопка новой статьи. Черновики в ленте видит только админ. #}
+{% import "includes/landing_article_card.html" as cards_ui %}
+{% set page_name = 'articles' %}
+{% block title %}Статьи - LearnBG{% endblock %}
+{% block description %}Статьи LearnBG о коротких нардах: разборы позиций, советы по игре и работе с сервисами анализа.{% endblock %}
+{% block content %}
+<section class="lbg-section lbg-faq-head" id="top">
+  <h1 {{ lp_attr('articles-h1-1') }}>{{ lp_text('articles-h1-1', 'Статьи') }}</h1>
+  <p class="lbg-section__lead" {{ lp_attr('articles-p-2') }}>{{ lp_text('articles-p-2', 'Разборы позиций, советы по игре и заметки о том, как учиться с помощью сервисов.') }}</p>
+  {% if can_edit %}
+  <div class="lbg-feed-admin">
+    <button type="button" class="lbg-btn lbg-btn--primary" data-lp-article="create">+ Новая статья</button>
+  </div>
+  {% endif %}
+</section>
+
+<section class="lbg-section lbg-section--last lbg-feed-section">
+  {% if cards %}
+  <div class="lbg-feed">
+    {% for item in cards %}
+    {{ cards_ui.card(item, wide=loop.first and cards|length > 2, admin=can_edit) }}
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="lbg-feed-empty">
+    {%- if can_edit %}Статей пока нет. Нажмите «Новая статья» - откроется черновик, его увидите только вы, пока не опубликуете.
+    {%- else %}Статей пока нет - загляните позже.{% endif -%}
+  </p>
+  {% endif %}
+</section>
+{% endblock %}

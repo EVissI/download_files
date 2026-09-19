@@ -1,59 +1,11 @@
-{# Страница вопросов и ответов. Оформление то же, что у лендинга: общий
-   web_landing.css и тот же режим редактирования - админ добавляет, правит и
-   убирает вопросы прямо здесь. Ключи текстов приходят из landing_blocks. #}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-{% include "includes/web_favicon.html" %}
-<title>Вопросы и ответы - LearnBG</title>
-<meta name="description" content="Частые вопросы о веб-сервисах LearnBG: доступ, протоколы матчей, сроки разбора.">
-<script>
-  (function () {
-    try {
-      var t = localStorage.getItem('web_theme');
-      if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
-    } catch (e) {}
-  })();
-</script>
-<link rel="stylesheet" href="/static/css/web_landing.css?t={{ cache_timestamp }}">
-{% if lp_color_css %}<style id="lp-colors">{{ lp_color_css }}</style>{% endif %}
-{% if can_edit %}
-<link rel="stylesheet" href="/static/css/web_landing_edit.css?t={{ cache_timestamp }}">
-{% endif %}
-</head>
-<body class="lbg" {{ lp_page('faq') }}>
-
-<header class="lbg-header">
-  <div class="lbg-header__inner">
-    <a class="lbg-logo" href="/web">LearnBG</a>
-    <nav class="lbg-nav" id="lbg-menu" aria-label="Разделы">
-      <a href="/web#services">Сервисы</a>
-      <a href="/web#steps">По шагам</a>
-      <a href="/web#guides">Руководства</a>
-      <a href="/web#play">Где играть</a>
-      <a class="lbg-nav__cta" href="{{ login_url }}">{{ login_label }}</a>
-    </nav>
-    <div class="lbg-header__actions">
-      {% if can_edit %}
-      <button type="button" class="lbg-theme lbg-edit-toggle" id="lbg-edit-toggle"
-              title="Режим редактирования" aria-label="Режим редактирования" aria-pressed="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Zm10-13 3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-      </button>
-      {% endif %}
-      <button type="button" class="lbg-theme" id="lbg-theme-toggle" title="Сменить тему" aria-label="Сменить тему">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.2 3.5A8.5 8.5 0 1 0 20.5 14 7 7 0 0 1 15.2 3.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
-      </button>
-      <a class="lbg-btn lbg-btn--sm lbg-btn--primary lbg-header__login" href="{{ login_url }}">{{ login_label }}</a>
-      <button type="button" class="lbg-burger" id="lbg-burger" aria-label="Меню" aria-expanded="false" aria-controls="lbg-menu">
-        <svg class="lbg-burger__open" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
-        <svg class="lbg-burger__close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
-      </button>
-    </div>
-  </div>
-</header>
-
+{% extends "landing_base.html" %}
+{# Страница вопросов и ответов. Админ добавляет, правит и убирает вопросы
+   прямо здесь; ответ состоит из частей - абзацев и картинок. #}
+{% import "includes/landing_rich.html" as rich with context %}
+{% set page_name = 'faq' %}
+{% block title %}Вопросы и ответы - LearnBG{% endblock %}
+{% block description %}Частые вопросы о веб-сервисах LearnBG: доступ, протоколы матчей, сроки разбора.{% endblock %}
+{% block content %}
 <section class="lbg-section lbg-faq-head" id="top">
   <h1 {{ lp_attr('faq-h1-1') }}>{{ lp_text('faq-h1-1', 'Вопросы и ответы') }}</h1>
   <p class="lbg-section__lead" {{ lp_attr('faq-p-2') }}>{{ lp_text('faq-p-2', 'Короткие ответы на то, что спрашивают чаще всего. Если нужного вопроса здесь нет - напишите мне, отвечу и дополню страницу.') }}</p>
@@ -68,7 +20,7 @@
         <span {{ lp_attr(block.question.key) }}>{{ lp_text(block.question.key, block.question.default) }}</span>
         <span class="lbg-faq__sign" aria-hidden="true"></span>
       </summary>
-      <p class="lbg-faq__a" {{ lp_attr(block.answer.key) }}>{{ lp_text(block.answer.key, block.answer.default) }}</p>
+      {{ rich.body(block.body, lp_body(block.body, legacy=block.answer), 'lbg-faq__a', 'h3') }}
     </details>
     {% endfor %}
     {{ lp_block_add('faq') }}
@@ -83,52 +35,4 @@
     </div>
   </div>
 </section>
-
-<footer class="lbg-footer">
-  <div class="lbg-footer__inner">
-    <div>
-      <b>LearnBG</b>
-      <p class="lbg-footer__note">Сервисы, помогающие учиться играть в короткие нарды</p>
-    </div>
-    <div class="lbg-footer__links">
-      <a href="mailto:learnbg24@gmail.com">learnbg24@gmail.com</a>
-      <a href="https://t.me/Learn_bg" target="_blank" rel="noopener">Telegram</a>
-      {# адрес и подпись - те же, что у ссылки MAX в футере лендинга #}
-      <a href="{{ lp_href('play-a-17', 'https://max.ru/') }}" target="_blank" rel="noopener">{{ lp_text('play-a-17', 'MAX') }}</a>
-    </div>
-  </div>
-</footer>
-
-<script>
-  (function () {
-    var burger = document.getElementById('lbg-burger');
-    var menu = document.getElementById('lbg-menu');
-    if (burger && menu) {
-      burger.addEventListener('click', function () {
-        var open = !menu.classList.contains('is-open');
-        menu.classList.toggle('is-open', open);
-        burger.setAttribute('aria-expanded', open ? 'true' : 'false');
-      });
-    }
-
-    var themeBtn = document.getElementById('lbg-theme-toggle');
-    if (!themeBtn) return;
-    themeBtn.addEventListener('click', function () {
-      var light = document.documentElement.getAttribute('data-theme') === 'light';
-      if (light) document.documentElement.removeAttribute('data-theme');
-      else document.documentElement.setAttribute('data-theme', 'light');
-      try {
-        localStorage.setItem('web_theme', light ? 'dark' : 'light');
-      } catch (e) {}
-    });
-  })();
-</script>
-
-{% if can_edit %}
-<script id="lp-defaults" type="application/json">{{ lp_defaults() }}</script>
-<script id="lp-href-defaults" type="application/json">{{ lp_href_defaults() }}</script>
-<script id="lp-presets" type="application/json">{{ lp_presets() }}</script>
-<script src="/static/js/web_landing_edit.js?t={{ cache_timestamp }}"></script>
-{% endif %}
-</body>
-</html>
+{% endblock %}
