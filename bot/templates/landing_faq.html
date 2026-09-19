@@ -55,7 +55,6 @@
 </header>
 
 <section class="lbg-section lbg-faq-head" id="top">
-  <a class="lbg-back" href="/web">← На главную</a>
   <h1 {{ lp_attr('faq-h1-1') }}>{{ lp_text('faq-h1-1', 'Вопросы и ответы') }}</h1>
   <p class="lbg-section__lead" {{ lp_attr('faq-p-2') }}>{{ lp_text('faq-p-2', 'Короткие ответы на то, что спрашивают чаще всего. Если нужного вопроса здесь нет - напишите мне, отвечу и дополню страницу.') }}</p>
 </section>
@@ -80,7 +79,7 @@
     <p {{ lp_attr('faq-p-4') }}>{{ lp_text('faq-p-4', 'Напишите мне в Telegram - помогу с доступом, протоколами и разбором.') }}</p>
     <div class="lbg-btns">
       <a class="lbg-btn lbg-btn--primary" href="{{ lp_href('faq-a-5', 'https://t.me/Learn_bg') }}" target="_blank" rel="noopener" {{ lp_attr('faq-a-5') }}>{{ lp_text('faq-a-5', 'Написать') }}</a>
-      <a class="lbg-btn lbg-btn--ghost" href="/web">На главную</a>
+      <a class="lbg-btn lbg-btn--ghost" href="{{ lp_href('faq-a-6', 'https://max.ru/') }}" target="_blank" rel="noopener" {{ lp_attr('faq-a-6') }}>{{ lp_text('faq-a-6', 'Написать в MAX') }}</a>
     </div>
   </div>
 </section>
@@ -94,7 +93,8 @@
     <div class="lbg-footer__links">
       <a href="mailto:learnbg24@gmail.com">learnbg24@gmail.com</a>
       <a href="https://t.me/Learn_bg" target="_blank" rel="noopener">Telegram</a>
-      <a href="{{ login_url }}">{{ login_label }}</a>
+      {# адрес и подпись - те же, что у ссылки MAX в футере лендинга #}
+      <a href="{{ lp_href('play-a-17', 'https://max.ru/') }}" target="_blank" rel="noopener">{{ lp_text('play-a-17', 'MAX') }}</a>
     </div>
   </div>
 </footer>

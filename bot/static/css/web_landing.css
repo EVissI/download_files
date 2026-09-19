@@ -215,8 +215,6 @@ html[data-theme="light"] .lbg-shotbox .lbg-shot--light{display:block}
 
 .lbg-faq-head{padding-bottom:0}
 .lbg-faq-head h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.08;letter-spacing:-.03em;font-weight:800}
-.lbg .lbg-back{display:inline-block;margin-bottom:18px;font-size:.9rem;font-weight:600;color:var(--lbg-soft)}
-.lbg .lbg-back:hover{color:var(--lbg-text)}
 
 .lbg-faq{display:flex;flex-direction:column;gap:14px}
 .lbg-faq__item{position:relative;background:var(--lbg-card);border:1px solid var(--lbg-border);border-radius:14px;padding:4px 24px;transition:border-color .15s ease}
